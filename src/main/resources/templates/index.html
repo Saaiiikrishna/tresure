@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunt Adventures - Epic Adventures Await!</title>
+    <meta name="description" content="Join exciting treasure hunt adventures with professional guides. Choose from beginner to advanced difficulty levels.">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-map-marked-alt me-2"></i>
+                Treasure Hunt Adventures
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#plans">Plans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Contact</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/admin" target="_blank">
+                            <i class="fas fa-cog"></i> Admin
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section">
+        <div class="container">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold text-dark mb-4">
+                        Epic Treasure Hunt Adventures Await!
+                    </h1>
+                    <p class="lead text-muted mb-4">
+                        Embark on thrilling treasure hunts with professional guides. 
+                        Solve puzzles, discover hidden clues, and create unforgettable memories 
+                        in our carefully crafted adventure experiences.
+                    </p>
+                    <div class="d-flex gap-3 mb-4">
+                        <a href="#plans" class="btn btn-primary btn-lg">
+                            <i class="fas fa-compass me-2"></i>
+                            Explore Plans
+                        </a>
+                        <button type="button" class="btn btn-outline-primary btn-lg" data-bs-toggle="modal" data-bs-target="#videoModal">
+                            <i class="fas fa-play me-2"></i>
+                            Watch Preview
+                        </button>
+                    </div>
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3 class="fw-bold text-primary" th:text="${totalPlans ?: 0}">0</h3>
+                            <small class="text-muted">Adventure Plans</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-primary">500+</h3>
+                            <small class="text-muted">Happy Adventurers</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-primary">4.9★</h3>
+                            <small class="text-muted">Average Rating</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-image">
+                        <img src="/images/treasure-hunt-hero.jpg" alt="Treasure Hunt Adventure" class="img-fluid rounded-3 shadow-lg">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Plans Section -->
+    <section id="plans" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Choose Your Adventure</h2>
+                <p class="lead text-muted">Select from our exciting treasure hunt plans designed for all skill levels</p>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="text-center mb-4">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" data-filter="all">All Plans</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="BEGINNER">Beginner</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="INTERMEDIATE">Intermediate</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="ADVANCED">Advanced</button>
+                </div>
+            </div>
+
+            <!-- Plans Grid -->
+            <div class="row g-4" id="plansContainer">
+                <div th:if="${plans.empty}" class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No treasure hunt plans are currently available. Please check back later!
+                    </div>
+                </div>
+                
+                <div th:each="plan : ${plans}" class="col-lg-4 col-md-6 plan-card" th:data-difficulty="${plan.difficultyLevel}">
+                    <div class="card h-100 shadow-sm border-0 plan-item">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0" th:text="${plan.name}">Plan Name</h5>
+                            <span class="badge difficulty-badge" 
+                                  th:classappend="${plan.difficultyLevel.name().toLowerCase()}"
+                                  th:text="${plan.difficultyLevel}">Difficulty</span>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <p class="card-text text-muted mb-3" 
+                               th:text="${plan.getTruncatedDescription(150)}">Plan description...</p>
+                            
+                            <div class="plan-details mb-3">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-clock text-primary me-1"></i> Duration:</span>
+                                    <span th:text="${plan.durationHours} + ' hours'">Duration</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-users text-primary me-1"></i> Max Participants:</span>
+                                    <span th:text="${plan.maxParticipants}">Max participants</span>
+                                </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
+                                    <span th:text="${plan.maxParticipants - plan.registrationCount}">Available spots</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4 class="text-primary mb-0">
+                                        $<span th:text="${#numbers.formatDecimal(plan.priceUsd, 1, 2)}">0.00</span>
+                                    </h4>
+                                    <small class="text-muted">per person</small>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="button" 
+                                            class="btn btn-primary register-btn"
+                                            th:data-plan-id="${plan.id}"
+                                            th:data-plan-name="${plan.name}"
+                                            th:data-plan-price="${plan.priceUsd}"
+                                            th:disabled="${!plan.available}">
+                                        <i class="fas fa-user-plus me-2"></i>
+                                        <span th:if="${plan.available}">Register Now</span>
+                                        <span th:unless="${plan.available}">Fully Booked</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm preview-btn"
+                                            th:data-plan-id="${plan.id}">
+                                        <i class="fas fa-play me-1"></i>
+                                        Watch Preview
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-5 bg-light">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="display-5 fw-bold mb-4">Why Choose Our Adventures?</h2>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-shield-alt text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Safety First</h5>
+                                    <p class="text-muted">Professional guides and comprehensive safety protocols ensure your adventure is both thrilling and secure.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-puzzle-piece text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Unique Challenges</h5>
+                                    <p class="text-muted">Each treasure hunt features original puzzles and clues designed to challenge and entertain participants of all skill levels.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-medal text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Memorable Experiences</h5>
+                                    <p class="text-muted">Create lasting memories with friends and family through our immersive adventure experiences.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <img src="/images/about-treasure-hunt.jpg" alt="About Us" class="img-fluid rounded-3 shadow">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Get In Touch</h2>
+                <p class="lead text-muted">Have questions? We're here to help!</p>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="row g-4">
+                        <div class="col-md-4 text-center">
+                            <i class="fas fa-phone text-primary fs-2 mb-3"></i>
+                            <h5>Call Us</h5>
+                            <p class="text-muted">+1 (555) 123-4567</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <i class="fas fa-envelope text-primary fs-2 mb-3"></i>
+                            <h5>Email Us</h5>
+                            <p class="text-muted">info@treasurehuntadventures.com</p>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <i class="fas fa-map-marker-alt text-primary fs-2 mb-3"></i>
+                            <h5>Visit Us</h5>
+                            <p class="text-muted">123 Adventure St, City, State 12345</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Treasure Hunt Adventures</h5>
+                    <p class="text-muted">Creating unforgettable adventure experiences since 2020.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="social-links mb-3">
+                        <a href="#" class="text-white me-3"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white me-3"><i class="fab fa-instagram"></i></a>
+                        <a href="#" class="text-white"><i class="fab fa-youtube"></i></a>
+                    </div>
+                    <div class="footer-links">
+                        <a href="/privacy" class="text-muted me-3">Privacy Policy</a>
+                        <a href="/terms" class="text-muted">Terms of Service</a>
+                    </div>
+                </div>
+            </div>
+            <hr class="my-3">
+            <div class="text-center text-muted">
+                <small>&copy; 2024 Treasure Hunt Adventures. All rights reserved.</small>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Video Modal -->
+    <div class="modal fade" id="videoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Treasure Hunt Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="previewVideo" src="" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registrationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register for Adventure</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Registration form will be loaded here -->
+                    <div id="registrationFormContainer">
+                        <!-- Form content will be dynamically loaded -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+.env
+traget/
+.idea/
+node_modules/

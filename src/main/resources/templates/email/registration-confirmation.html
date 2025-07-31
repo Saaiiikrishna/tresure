@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Confirmation - Treasure Hunt Adventures</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #2c5aa0 0%, #3d6bb3 100%);
+            color: white;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        .header .subtitle {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px 20px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #2c5aa0;
+            font-weight: 600;
+        }
+        .plan-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #2c5aa0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .plan-details h3 {
+            margin: 0 0 15px 0;
+            color: #2c5aa0;
+            font-size: 20px;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        .detail-value {
+            color: #6c757d;
+        }
+        .registration-info {
+            background-color: #e8f4fd;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .registration-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2c5aa0;
+            margin-bottom: 10px;
+        }
+        .checklist {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .checklist h4 {
+            color: #856404;
+            margin: 0 0 15px 0;
+            font-size: 18px;
+        }
+        .checklist ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .checklist li {
+            margin-bottom: 8px;
+            color: #856404;
+        }
+        .important-note {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #721c24;
+        }
+        .contact-info {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .contact-info h4 {
+            color: #0c5460;
+            margin: 0 0 15px 0;
+        }
+        .contact-info p {
+            margin: 5px 0;
+            color: #0c5460;
+        }
+        .footer {
+            background-color: #343a40;
+            color: #ffffff;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .footer a {
+            color: #f8c146;
+            text-decoration: none;
+        }
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        .social-links {
+            margin: 15px 0;
+        }
+        .social-links a {
+            display: inline-block;
+            margin: 0 10px;
+            color: #f8c146;
+            font-size: 18px;
+            text-decoration: none;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2c5aa0;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 10px 0;
+        }
+        .btn:hover {
+            background-color: #1e4080;
+            color: white;
+        }
+        @media (max-width: 600px) {
+            .container {
+                margin: 0;
+                border-radius: 0;
+            }
+            .content {
+                padding: 20px 15px;
+            }
+            .detail-row {
+                flex-direction: column;
+            }
+            .detail-value {
+                margin-top: 5px;
+                font-weight: 600;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🗺️ Treasure Hunt Adventures</h1>
+            <p class="subtitle">Registration Confirmation</p>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="greeting">
+                Hello <span th:text="${registration.fullName}">Adventurer</span>! 🎉
+            </div>
+
+            <p>Thank you for registering for our exciting treasure hunt adventure! We're thrilled to have you join us for an unforgettable experience.</p>
+
+            <!-- Registration Information -->
+            <div class="registration-info">
+                <div class="registration-number" th:text="${registrationNumber}">TH-000001</div>
+                <p><strong>Your Registration Number</strong></p>
+                <p>Please keep this number for your records and bring it with you on the day of your adventure.</p>
+            </div>
+
+            <!-- Plan Details -->
+            <div class="plan-details">
+                <h3 th:text="${plan.name}">Adventure Plan Name</h3>
+                <div class="detail-row">
+                    <span class="detail-label">Duration:</span>
+                    <span class="detail-value" th:text="${plan.durationHours} + ' hours'">Duration</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Difficulty Level:</span>
+                    <span class="detail-value" th:text="${plan.difficultyLevel}">Difficulty</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Price:</span>
+                    <span class="detail-value">$<span th:text="${#numbers.formatDecimal(plan.priceUsd, 1, 2)}">0.00</span> per person</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Registration Date:</span>
+                    <span class="detail-value" th:text="${#temporals.format(registration.registrationDate, 'MMMM dd, yyyy')}">Date</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status:</span>
+                    <span class="detail-value" th:text="${registration.status}">Status</span>
+                </div>
+            </div>
+
+            <!-- Important Note -->
+            <div class="important-note">
+                <strong>⚠️ Important:</strong> Your registration is currently being reviewed. You will receive another email once your registration is confirmed and we have verified your documents.
+            </div>
+
+            <!-- Pre-Hunt Checklist -->
+            <div class="checklist">
+                <h4>📋 Pre-Hunt Checklist - What to Bring:</h4>
+                <ul>
+                    <li th:each="item : ${checklist}" th:text="${item}">Checklist item</li>
+                </ul>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="contact-info">
+                <h4>📞 Need Help?</h4>
+                <p><strong>Email:</strong> <span th:text="${supportEmail}">support@treasurehuntadventures.com</span></p>
+                <p><strong>Phone:</strong> +1 (555) 123-4567</p>
+                <p><strong>Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM</p>
+            </div>
+
+            <p>We can't wait to see you on your adventure! If you have any questions or need to make changes to your registration, please don't hesitate to contact our support team.</p>
+
+            <p>Happy hunting! 🏴‍☠️</p>
+
+            <p>
+                Best regards,<br>
+                <strong>The <span th:text="${companyName}">Treasure Hunt Adventures</span> Team</strong>
+            </p>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong th:text="${companyName}">Treasure Hunt Adventures</strong></p>
+            <p>Creating unforgettable adventure experiences since 2020</p>
+            
+            <div class="social-links">
+                <a href="#">📘</a>
+                <a href="#">🐦</a>
+                <a href="#">📷</a>
+                <a href="#">📺</a>
+            </div>
+            
+            <p>
+                <a href="#">Privacy Policy</a> | 
+                <a href="#">Terms of Service</a> | 
+                <a href="#">Unsubscribe</a>
+            </p>
+            
+            <p style="font-size: 12px; color: #adb5bd; margin-top: 15px;">
+                This email was sent to <span th:text="${registration.email}">email@example.com</span>. 
+                If you received this email in error, please ignore it.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

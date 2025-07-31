@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registrations - Treasure Hunt Adventures Admin</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c5aa0;
+            --sidebar-bg: #343a40;
+            --sidebar-width: 250px;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background-color: var(--sidebar-bg);
+            padding-top: 1rem;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .sidebar .nav-link {
+            color: #adb5bd;
+            padding: 0.75rem 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            color: white;
+            background-color: var(--primary-color);
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+        }
+        
+        .table-responsive {
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        
+        .badge-status {
+            font-size: 0.75rem;
+            padding: 0.375rem 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="px-3 mb-4">
+            <h4 class="text-white">
+                <i class="fas fa-map-marked-alt me-2"></i>
+                Admin Panel
+            </h4>
+        </div>
+        
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link" href="/admin">
+                    <i class="fas fa-tachometer-alt me-2"></i>
+                    Dashboard
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/plans">
+                    <i class="fas fa-map me-2"></i>
+                    Manage Plans
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link active" href="/admin/registrations">
+                    <i class="fas fa-users me-2"></i>
+                    Registrations
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/" target="_blank">
+                    <i class="fas fa-external-link-alt me-2"></i>
+                    View Website
+                </a>
+            </li>
+            <li class="nav-item mt-4">
+                <a class="nav-link text-danger" href="/admin/logout">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    Logout
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-0">Registrations</h1>
+                <p class="text-muted">Manage treasure hunt registrations</p>
+            </div>
+        </div>
+
+        <!-- Alert Messages -->
+        <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <span th:text="${error}">Error message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <span th:text="${success}">Success message</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Filters -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" th:action="@{/admin/registrations}">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-control" id="status" name="status">
+                                <option value="">All Statuses</option>
+                                <option value="PENDING" th:selected="${param.status != null and param.status[0] == 'PENDING'}">Pending</option>
+                                <option value="CONFIRMED" th:selected="${param.status != null and param.status[0] == 'CONFIRMED'}">Confirmed</option>
+                                <option value="CANCELLED" th:selected="${param.status != null and param.status[0] == 'CANCELLED'}">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="planId" class="form-label">Plan</label>
+                            <select class="form-control" id="planId" name="planId">
+                                <option value="">All Plans</option>
+                                <option th:each="plan : ${allPlans}" 
+                                        th:value="${plan.id}" 
+                                        th:text="${plan.name}"
+                                        th:selected="${param.planId != null and param.planId[0] == plan.id.toString()}">Plan Name</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" class="form-control" id="search" name="search" 
+                                   placeholder="Name or email..." th:value="${param.search != null ? param.search[0] : ''}">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search me-1"></i>
+                                Filter
+                            </button>
+                            <a href="/admin/registrations" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i>
+                                Clear
+                            </a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Registrations Table -->
+        <div class="card">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Registration #</th>
+                                <th>Participant</th>
+                                <th>Plan</th>
+                                <th>Registration Date</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:if="${registrations.empty}">
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fs-1 mb-3 d-block"></i>
+                                    No registrations found
+                                </td>
+                            </tr>
+                            <tr th:each="registration : ${registrations}" th:if="${!registrations.empty}">
+                                <td>
+                                    <span class="fw-bold" th:text="${registration.registrationNumber}">TH-000001</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <div class="fw-semibold" th:text="${registration.fullName}">Full Name</div>
+                                        <small class="text-muted" th:text="${registration.email}">email@example.com</small>
+                                        <br>
+                                        <small class="text-muted">
+                                            Age: <span th:text="${registration.age}">25</span> | 
+                                            <span th:text="${registration.gender}">Gender</span>
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <span th:text="${registration.plan.name}">Plan Name</span>
+                                        <br>
+                                        <small class="text-muted">
+                                            $<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span>
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span th:text="${#temporals.format(registration.registrationDate, 'MMM dd, yyyy')}">Date</span>
+                                    <br>
+                                    <small class="text-muted" th:text="${#temporals.format(registration.registrationDate, 'HH:mm')}">Time</small>
+                                </td>
+                                <td>
+                                    <span class="badge badge-status"
+                                          th:classappend="${registration.status.name() == 'CONFIRMED' ? 'bg-success' : 
+                                                          registration.status.name() == 'PENDING' ? 'bg-warning' : 'bg-danger'}"
+                                          th:text="${registration.status}">Status</span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                th:onclick="'viewRegistration(' + ${registration.id} + ')'">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-success"
+                                                th:if="${registration.status.name() == 'PENDING'}"
+                                                th:onclick="'updateStatus(' + ${registration.id} + ', \'CONFIRMED\')'">
+                                            <i class="fas fa-check"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger"
+                                                th:if="${registration.status.name() != 'CANCELLED'}"
+                                                th:onclick="'updateStatus(' + ${registration.id} + ', \'CANCELLED\')'">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Details Modal -->
+    <div class="modal fade" id="registrationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Registration Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="registrationDetails">
+                    <!-- Registration details will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function viewRegistration(id) {
+            // Load registration details
+            fetch(`/admin/registrations/${id}`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('registrationDetails').innerHTML = html;
+                    new bootstrap.Modal(document.getElementById('registrationModal')).show();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error loading registration details.');
+                });
+        }
+
+        function updateStatus(id, status) {
+            const action = status.toLowerCase();
+            if (confirm(`Are you sure you want to ${action} this registration?`)) {
+                fetch(`/admin/registrations/${id}/status`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `status=${status}`
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error updating status: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while updating the status.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

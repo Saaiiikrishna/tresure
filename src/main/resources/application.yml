@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: treasure-hunt-registration
+  
+  # Database Configuration (H2 for development)
+  datasource:
+    url: jdbc:h2:mem:treasure_hunt_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  
+  # JPA/Hibernate Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        jdbc:
+          time_zone: UTC
+
+  # H2 Console (for development)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+  
+  # Mail Configuration
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_USERNAME:tresurhunting@gmail.com}
+    password: ${GMAIL_APP_PASSWORD:vhgf rrxt yede hnae}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+  
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 15MB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+# Custom Application Properties
+app:
+  file-storage:
+    upload-dir: uploads/documents
+    max-photo-size: 2097152  # 2MB in bytes
+    max-document-size: 5242880  # 5MB in bytes
+    allowed-photo-types: image/jpeg,image/jpg,image/png
+    allowed-document-types: application/pdf,image/jpeg,image/jpg
+  
+  email:
+    from: ${GMAIL_USERNAME:tresurhunting@gmail.com}
+    support: tresurhunting@gmail.com
+    company-name: Treasure Hunt Adventures
+  
+  security:
+    admin:
+      username: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:admin123}
+
+# Logging Configuration
+logging:
+  level:
+    com.treasurehunt: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.mail: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/treasure-hunt.log
+
+# Server Configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
