@@ -112,4 +112,24 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
            "WHERE r.registrationDate >= :cutoffDate " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findRecentRegistrations(@Param("cutoffDate") LocalDateTime cutoffDate);
+
+    /**
+     * Check if email is already registered for a specific plan
+     */
+    Optional<UserRegistration> findByEmailAndPlanId(String email, Long planId);
+
+    /**
+     * Find individual registrations (no team name)
+     */
+    List<UserRegistration> findByTeamNameIsNull();
+
+    /**
+     * Find team registrations (has team name)
+     */
+    List<UserRegistration> findByTeamNameIsNotNull();
+
+    /**
+     * Find registrations after a specific date
+     */
+    List<UserRegistration> findByRegistrationDateAfter(LocalDateTime date);
 }

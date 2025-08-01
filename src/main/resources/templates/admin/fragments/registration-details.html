@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Registration Details</title>
+</head>
+<body>
+    <!-- Registration Details Fragment -->
+    <div th:fragment="registrationDetails" th:if="${registration}">
+        <!-- Registration Header -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Registration Information
+                </h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Registration #:</strong></td>
+                        <td th:text="${registration.registrationNumber}">TH-000001</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Plan:</strong></td>
+                        <td th:text="${registration.plan.name}">Plan Name</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Price:</strong></td>
+                        <td>$<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Registration Date:</strong></td>
+                        <td th:text="${#temporals.format(registration.registrationDate, 'MMM dd, yyyy HH:mm')}">Date</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>
+                            <span class="badge" 
+                                  th:classappend="${registration.status.name() == 'CONFIRMED' ? 'bg-success' : 
+                                                  registration.status.name() == 'PENDING' ? 'bg-warning' : 'bg-danger'}"
+                                  th:text="${registration.status}">Status</span>
+                        </td>
+                    </tr>
+                    <tr th:if="${registration.teamRegistration}">
+                        <td><strong>Team Name:</strong></td>
+                        <td th:text="${registration.teamName}">Team Name</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-file-alt me-2"></i>Uploaded Documents
+                </h6>
+                <div th:if="${!#lists.isEmpty(documents)}">
+                    <div th:each="document : ${documents}" class="mb-2">
+                        <div class="card card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file me-2" 
+                                       th:classappend="${document.image} ? 'text-primary' : 
+                                                       (${document.pdf} ? 'text-danger' : 'text-secondary')"></i>
+                                    <strong th:text="${document.documentType}">Document Type</strong>
+                                    <br>
+                                    <small class="text-muted">
+                                        <span th:text="${document.originalFilename}">filename.pdf</span>
+                                        (<span th:text="${document.formattedFileSize}">1.2 MB</span>)
+                                    </small>
+                                </div>
+                                <div class="btn-group btn-group-sm">
+                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/view'}" 
+                                       target="_blank" class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/download'}" 
+                                       class="btn btn-outline-secondary" title="Download">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${#lists.isEmpty(documents)}" class="text-muted">
+                    <i class="fas fa-inbox me-2"></i>No documents uploaded
+                </div>
+            </div>
+        </div>
+
+        <!-- Participant Details -->
+        <div class="row">
+            <div class="col-12">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-users me-2"></i>Participant Details
+                </h6>
+                
+                <!-- Team Registration -->
+                <div th:if="${isTeamRegistration}">
+                    <div th:each="member, iterStat : ${teamMembers}" class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge me-2" 
+                                      th:classappend="${member.teamLeader} ? 'bg-warning text-dark' : 'bg-secondary'"
+                                      th:text="${iterStat.index + 1}"></span>
+                                <strong th:text="${member.fullName}">Member Name</strong>
+                                <span th:if="${member.teamLeader}" class="badge bg-warning text-dark ms-2">Team Leader</span>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td><strong>Email:</strong></td>
+                                            <td th:text="${member.email}">email@example.com</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Phone:</strong></td>
+                                            <td th:text="${member.phoneNumber}">+1234567890</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Age:</strong></td>
+                                            <td th:text="${member.age}">25</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Gender:</strong></td>
+                                            <td th:text="${member.gender}">Gender</td>
+                                        </tr>
+                                    </table>
+                                </div>
+                                <div class="col-md-6">
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td><strong>Emergency Contact:</strong></td>
+                                            <td th:text="${member.emergencyContactName}">Contact Name</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Emergency Phone:</strong></td>
+                                            <td th:text="${member.emergencyContactPhone}">+1234567890</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Medical Consent:</strong></td>
+                                            <td>
+                                                <span class="badge" 
+                                                      th:classappend="${registration.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
+                                                      th:text="${registration.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Individual Registration -->
+                <div th:unless="${isTeamRegistration}" class="card">
+                    <div class="card-header">
+                        <strong>
+                            <i class="fas fa-user me-2"></i>
+                            <span th:text="${registration.fullName}">Participant Name</span>
+                        </strong>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td><strong>Email:</strong></td>
+                                        <td th:text="${registration.email}">email@example.com</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Phone:</strong></td>
+                                        <td th:text="${registration.phoneNumber}">+1234567890</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Age:</strong></td>
+                                        <td th:text="${registration.age}">25</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Gender:</strong></td>
+                                        <td th:text="${registration.gender}">Gender</td>
+                                    </tr>
+                                </table>
+                            </div>
+                            <div class="col-md-6">
+                                <table class="table table-sm table-borderless">
+                                    <tr>
+                                        <td><strong>Emergency Contact:</strong></td>
+                                        <td th:text="${registration.emergencyContactName}">Contact Name</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Emergency Phone:</strong></td>
+                                        <td th:text="${registration.emergencyContactPhone}">+1234567890</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Medical Consent:</strong></td>
+                                        <td>
+                                            <span class="badge" 
+                                                  th:classappend="${registration.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
+                                                  th:text="${registration.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Fragment -->
+    <div th:fragment="error" class="text-center text-muted py-4">
+        <i class="fas fa-exclamation-triangle fs-1 mb-3 d-block text-warning"></i>
+        <h5 th:text="${error}">Error loading registration details</h5>
+    </div>
+</body>
+</html>

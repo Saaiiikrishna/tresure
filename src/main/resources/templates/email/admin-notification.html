@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Registration - Admin Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #007bff;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .notification-icon {
+            font-size: 48px;
+            color: #007bff;
+            margin: 20px 0;
+        }
+        .info-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .team-card {
+            background-color: #e8f4fd;
+            border-left: 4px solid #0056b3;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 5px;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        .member-list {
+            list-style: none;
+            padding: 0;
+        }
+        .member-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .member-list li:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo" th:text="${companyName}">Treasure Hunt Adventures</div>
+            <div class="notification-icon">🔔</div>
+            <h1 style="color: #007bff; margin: 0;">New Registration Alert</h1>
+        </div>
+
+        <!-- Main Message -->
+        <div style="margin-bottom: 25px;">
+            <h2 style="color: #007bff; margin-bottom: 10px;">
+                New Registration Received!
+            </h2>
+            <p style="font-size: 16px; margin-bottom: 15px;">
+                A new registration has been submitted for 
+                <span class="highlight" th:text="${registration.plan.name}">Adventure Plan</span>.
+                Please review and take appropriate action.
+            </p>
+        </div>
+
+        <!-- Registration Details -->
+        <div class="info-card">
+            <h3 style="color: #007bff; margin-top: 0;">📋 Registration Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Registration ID:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.id}">1</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Number:</td>
+                    <td style="padding: 8px 0;">TH-<span th:text="${registration.id}">000001</span></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Adventure Plan:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.plan.name}">Plan Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Plan Price:</td>
+                    <td style="padding: 8px 0;">$<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span></td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Date:</td>
+                    <td style="padding: 8px 0;" th:text="${#temporals.format(registration.registrationDate, 'MMM dd, yyyy HH:mm')}">Date</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Status:</td>
+                    <td style="padding: 8px 0;">
+                        <span style="background-color: #ffc107; color: #212529; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
+                            PENDING REVIEW
+                        </span>
+                    </td>
+                </tr>
+                <tr th:if="${registration.teamRegistration}">
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Type:</td>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #0056b3; font-weight: bold;">👥 Team Registration</span>
+                    </td>
+                </tr>
+                <tr th:unless="${registration.teamRegistration}">
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Type:</td>
+                    <td style="padding: 8px 0;">
+                        <span style="color: #28a745; font-weight: bold;">👤 Individual Registration</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Participant Information -->
+        <div th:if="${registration.teamRegistration}" class="team-card">
+            <h3 style="color: #0056b3; margin-top: 0;">👥 Team Information</h3>
+            <p><strong>Team Name:</strong> <span th:text="${registration.teamName}">Team Name</span></p>
+            <p><strong>Team Size:</strong> <span th:text="${#lists.size(registration.teamMembers)}">0</span> members</p>
+            
+            <h4 style="color: #0056b3; margin-top: 20px;">Team Members:</h4>
+            <ul class="member-list">
+                <li th:each="member, iterStat : ${registration.teamMembers}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong th:text="${member.fullName}">Member Name</strong>
+                            <span th:if="${member.teamLeader}" style="color: #ffc107; font-weight: bold;"> (Team Leader)</span>
+                            <br>
+                            <small style="color: #6c757d;">
+                                <span th:text="${member.email}">email@example.com</span> | 
+                                Age: <span th:text="${member.age}">25</span> | 
+                                <span th:text="${member.gender}">Gender</span>
+                            </small>
+                        </div>
+                        <span style="background-color: #e9ecef; padding: 4px 8px; border-radius: 4px; font-size: 12px;">
+                            #<span th:text="${iterStat.index + 1}">1</span>
+                        </span>
+                    </div>
+                </li>
+            </ul>
+        </div>
+
+        <div th:unless="${registration.teamRegistration}" class="info-card">
+            <h3 style="color: #28a745; margin-top: 0;">👤 Participant Information</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Name:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.fullName}">Participant Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Email:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.email}">email@example.com</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Phone:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.phoneNumber}">+1234567890</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Age:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.age}">25</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Gender:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.gender}">Gender</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Action Required -->
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="color: #856404; margin-top: 0;">⚠️ Action Required</h3>
+            <p>This registration is currently <strong>PENDING</strong> and requires admin review.</p>
+            <p>Please log into the admin panel to:</p>
+            <ul>
+                <li>Review participant details and uploaded documents</li>
+                <li>Verify payment information (if applicable)</li>
+                <li>Confirm or reject the registration</li>
+                <li>Send appropriate notifications to participants</li>
+            </ul>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="text-align: center; margin: 30px 0;">
+            <h3 style="color: #007bff;">Quick Actions</h3>
+            <a href="http://localhost:8080/admin/registrations" class="btn">
+                📋 View All Registrations
+            </a>
+            <a th:href="@{'/admin/registrations/' + ${registration.id}}" class="btn btn-success">
+                👁️ View Details
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                This is an automated notification from <span th:text="${companyName}">Treasure Hunt Adventures</span><br>
+                Admin Panel System
+            </p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                Registration received at: <span th:text="${#temporals.format(registration.registrationDate, 'MMM dd, yyyy HH:mm:ss')}">timestamp</span><br>
+                System: Treasure Hunt Registration Management
+            </p>
+        </div>
+    </div>
+</body>
+</html>

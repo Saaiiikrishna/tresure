@@ -2,12 +2,17 @@ package com.treasurehunt.controller;
 
 import com.treasurehunt.entity.TreasureHuntPlan;
 import com.treasurehunt.entity.UserRegistration;
+import com.treasurehunt.entity.UploadedDocument;
 import com.treasurehunt.service.RegistrationService;
 import com.treasurehunt.service.TreasureHuntPlanService;
+import com.treasurehunt.service.FileStorageService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
@@ -34,12 +39,15 @@ public class AdminController {
 
     private final TreasureHuntPlanService planService;
     private final RegistrationService registrationService;
+    private final FileStorageService fileStorageService;
 
     @Autowired
     public AdminController(TreasureHuntPlanService planService,
-                          RegistrationService registrationService) {
+                          RegistrationService registrationService,
+                          FileStorageService fileStorageService) {
         this.planService = planService;
         this.registrationService = registrationService;
+        this.fileStorageService = fileStorageService;
     }
 
     /**
@@ -252,70 +260,38 @@ public class AdminController {
         }
     }
 
-    /**
-     * Update registration status (AJAX)
-     * @param id Registration ID
-     * @param status New status
-     * @return JSON response
-     */
-    @PostMapping("/registrations/{id}/status")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> updateRegistrationStatus(
-            @PathVariable Long id,
-            @RequestParam String status) {
-        
-        logger.info("Updating registration status for ID: {} to {}", id, status);
-        
-        Map<String, Object> response = new HashMap<>();
-        
-        try {
-            UserRegistration.RegistrationStatus newStatus = 
-                    UserRegistration.RegistrationStatus.valueOf(status.toUpperCase());
-            
-            UserRegistration updatedRegistration = registrationService.updateRegistrationStatus(id, newStatus);
-            
-            response.put("success", true);
-            response.put("newStatus", updatedRegistration.getStatus().toString());
-            response.put("message", "Registration status updated successfully");
-            
-            return ResponseEntity.ok(response);
-            
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid status or registration ID: {}", e.getMessage());
-            response.put("success", false);
-            response.put("message", "Invalid status or registration not found");
-            return ResponseEntity.badRequest().body(response);
-            
-        } catch (Exception e) {
-            logger.error("Error updating registration status for ID: {}", id, e);
-            response.put("success", false);
-            response.put("message", "Error updating registration status: " + e.getMessage());
-            return ResponseEntity.internalServerError().body(response);
-        }
-    }
+
 
     /**
-     * Get registration details (AJAX)
+     * Get registration details (HTML fragment for modal)
      * @param id Registration ID
-     * @return JSON response with registration details
+     * @param model Thymeleaf model
+     * @return HTML fragment
      */
     @GetMapping("/registrations/{id}")
-    @ResponseBody
-    public ResponseEntity<UserRegistration> getRegistrationDetails(@PathVariable Long id) {
+    public String getRegistrationDetails(@PathVariable Long id, Model model) {
         logger.debug("Fetching registration details for ID: {}", id);
-        
+
         try {
-            Optional<UserRegistration> registration = registrationService.getRegistrationById(id);
-            
-            if (registration.isPresent()) {
-                return ResponseEntity.ok(registration.get());
+            Optional<UserRegistration> registrationOpt = registrationService.getRegistrationById(id);
+
+            if (registrationOpt.isPresent()) {
+                UserRegistration registration = registrationOpt.get();
+                model.addAttribute("registration", registration);
+                model.addAttribute("isTeamRegistration", registration.isTeamRegistration());
+                model.addAttribute("teamMembers", registration.getTeamMembers());
+                model.addAttribute("documents", registration.getDocuments());
+
+                return "admin/fragments/registration-details :: registrationDetails";
             } else {
-                return ResponseEntity.notFound().build();
+                model.addAttribute("error", "Registration not found");
+                return "admin/fragments/registration-details :: error";
             }
-            
+
         } catch (Exception e) {
             logger.error("Error fetching registration details for ID: {}", id, e);
-            return ResponseEntity.internalServerError().build();
+            model.addAttribute("error", "Error loading registration details");
+            return "admin/fragments/registration-details :: error";
         }
     }
 
@@ -349,6 +325,106 @@ public class AdminController {
         } catch (Exception e) {
             logger.error("Error searching registrations", e);
             return ResponseEntity.internalServerError().build();
+        }
+    }
+
+    /**
+     * Update registration status (AJAX)
+     * @param id Registration ID
+     * @param status New status
+     * @return JSON response
+     */
+    @PostMapping("/registrations/{id}/status")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateRegistrationStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+
+        logger.debug("Updating registration {} status to: {}", id, status);
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            UserRegistration.RegistrationStatus newStatus =
+                UserRegistration.RegistrationStatus.valueOf(status.toUpperCase());
+
+            UserRegistration updatedRegistration = registrationService.updateRegistrationStatus(id, newStatus);
+
+            response.put("success", true);
+            response.put("message", "Status updated successfully");
+            response.put("newStatus", updatedRegistration.getStatus().toString());
+
+            // Send appropriate emails based on status change
+            if (newStatus == UserRegistration.RegistrationStatus.CONFIRMED) {
+                // Send confirmation emails to all participants
+                registrationService.sendConfirmationEmails(updatedRegistration);
+            } else if (newStatus == UserRegistration.RegistrationStatus.CANCELLED) {
+                // Send cancellation email to team leader or individual
+                registrationService.sendCancellationEmail(updatedRegistration);
+            }
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            logger.error("Invalid status value: {}", status, e);
+            response.put("success", false);
+            response.put("message", "Invalid status value");
+            return ResponseEntity.badRequest().body(response);
+
+        } catch (Exception e) {
+            logger.error("Error updating registration status for ID: {}", id, e);
+            response.put("success", false);
+            response.put("message", "Internal server error");
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Download uploaded document
+     * @param documentId Document ID
+     * @return File download response
+     */
+    @GetMapping("/documents/{documentId}/download")
+    public ResponseEntity<Resource> downloadDocument(@PathVariable Long documentId) {
+        logger.debug("Downloading document with ID: {}", documentId);
+
+        try {
+            UploadedDocument document = fileStorageService.getDocumentById(documentId);
+            Resource resource = fileStorageService.loadFileAsResource(document.getStoredFilename());
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(document.getContentType()))
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                           "attachment; filename=\"" + document.getOriginalFilename() + "\"")
+                    .body(resource);
+
+        } catch (Exception e) {
+            logger.error("Error downloading document with ID: {}", documentId, e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
+     * View uploaded document (inline)
+     * @param documentId Document ID
+     * @return File view response
+     */
+    @GetMapping("/documents/{documentId}/view")
+    public ResponseEntity<Resource> viewDocument(@PathVariable Long documentId) {
+        logger.debug("Viewing document with ID: {}", documentId);
+
+        try {
+            UploadedDocument document = fileStorageService.getDocumentById(documentId);
+            Resource resource = fileStorageService.loadFileAsResource(document.getStoredFilename());
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType(document.getContentType()))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                    .body(resource);
+
+        } catch (Exception e) {
+            logger.error("Error viewing document with ID: {}", documentId, e);
+            return ResponseEntity.notFound().build();
         }
     }
 }

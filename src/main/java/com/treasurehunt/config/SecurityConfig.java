@@ -40,10 +40,11 @@ public class SecurityConfig {
         http
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints
-                .requestMatchers("/", "/api/plans/**", "/api/register/**", "/api/health").permitAll()
+                .requestMatchers("/", "/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
                 .requestMatchers("/about", "/contact", "/privacy", "/terms").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/debug/**").permitAll() // Debug endpoints
                 
                 // Admin endpoints - require authentication
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -72,7 +73,7 @@ public class SecurityConfig {
                 .maxSessionsPreventsLogin(false)
             )
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**") // Disable CSRF for API endpoints
+                .ignoringRequestMatchers("/api/**", "/admin/email-templates/**") // Disable CSRF for API and email template endpoints
             )
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.deny())

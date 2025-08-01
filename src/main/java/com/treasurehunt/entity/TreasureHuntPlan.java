@@ -1,5 +1,6 @@
 package com.treasurehunt.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -46,9 +47,20 @@ public class TreasureHuntPlan {
     @Column(name = "max_participants", nullable = false)
     private Integer maxParticipants;
 
+    @NotNull(message = "Team size is required")
+    @Min(value = 1, message = "Team size must be at least 1")
+    @Max(value = 10, message = "Team size cannot exceed 10")
+    @Column(name = "team_size", nullable = false)
+    private Integer teamSize = 1;
+
+    @NotNull(message = "Team type is required")
+    @Enumerated(EnumType.STRING)
+    @Column(name = "team_type", nullable = false, length = 20)
+    private TeamType teamType = TeamType.INDIVIDUAL;
+
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.00", message = "Price must be non-negative")
-    @DecimalMax(value = "9999.99", message = "Price must not exceed $9999.99")
+    @DecimalMax(value = "9999.99", message = "Price must not exceed $9999.99 (₹829,999)")
     @Column(name = "price_usd", nullable = false, precision = 10, scale = 2)
     private BigDecimal priceUsd;
 
@@ -62,6 +74,7 @@ public class TreasureHuntPlan {
     private LocalDateTime createdDate;
 
     @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<UserRegistration> registrations = new ArrayList<>();
 
     // Enums
@@ -71,6 +84,10 @@ public class TreasureHuntPlan {
 
     public enum PlanStatus {
         ACTIVE, INACTIVE
+    }
+
+    public enum TeamType {
+        INDIVIDUAL, TEAM
     }
 
     // Constructors
@@ -135,5 +152,45 @@ public class TreasureHuntPlan {
 
     public boolean isAvailable() {
         return status == PlanStatus.ACTIVE && getRegistrationCount() < maxParticipants;
+    }
+
+    /**
+     * Get price in Indian Rupees (converted from USD)
+     * Using approximate conversion rate of 1 USD = 83 INR
+     */
+    public BigDecimal getPriceInr() {
+        if (priceUsd == null) {
+            return BigDecimal.ZERO;
+        }
+        return priceUsd.multiply(new BigDecimal("83")).setScale(0, BigDecimal.ROUND_HALF_UP);
+    }
+
+    // Getters and setters for new fields
+    public Integer getTeamSize() {
+        return teamSize;
+    }
+
+    public void setTeamSize(Integer teamSize) {
+        this.teamSize = teamSize;
+    }
+
+    public TeamType getTeamType() {
+        return teamType;
+    }
+
+    public void setTeamType(TeamType teamType) {
+        this.teamType = teamType;
+    }
+
+    public boolean isTeamBased() {
+        return teamType == TeamType.TEAM && teamSize > 1;
+    }
+
+    public String getTeamDescription() {
+        if (teamType == TeamType.INDIVIDUAL || teamSize == 1) {
+            return "Individual players";
+        } else {
+            return "Teams of " + teamSize + " players";
+        }
     }
 }

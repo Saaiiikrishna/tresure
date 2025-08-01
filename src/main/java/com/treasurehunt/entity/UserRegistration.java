@@ -1,5 +1,6 @@
 package com.treasurehunt.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -47,8 +48,8 @@ public class UserRegistration {
     private String email;
 
     @NotBlank(message = "Phone number is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Please provide a valid phone number")
-    @Size(max = 20, message = "Phone number must not exceed 20 characters")
+    @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Please provide a valid 10-digit Indian mobile number")
+    @Size(max = 10, message = "Phone number must be exactly 10 digits")
     @Column(name = "phone_number", nullable = false)
     private String phoneNumber;
 
@@ -58,8 +59,8 @@ public class UserRegistration {
     private String emergencyContactName;
 
     @NotBlank(message = "Emergency contact phone is required")
-    @Pattern(regexp = "^\\+?[1-9]\\d{1,14}$", message = "Please provide a valid emergency contact phone")
-    @Size(max = 20, message = "Emergency contact phone must not exceed 20 characters")
+    @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Please provide a valid 10-digit Indian mobile number")
+    @Size(max = 10, message = "Emergency contact phone must be exactly 10 digits")
     @Column(name = "emergency_contact_phone", nullable = false)
     private String emergencyContactPhone;
 
@@ -76,7 +77,16 @@ public class UserRegistration {
     private RegistrationStatus status = RegistrationStatus.PENDING;
 
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<UploadedDocument> documents = new ArrayList<>();
+
+    @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<TeamMember> teamMembers = new ArrayList<>();
+
+    @Size(max = 100, message = "Team name must not exceed 100 characters")
+    @Column(name = "team_name", length = 100)
+    private String teamName;
 
     // Enums
     public enum Gender {
@@ -157,7 +167,40 @@ public class UserRegistration {
                 .anyMatch(doc -> doc.getDocumentType() == UploadedDocument.DocumentType.ID_DOCUMENT);
         boolean hasMedical = documents.stream()
                 .anyMatch(doc -> doc.getDocumentType() == UploadedDocument.DocumentType.MEDICAL_CERTIFICATE);
-        
+
         return hasPhoto && hasId && hasMedical;
+    }
+
+    // Getters and setters for new fields
+    public List<TeamMember> getTeamMembers() {
+        return teamMembers;
+    }
+
+    public void setTeamMembers(List<TeamMember> teamMembers) {
+        this.teamMembers = teamMembers;
+    }
+
+    public String getTeamName() {
+        return teamName;
+    }
+
+    public void setTeamName(String teamName) {
+        this.teamName = teamName;
+    }
+
+    public boolean isTeamRegistration() {
+        // Use team name as primary indicator to avoid lazy loading issues
+        return teamName != null && !teamName.trim().isEmpty();
+    }
+
+    public int getTeamSize() {
+        return teamMembers != null ? teamMembers.size() : 0;
+    }
+
+    public TeamMember getTeamLeader() {
+        return teamMembers.stream()
+                .filter(TeamMember::isTeamLeader)
+                .findFirst()
+                .orElse(null);
     }
 }

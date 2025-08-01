@@ -49,7 +49,7 @@ public class DataInitializer implements CommandLineRunner {
      * Create sample treasure hunt plans
      */
     private void createSamplePlans() {
-        // Beginner Plan
+        // Beginner Plan - Individual
         TreasureHuntPlan beginnerPlan = new TreasureHuntPlan(
                 "Urban Explorer",
                 "Perfect for first-time treasure hunters! Explore the city center with easy-to-solve puzzles and clues. " +
@@ -61,6 +61,7 @@ public class DataInitializer implements CommandLineRunner {
                 15,
                 new BigDecimal("29.99")
         );
+        // Individual plan (default)
 
         TreasureHuntPlan beginnerPlan2 = new TreasureHuntPlan(
                 "Park Adventure",
@@ -72,6 +73,9 @@ public class DataInitializer implements CommandLineRunner {
                 20,
                 new BigDecimal("24.99")
         );
+        // Set as team-based plan
+        beginnerPlan2.setTeamType(TreasureHuntPlan.TeamType.TEAM);
+        beginnerPlan2.setTeamSize(2);
 
         // Intermediate Plans
         TreasureHuntPlan intermediatePlan = new TreasureHuntPlan(
@@ -85,6 +89,9 @@ public class DataInitializer implements CommandLineRunner {
                 12,
                 new BigDecimal("45.99")
         );
+        // Set as team-based plan with 3 members
+        intermediatePlan.setTeamType(TreasureHuntPlan.TeamType.TEAM);
+        intermediatePlan.setTeamSize(3);
 
         TreasureHuntPlan intermediatePlan2 = new TreasureHuntPlan(
                 "Downtown Detective",
@@ -97,6 +104,7 @@ public class DataInitializer implements CommandLineRunner {
                 10,
                 new BigDecimal("52.99")
         );
+        // Individual plan (default)
 
         // Advanced Plans
         TreasureHuntPlan advancedPlan = new TreasureHuntPlan(
@@ -110,6 +118,9 @@ public class DataInitializer implements CommandLineRunner {
                 6,
                 new BigDecimal("89.99")
         );
+        // Set as team-based plan with 5 members
+        advancedPlan.setTeamType(TreasureHuntPlan.TeamType.TEAM);
+        advancedPlan.setTeamSize(5);
 
         TreasureHuntPlan advancedPlan2 = new TreasureHuntPlan(
                 "Nighttime Expedition",
@@ -122,6 +133,9 @@ public class DataInitializer implements CommandLineRunner {
                 8,
                 new BigDecimal("75.99")
         );
+        // Set as team-based plan with 4 members
+        advancedPlan2.setTeamType(TreasureHuntPlan.TeamType.TEAM);
+        advancedPlan2.setTeamSize(4);
 
         // Save all plans
         try {

@@ -1,4 +1,7 @@
 .env
-traget/
+.mvn/
+target/
 .idea/
 node_modules/
+
+logs/

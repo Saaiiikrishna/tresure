@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registration Cancelled</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #dc3545;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .cancel-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin: 20px 0;
+        }
+        .info-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .highlight {
+            background-color: #f8d7da;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo" th:text="${companyName}">Treasure Hunt Adventures</div>
+            <div class="cancel-icon">❌</div>
+            <h1 style="color: #dc3545; margin: 0;">Registration Cancelled</h1>
+        </div>
+
+        <!-- Greeting -->
+        <div style="margin-bottom: 25px;">
+            <h2 style="color: #dc3545; margin-bottom: 10px;">
+                Hello <span th:text="${registration.fullName}">Participant</span>,
+            </h2>
+        </div>
+
+        <!-- Main Message -->
+        <div style="margin-bottom: 25px;">
+            <p style="font-size: 16px; margin-bottom: 15px;">
+                We regret to inform you that your registration for 
+                <span class="highlight" th:text="${plan.name}">Adventure Plan</span> 
+                has been <strong>cancelled</strong>.
+            </p>
+            <p>
+                We sincerely apologize for any inconvenience this may cause.
+            </p>
+        </div>
+
+        <!-- Registration Details -->
+        <div class="info-card">
+            <h3 style="color: #dc3545; margin-top: 0;">📋 Cancelled Registration Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Number:</td>
+                    <td style="padding: 8px 0;" th:text="${registrationNumber}">TH-000001</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Participant:</td>
+                    <td style="padding: 8px 0;" th:text="${registration.fullName}">Participant Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Adventure Plan:</td>
+                    <td style="padding: 8px 0;" th:text="${plan.name}">Plan Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Duration:</td>
+                    <td style="padding: 8px 0;">
+                        <span th:text="${plan.durationHours}">4</span> hours
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Cancellation Date:</td>
+                    <td style="padding: 8px 0;" th:text="${#temporals.format(#temporals.createNow(), 'MMM dd, yyyy')}">Today</td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Reason and Next Steps -->
+        <div style="margin: 25px 0;">
+            <h3 style="color: #007bff;">🤔 Why was this cancelled?</h3>
+            <p>Registrations may be cancelled for various reasons including:</p>
+            <ul>
+                <li>Weather conditions or safety concerns</li>
+                <li>Insufficient participant numbers</li>
+                <li>Venue or logistical issues</li>
+                <li>Administrative reasons</li>
+            </ul>
+            <p>For specific details about your cancellation, please contact our support team.</p>
+        </div>
+
+        <!-- Refund Information -->
+        <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="color: #e0a800; margin-top: 0;">💰 Refund Information</h3>
+            <p>If you paid for this registration:</p>
+            <ul>
+                <li>Refunds will be processed automatically within 5-7 business days</li>
+                <li>You will receive a separate email confirmation once the refund is processed</li>
+                <li>Refunds will be credited to your original payment method</li>
+            </ul>
+            <p><strong>No action is required from you</strong> - we'll handle everything automatically.</p>
+        </div>
+
+        <!-- Rebooking Information -->
+        <div style="background-color: #e8f5e8; border-left: 4px solid #28a745; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3 style="color: #28a745; margin-top: 0;">🔄 Want to Rebook?</h3>
+            <p>We'd love to have you join us for another adventure! Here's how to get started:</p>
+            <ul>
+                <li>Visit our website to see available dates</li>
+                <li>Contact our team for personalized recommendations</li>
+                <li>Ask about special offers for returning participants</li>
+            </ul>
+            <p>As a returning customer, you may be eligible for special discounts on future bookings!</p>
+        </div>
+
+        <!-- Contact Information -->
+        <div style="margin: 25px 0; text-align: center;">
+            <p>Questions about this cancellation? We're here to help!</p>
+            <a th:href="'mailto:' + ${supportEmail}" class="btn" th:text="'Contact Support: ' + ${supportEmail}">
+                Contact Support
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                We sincerely apologize for any inconvenience this cancellation may cause.<br>
+                Thank you for your understanding, and we hope to see you again soon!
+            </p>
+            <p style="margin-top: 15px;">
+                Best regards,<br>
+                The <span th:text="${companyName}">Treasure Hunt Adventures</span> Team
+            </p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                This email was sent to <span th:text="${registration.email}">email@example.com</span><br>
+                If you have any questions, please contact us at <span th:text="${supportEmail}">support@example.com</span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

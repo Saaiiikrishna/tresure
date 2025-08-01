@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Email Campaign - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .form-section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .preview-area {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            background: white;
+            min-height: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-dark text-white p-0">
+                <div class="p-3">
+                    <h5><i class="fas fa-envelope me-2"></i>Email System</h5>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white" href="/admin/email-campaigns">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white active" href="/admin/email-campaigns/create">
+                        <i class="fas fa-plus me-2"></i>Create Campaign
+                    </a>
+                    <a class="nav-link text-white" href="/admin/email-campaigns/email-queue">
+                        <i class="fas fa-list me-2"></i>Email Queue
+                    </a>
+                    <a class="nav-link text-white" href="/admin/registrations">
+                        <i class="fas fa-users me-2"></i>Registrations
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="p-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-plus me-2"></i>Create Email Campaign</h2>
+                        <a href="/admin/email-campaigns" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                        </a>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Campaign Form -->
+                    <form th:action="@{/admin/email-campaigns/create}" method="post" th:object="${campaign}">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <!-- Basic Information -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-info-circle me-2"></i>Campaign Information</h5>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="name" class="form-label">Campaign Name *</label>
+                                                <input type="text" class="form-control" id="name" th:field="*{name}" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="campaignType" class="form-label">Campaign Type *</label>
+                                                <select class="form-select" id="campaignType" th:field="*{campaignType}" required>
+                                                    <option value="">Select Type</option>
+                                                    <option th:each="type : ${campaignTypes}" th:value="${type}" th:text="${type}">TYPE</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="description" class="form-label">Description</label>
+                                        <textarea class="form-control" id="description" th:field="*{description}" rows="3" 
+                                                  placeholder="Brief description of the campaign purpose"></textarea>
+                                    </div>
+
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="targetAudience" class="form-label">Target Audience *</label>
+                                                <select class="form-select" id="targetAudience" th:field="*{targetAudience}" required>
+                                                    <option value="">Select Audience</option>
+                                                    <option th:each="audience : ${targetAudiences}" th:value="${audience}" th:text="${audience}">AUDIENCE</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <label for="priority" class="form-label">Priority</label>
+                                                <select class="form-select" id="priority" th:field="*{priority}">
+                                                    <option value="1">High (1)</option>
+                                                    <option value="3">Medium (3)</option>
+                                                    <option value="5" selected>Normal (5)</option>
+                                                    <option value="7">Low (7)</option>
+                                                    <option value="10">Very Low (10)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Email Content -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-edit me-2"></i>Email Content</h5>
+                                    
+                                    <div class="mb-3">
+                                        <label for="subject" class="form-label">Subject Line *</label>
+                                        <input type="text" class="form-control" id="subject" th:field="*{subject}" required
+                                               placeholder="Enter compelling subject line">
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <label for="body" class="form-label">Email Body *</label>
+                                        <textarea class="form-control" id="body" th:field="*{body}" rows="15" required
+                                                  placeholder="Enter your email content here. You can use HTML for formatting."></textarea>
+                                        <div class="form-text">
+                                            You can use HTML tags for formatting. Available variables: {{fullName}}, {{email}}, {{teamName}}, {{registrationDate}}
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <button type="button" class="btn btn-outline-secondary" onclick="insertTemplate()">
+                                            <i class="fas fa-magic me-2"></i>Insert Template
+                                        </button>
+                                        <button type="button" class="btn btn-outline-info" onclick="previewEmail()">
+                                            <i class="fas fa-eye me-2"></i>Preview
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-2"></i>Save as Draft
+                                    </button>
+                                    <button type="button" class="btn btn-success" onclick="sendNow()">
+                                        <i class="fas fa-paper-plane me-2"></i>Send Now
+                                    </button>
+                                    <button type="button" class="btn btn-warning" onclick="scheduleModal()">
+                                        <i class="fas fa-clock me-2"></i>Schedule
+                                    </button>
+                                    <a href="/admin/email-campaigns" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times me-2"></i>Cancel
+                                    </a>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <!-- Preview Panel -->
+                                <div class="form-section">
+                                    <h5><i class="fas fa-eye me-2"></i>Email Preview</h5>
+                                    <div class="preview-area" id="emailPreview">
+                                        <div class="text-center text-muted">
+                                            <i class="fas fa-envelope fa-3x mb-3"></i>
+                                            <p>Email preview will appear here</p>
+                                            <p>Fill in the subject and body to see preview</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Campaign Tips -->
+                                <div class="form-section">
+                                    <h6><i class="fas fa-lightbulb me-2"></i>Campaign Tips</h6>
+                                    <ul class="small">
+                                        <li>Keep subject lines under 50 characters</li>
+                                        <li>Use personalization variables like {{fullName}}</li>
+                                        <li>Test your email content before sending</li>
+                                        <li>Consider your audience's time zone</li>
+                                        <li>Include a clear call-to-action</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Schedule Modal -->
+    <div class="modal fade" id="scheduleModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Schedule Campaign</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="scheduledDateTime" class="form-label">Schedule Date & Time</label>
+                        <input type="datetime-local" class="form-control" id="scheduledDateTime" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmSchedule()">Schedule Campaign</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function previewEmail() {
+            const subject = document.getElementById('subject').value;
+            const body = document.getElementById('body').value;
+            
+            if (!subject && !body) {
+                document.getElementById('emailPreview').innerHTML = `
+                    <div class="text-center text-muted">
+                        <i class="fas fa-envelope fa-3x mb-3"></i>
+                        <p>Email preview will appear here</p>
+                        <p>Fill in the subject and body to see preview</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            document.getElementById('emailPreview').innerHTML = `
+                <div class="border-bottom pb-2 mb-3">
+                    <strong>Subject:</strong> ${subject || 'No subject'}
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    ${body || 'No content'}
+                </div>
+            `;
+        }
+
+        function insertTemplate() {
+            const template = `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>{{subject}}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="margin: 0; font-size: 28px;">🎉 Treasure Hunt Adventures</h1>
+            <p style="margin: 10px 0 0 0; font-size: 18px;">Your Adventure Awaits!</p>
+        </div>
+        <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;">
+            <h2 style="color: #667eea; margin-top: 0;">Hello {{fullName}}!</h2>
+            <p>We have exciting news to share with you about your treasure hunt adventure.</p>
+            
+            <!-- Your content here -->
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <p style="color: #6c757d;">Questions? Contact us at <a href="mailto:support@treasurehunt.com" style="color: #667eea;">support@treasurehunt.com</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>`;
+            
+            document.getElementById('body').value = template;
+            previewEmail();
+        }
+
+        function sendNow() {
+            if (confirm('Are you sure you want to send this campaign immediately?')) {
+                // Add hidden field to indicate immediate sending
+                const form = document.querySelector('form');
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'sendNow';
+                input.value = 'true';
+                form.appendChild(input);
+                form.submit();
+            }
+        }
+
+        function scheduleModal() {
+            const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+            modal.show();
+        }
+
+        function confirmSchedule() {
+            const scheduledDateTime = document.getElementById('scheduledDateTime').value;
+            if (!scheduledDateTime) {
+                alert('Please select a date and time');
+                return;
+            }
+
+            // Add hidden fields for scheduling
+            const form = document.querySelector('form');
+            const input1 = document.createElement('input');
+            input1.type = 'hidden';
+            input1.name = 'schedule';
+            input1.value = 'true';
+            form.appendChild(input1);
+            
+            const input2 = document.createElement('input');
+            input2.type = 'hidden';
+            input2.name = 'scheduledDateTime';
+            input2.value = scheduledDateTime;
+            form.appendChild(input2);
+            
+            form.submit();
+        }
+
+        // Auto-preview on input
+        document.getElementById('subject').addEventListener('input', previewEmail);
+        document.getElementById('body').addEventListener('input', previewEmail);
+    </script>
+</body>
+</html>

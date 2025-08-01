@@ -5,11 +5,13 @@ import com.treasurehunt.service.TreasureHuntPlanService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,6 +52,41 @@ public class HomeController {
             logger.error("Error loading home page", e);
             model.addAttribute("error", "Unable to load treasure hunt plans. Please try again later.");
             return "error";
+        }
+    }
+
+    /**
+     * Test page for JavaScript debugging
+     * @return Template name
+     */
+    @GetMapping("/test")
+    public String test() {
+        logger.info("Displaying test page");
+        return "test";
+    }
+
+    /**
+     * Debug endpoint to serve JavaScript file directly
+     */
+    @GetMapping(value = "/debug/js", produces = "application/javascript; charset=utf-8")
+    @ResponseBody
+    public ResponseEntity<String> debugJs() {
+        try {
+            // Read the JavaScript file directly
+            ClassPathResource resource = new ClassPathResource("static/js/app.js");
+            String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+
+            logger.info("Serving JavaScript file, content length: {}", content.length());
+
+            return ResponseEntity.ok()
+                    .header("Content-Type", "application/javascript; charset=utf-8")
+                    .header("Cache-Control", "no-cache")
+                    .body(content);
+        } catch (Exception e) {
+            logger.error("Error reading JavaScript file", e);
+            return ResponseEntity.status(500)
+                    .header("Content-Type", "text/plain")
+                    .body("Error: " + e.getMessage());
         }
     }
 

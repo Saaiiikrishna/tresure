@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Admin Dashboard - Treasure Hunt Adventures</title>
-    
+
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -142,6 +144,18 @@
                 <a class="nav-link" href="/admin/registrations">
                     <i class="fas fa-users"></i>
                     Registrations
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/email-campaigns">
+                    <i class="fas fa-envelope"></i>
+                    Email Campaigns
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/email-campaigns/email-queue">
+                    <i class="fas fa-list"></i>
+                    Email Queue
                 </a>
             </li>
             <li class="nav-item">
@@ -440,19 +454,43 @@
 
         function updateStatus(id, status) {
             if (confirm(`Are you sure you want to ${status.toLowerCase()} this registration?`)) {
+                // Get CSRF token
+                const csrfToken = document.querySelector('meta[name="_csrf"]').getAttribute('content');
+                const csrfHeader = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
+
                 fetch(`/admin/registrations/${id}/status`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
+                        [csrfHeader]: csrfToken
                     },
                     body: `status=${status}`
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        location.reload();
+                        // Show success message
+                        const alertDiv = document.createElement('div');
+                        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+                        alertDiv.innerHTML = `
+                            <strong>Success!</strong> Registration ${status.toLowerCase()} successfully. Emails are being sent.
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        `;
+
+                        // Find a safe place to insert the alert
+                        const mainContent = document.querySelector('.main-content') || document.body;
+                        const firstCard = mainContent.querySelector('.card');
+
+                        if (firstCard) {
+                            mainContent.insertBefore(alertDiv, firstCard);
+                        } else {
+                            mainContent.insertBefore(alertDiv, mainContent.firstChild);
+                        }
+
+                        // Reload page after short delay
+                        setTimeout(() => location.reload(), 2000);
                     } else {
-                        alert('Error updating status: ' + data.message);
+                        alert('Error updating status: ' + (data.message || 'Unknown error'));
                     }
                 })
                 .catch(error => {

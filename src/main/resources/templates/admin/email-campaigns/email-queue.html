@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Queue - Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .stats-card .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .status-badge {
+            font-size: 0.8rem;
+            padding: 0.4rem 0.8rem;
+        }
+        .email-preview {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 bg-dark text-white p-0">
+                <div class="p-3">
+                    <h5><i class="fas fa-envelope me-2"></i>Email System</h5>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white" href="/admin/email-campaigns">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white" href="/admin/email-campaigns/create">
+                        <i class="fas fa-plus me-2"></i>Create Campaign
+                    </a>
+                    <a class="nav-link text-white active" href="/admin/email-campaigns/email-queue">
+                        <i class="fas fa-list me-2"></i>Email Queue
+                    </a>
+                    <a class="nav-link text-white" href="/admin/email-templates">
+                        <i class="fas fa-file-code me-2"></i>Email Templates
+                    </a>
+                    <a class="nav-link text-white" href="/admin/registrations">
+                        <i class="fas fa-users me-2"></i>Registrations
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="p-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2><i class="fas fa-list me-2"></i>Email Queue</h2>
+                        <div>
+                            <button class="btn btn-outline-primary" onclick="refreshQueue()">
+                                <i class="fas fa-sync me-2"></i>Refresh
+                            </button>
+                            <a href="/admin/email-campaigns" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Error Messages -->
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Statistics Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="stats-card">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="stats-number" th:text="${emailStats != null ? emailStats.totalEmails : 0}">0</div>
+                                        <div>Total Emails</div>
+                                    </div>
+                                    <i class="fas fa-envelope fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="stats-number" th:text="${emailStats != null ? emailStats.sentEmails : 0}">0</div>
+                                        <div>Sent</div>
+                                    </div>
+                                    <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="stats-number" th:text="${emailStats != null ? emailStats.pendingEmails : 0}">0</div>
+                                        <div>Pending</div>
+                                    </div>
+                                    <i class="fas fa-clock fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="stats-card" style="background: linear-gradient(135deg, #dc3545 0%, #e83e8c 100%);">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="stats-number" th:text="${emailStats != null ? emailStats.failedEmails : 0}">0</div>
+                                        <div>Failed</div>
+                                    </div>
+                                    <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title">Filters</h5>
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label for="statusFilter" class="form-label">Status</label>
+                                    <select class="form-select" id="statusFilter" onchange="filterEmails()">
+                                        <option value="">All Statuses</option>
+                                        <option value="PENDING">Pending</option>
+                                        <option value="PROCESSING">Processing</option>
+                                        <option value="SENT">Sent</option>
+                                        <option value="FAILED">Failed</option>
+                                        <option value="CANCELLED">Cancelled</option>
+                                        <option value="SCHEDULED">Scheduled</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="typeFilter" class="form-label">Type</label>
+                                    <select class="form-select" id="typeFilter" onchange="filterEmails()">
+                                        <option value="">All Types</option>
+                                        <option value="REGISTRATION_CONFIRMATION">Registration Confirmation</option>
+                                        <option value="APPLICATION_APPROVAL">Application Approval</option>
+                                        <option value="ADMIN_NOTIFICATION">Admin Notification</option>
+                                        <option value="CAMPAIGN_EMAIL">Campaign Email</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="searchInput" class="form-label">Search</label>
+                                    <input type="text" class="form-control" id="searchInput" placeholder="Search by email or subject..." onkeyup="filterEmails()">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button class="btn btn-outline-secondary d-block w-100" onclick="clearFilters()">
+                                        <i class="fas fa-times me-1"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Queue Table -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Email Queue</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover" id="emailTable">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Recipient</th>
+                                            <th>Subject</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Priority</th>
+                                            <th>Created</th>
+                                            <th>Scheduled</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:if="${emails == null or emails.empty}">
+                                            <td colspan="9" class="text-center text-muted">No emails found</td>
+                                        </tr>
+                                        <tr th:each="email : ${emails}" th:if="${emails != null}">
+                                            <td th:text="${email.id}">1</td>
+                                            <td>
+                                                <div th:text="${email.recipientEmail}">user@example.com</div>
+                                                <small class="text-muted" th:text="${email.recipientName}">User Name</small>
+                                            </td>
+                                            <td>
+                                                <div class="email-preview" th:text="${email.subject}">Email Subject</div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-info" th:text="${email.emailType}">TYPE</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge status-badge bg-secondary" th:text="${email.status}">STATUS</span>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary" th:text="${email.priority}">5</span>
+                                            </td>
+                                            <td>
+                                                <span th:text="${#temporals.format(email.createdDate, 'MMM dd, HH:mm')}">Date</span>
+                                            </td>
+                                            <td>
+                                                <span th:if="${email.scheduledDate}" 
+                                                      th:text="${#temporals.format(email.scheduledDate, 'MMM dd, HH:mm')}">Date</span>
+                                                <span th:unless="${email.scheduledDate}" class="text-muted">-</span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" th:onclick="'viewEmail(' + ${email.id} + ')'">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning" th:if="${email.status == 'FAILED'}" th:onclick="'retryEmail(' + ${email.id} + ')'">
+                                                    <i class="fas fa-redo"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" th:if="${email.status == 'PENDING' or email.status == 'SCHEDULED'}" th:onclick="'cancelEmail(' + ${email.id} + ')'">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function refreshQueue() {
+            location.reload();
+        }
+
+        function filterEmails() {
+            // Simple client-side filtering
+            const statusFilter = document.getElementById('statusFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            
+            const rows = document.querySelectorAll('#emailTable tbody tr');
+            
+            rows.forEach(row => {
+                if (row.cells.length === 1) return; // Skip "no emails" row
+                
+                const status = row.cells[4].textContent.trim();
+                const type = row.cells[3].textContent.trim();
+                const email = row.cells[1].textContent.toLowerCase();
+                const subject = row.cells[2].textContent.toLowerCase();
+                
+                const statusMatch = !statusFilter || status === statusFilter;
+                const typeMatch = !typeFilter || type === typeFilter;
+                const searchMatch = !searchInput || email.includes(searchInput) || subject.includes(searchInput);
+                
+                row.style.display = statusMatch && typeMatch && searchMatch ? '' : 'none';
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            filterEmails();
+        }
+
+        function viewEmail(id) {
+            alert('View email functionality - ID: ' + id);
+        }
+
+        function retryEmail(id) {
+            if (confirm('Are you sure you want to retry this email?')) {
+                alert('Retry email functionality - ID: ' + id);
+            }
+        }
+
+        function cancelEmail(id) {
+            if (confirm('Are you sure you want to cancel this email?')) {
+                alert('Cancel email functionality - ID: ' + id);
+            }
+        }
+    </script>
+</body>
+</html>

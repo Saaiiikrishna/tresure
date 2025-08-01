@@ -1,5 +1,6 @@
 package com.treasurehunt.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -20,6 +21,7 @@ public class UploadedDocument {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registration_id", nullable = false)
+    @JsonIgnore
     private UserRegistration registration;
 
     @NotNull(message = "Document type is required")

@@ -7,6 +7,8 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -270,5 +272,58 @@ public class FileStorageService {
             default:
                 return false;
         }
+    }
+
+    /**
+     * Get document by ID
+     * @param documentId Document ID
+     * @return Document entity
+     * @throws IllegalArgumentException if document not found
+     */
+    @Transactional(readOnly = true)
+    public UploadedDocument getDocumentById(Long documentId) {
+        return documentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("Document not found with ID: " + documentId));
+    }
+
+    /**
+     * Load file as resource for download/viewing
+     * @param filename Stored filename
+     * @return File resource
+     * @throws IOException if file not found or cannot be read
+     */
+    public Resource loadFileAsResource(String filename) throws IOException {
+        try {
+            // Find the file in any registration directory
+            Path filePath = findFileInStorage(filename);
+            Resource resource = new UrlResource(filePath.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                return resource;
+            } else {
+                throw new IOException("File not found or not readable: " + filename);
+            }
+        } catch (Exception e) {
+            throw new IOException("Error loading file: " + filename, e);
+        }
+    }
+
+    /**
+     * Find file in storage directories
+     * @param filename Stored filename
+     * @return Path to file
+     * @throws IOException if file not found
+     */
+    private Path findFileInStorage(String filename) throws IOException {
+        // First try to find by document record
+        UploadedDocument document = documentRepository.findByStoredFilename(filename)
+                .orElseThrow(() -> new IOException("Document record not found for filename: " + filename));
+
+        Path filePath = Paths.get(document.getFilePath());
+        if (Files.exists(filePath)) {
+            return filePath;
+        }
+
+        throw new IOException("Physical file not found: " + filename);
     }
 }

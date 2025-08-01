@@ -46,16 +46,19 @@ spring:
     host: smtp.gmail.com
     port: 587
     username: ${GMAIL_USERNAME:tresurhunting@gmail.com}
-    password: ${GMAIL_APP_PASSWORD:vhgf rrxt yede hnae}
+    password: ${GMAIL_PASSWORD:kweh zjts ijoz qrfr}
     properties:
       mail:
         smtp:
           auth: true
           starttls:
             enable: true
-          connectiontimeout: 5000
-          timeout: 5000
-          writetimeout: 5000
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+          ssl:
+            trust: smtp.gmail.com
   
   # File Upload Configuration
   servlet:
@@ -77,8 +80,10 @@ app:
   
   email:
     from: ${GMAIL_USERNAME:tresurhunting@gmail.com}
-    support: tresurhunting@gmail.com
-    company-name: Treasure Hunt Adventures
+    support: ${APP_EMAIL_SUPPORT:tresurhunting@gmail.com}
+    company-name: ${APP_EMAIL_COMPANY_NAME:Treasure Hunt Adventures}
+    mock:
+      enabled: ${APP_EMAIL_MOCK_ENABLED:false}  # Use real Gmail SMTP
   
   security:
     admin:

@@ -38,11 +38,6 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#contact">Contact</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="/admin" target="_blank">
-                            <i class="fas fa-cog"></i> Admin
-                        </a>
-                    </li>
                 </ul>
             </div>
         </div>
@@ -147,22 +142,28 @@
                                     <span><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
                                     <span th:text="${plan.maxParticipants - plan.registrationCount}">Available spots</span>
                                 </div>
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span><i class="fas fa-users-cog text-primary me-1"></i> Team Format:</span>
+                                    <span th:text="${plan.teamDescription}">Team format</span>
+                                </div>
                             </div>
                             
                             <div class="mt-auto">
                                 <div class="d-flex justify-content-between align-items-center mb-3">
                                     <h4 class="text-primary mb-0">
-                                        $<span th:text="${#numbers.formatDecimal(plan.priceUsd, 1, 2)}">0.00</span>
+                                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>
                                     </h4>
                                     <small class="text-muted">per person</small>
                                 </div>
                                 
                                 <div class="d-grid gap-2">
-                                    <button type="button" 
+                                    <button type="button"
                                             class="btn btn-primary register-btn"
                                             th:data-plan-id="${plan.id}"
                                             th:data-plan-name="${plan.name}"
-                                            th:data-plan-price="${plan.priceUsd}"
+                                            th:data-plan-price="${plan.priceInr}"
+                                            th:data-team-size="${plan.teamSize}"
+                                            th:data-team-type="${plan.teamType}"
                                             th:disabled="${!plan.available}">
                                         <i class="fas fa-user-plus me-2"></i>
                                         <span th:if="${plan.available}">Register Now</span>
@@ -320,6 +321,35 @@
                     <div id="registrationFormContainer">
                         <!-- Form content will be dynamically loaded -->
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Registration Successful!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="successModalContent">
+                        <!-- Success content will be dynamically loaded -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <div class="text-muted small">
+                        <i class="fas fa-envelope me-1"></i>
+                        You will receive confirmation at: <strong>treasurehuntadventures@gmail.com</strong>
+                    </div>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="closeSuccessModal()">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
                 </div>
             </div>
         </div>

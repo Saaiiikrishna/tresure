@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team Registration Confirmed</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .email-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #007bff;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+            margin-bottom: 10px;
+        }
+        .success-icon {
+            font-size: 48px;
+            color: #28a745;
+            margin: 20px 0;
+        }
+        .team-badge {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            display: inline-block;
+            margin: 10px 0;
+        }
+        .leader-badge {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+        }
+        .info-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .checklist {
+            background-color: #e8f5e8;
+            border-left: 4px solid #28a745;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .checklist ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .checklist li {
+            margin: 8px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo" th:text="${companyName}">Treasure Hunt Adventures</div>
+            <div class="success-icon">✅</div>
+            <h1 style="color: #28a745; margin: 0;">Registration Confirmed!</h1>
+        </div>
+
+        <!-- Greeting -->
+        <div style="margin-bottom: 25px;">
+            <h2 style="color: #007bff; margin-bottom: 10px;">
+                Hello <span th:text="${member.fullName}">Team Member</span>!
+            </h2>
+            <div th:if="${isTeamLeader}" class="team-badge leader-badge">
+                👑 Team Leader
+            </div>
+            <div th:unless="${isTeamLeader}" class="team-badge">
+                👤 Team Member
+            </div>
+        </div>
+
+        <!-- Main Message -->
+        <div style="margin-bottom: 25px;">
+            <p style="font-size: 16px; margin-bottom: 15px;">
+                Fantastic news! Your team registration for 
+                <span class="highlight" th:text="${plan.name}">Adventure Plan</span> 
+                has been <strong>confirmed</strong>!
+            </p>
+            <p>
+                We're thrilled to have you and your team 
+                <strong th:text="${teamName}">Team Name</strong> 
+                join us for this exciting adventure.
+            </p>
+        </div>
+
+        <!-- Registration Details -->
+        <div class="info-card">
+            <h3 style="color: #007bff; margin-top: 0;">📋 Your Registration Details</h3>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Registration Number:</td>
+                    <td style="padding: 8px 0;" th:text="${registrationNumber}">TH-000001</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Team Name:</td>
+                    <td style="padding: 8px 0;" th:text="${teamName}">Team Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Adventure Plan:</td>
+                    <td style="padding: 8px 0;" th:text="${plan.name}">Plan Name</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Duration:</td>
+                    <td style="padding: 8px 0;">
+                        <span th:text="${plan.durationHours}">4</span> hours
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Difficulty:</td>
+                    <td style="padding: 8px 0;" th:text="${plan.difficultyLevel}">Intermediate</td>
+                </tr>
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold;">Your Role:</td>
+                    <td style="padding: 8px 0;">
+                        <span th:if="${isTeamLeader}">👑 Team Leader</span>
+                        <span th:unless="${isTeamLeader}">👤 Team Member</span>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Team Leader Specific Information -->
+        <div th:if="${isTeamLeader}" class="info-card" style="border-left-color: #ffc107; background-color: #fff8e1;">
+            <h3 style="color: #e0a800; margin-top: 0;">👑 Team Leader Responsibilities</h3>
+            <p>As the team leader, you have some additional responsibilities:</p>
+            <ul>
+                <li>Coordinate with your team members before the event</li>
+                <li>Ensure all team members arrive on time</li>
+                <li>Act as the primary contact for any event updates</li>
+                <li>Lead your team during the treasure hunt adventure</li>
+            </ul>
+        </div>
+
+        <!-- Pre-Hunt Checklist -->
+        <div class="checklist">
+            <h3 style="color: #28a745; margin-top: 0;">✅ Pre-Hunt Checklist</h3>
+            <p>To ensure you have the best experience, please:</p>
+            <ul th:if="${checklist}">
+                <li th:each="item : ${checklist}" th:text="${item}">Checklist item</li>
+            </ul>
+            <ul th:unless="${checklist}">
+                <li>Wear comfortable walking shoes</li>
+                <li>Bring a fully charged smartphone</li>
+                <li>Dress appropriately for outdoor activities</li>
+                <li>Bring a water bottle and light snacks</li>
+                <li>Arrive 15 minutes before the scheduled start time</li>
+            </ul>
+        </div>
+
+        <!-- Next Steps -->
+        <div style="margin: 25px 0;">
+            <h3 style="color: #007bff;">🚀 What's Next?</h3>
+            <p>We'll send you detailed event information including:</p>
+            <ul>
+                <li>📍 Exact meeting location and parking details</li>
+                <li>⏰ Final schedule and timeline</li>
+                <li>📱 Event app download instructions (if applicable)</li>
+                <li>🌤️ Weather updates and recommendations</li>
+            </ul>
+            <p>This information will be sent to you <strong>48 hours before your adventure</strong>.</p>
+        </div>
+
+        <!-- Contact Information -->
+        <div style="margin: 25px 0; text-align: center;">
+            <p>Questions? We're here to help!</p>
+            <a th:href="'mailto:' + ${supportEmail}" class="btn" th:text="'Contact Support: ' + ${supportEmail}">
+                Contact Support
+            </a>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>
+                Thank you for choosing <span th:text="${companyName}">Treasure Hunt Adventures</span>!<br>
+                We can't wait to see you and your team in action! 🏆
+            </p>
+            <p style="margin-top: 15px; font-size: 12px;">
+                This email was sent to <span th:text="${member.email}">email@example.com</span><br>
+                If you have any questions, please contact us at <span th:text="${supportEmail}">support@example.com</span>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

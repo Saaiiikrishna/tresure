@@ -28,7 +28,13 @@ public interface TreasureHuntPlanRepository extends JpaRepository<TreasureHuntPl
      */
     @Query("SELECT p FROM TreasureHuntPlan p WHERE p.status = 'ACTIVE' " +
            "AND (SELECT COUNT(r) FROM UserRegistration r WHERE r.plan = p AND r.status = 'CONFIRMED') < p.maxParticipants " +
-           "ORDER BY p.createdDate DESC")
+           "ORDER BY " +
+           "CASE p.difficultyLevel " +
+           "  WHEN 'BEGINNER' THEN 1 " +
+           "  WHEN 'INTERMEDIATE' THEN 2 " +
+           "  WHEN 'ADVANCED' THEN 3 " +
+           "  ELSE 4 " +
+           "END, p.createdDate ASC")
     List<TreasureHuntPlan> findAvailablePlans();
 
     /**

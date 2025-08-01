@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Template Management - Admin Panel</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .template-card {
+            transition: transform 0.2s ease-in-out;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .template-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .btn-edit {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+        }
+        .btn-edit:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+            color: white;
+        }
+        .template-icon {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar text-white p-0">
+                <div class="p-3">
+                    <h5><i class="fas fa-envelope me-2"></i>Email Templates</h5>
+                </div>
+                <nav class="nav flex-column">
+                    <a class="nav-link text-white active" href="/admin/email-templates">
+                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    </a>
+                    <a class="nav-link text-white" href="/admin/email-campaigns">
+                        <i class="fas fa-paper-plane me-2"></i>Email Campaigns
+                    </a>
+                    <a class="nav-link text-white" href="/admin/email-campaigns/email-queue">
+                        <i class="fas fa-list me-2"></i>Email Queue
+                    </a>
+                    <a class="nav-link text-white" href="/admin/registrations">
+                        <i class="fas fa-users me-2"></i>Registrations
+                    </a>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-10">
+                <div class="container-fluid py-4">
+                    <!-- Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h1 class="h3 mb-0">Email Template Management</h1>
+                            <p class="text-muted">Manage and customize email templates for the treasure hunt system</p>
+                        </div>
+                        <div>
+                            <button class="btn btn-outline-primary" onclick="refreshStats()">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Error/Success Messages -->
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span th:text="${error}">Error message</span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Email Statistics -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            <div class="card stats-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-envelope-open-text fa-2x mb-2"></i>
+                                    <h4 th:text="${emailStats?.totalSent ?: 0}">0</h4>
+                                    <p class="mb-0">Total Emails Sent</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stats-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x mb-2"></i>
+                                    <h4 th:text="${emailStats?.pending ?: 0}">0</h4>
+                                    <p class="mb-0">Pending Emails</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stats-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                    <h4 th:text="${emailStats?.delivered ?: 0}">0</h4>
+                                    <p class="mb-0">Delivered Today</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card stats-card">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-exclamation-circle fa-2x mb-2"></i>
+                                    <h4 th:text="${emailStats?.failed ?: 0}">0</h4>
+                                    <p class="mb-0">Failed Emails</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Management -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-code me-2"></i>Available Email Templates
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <!-- Registration Confirmation Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-primary">
+                                                <i class="fas fa-user-check"></i>
+                                            </div>
+                                            <h6 class="card-title">Registration Received</h6>
+                                            <p class="card-text text-muted small">Sent immediately after user submits registration</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/registration-confirmation" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('registration-confirmation')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Application Approval Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-success">
+                                                <i class="fas fa-check-circle"></i>
+                                            </div>
+                                            <h6 class="card-title">Application Approved</h6>
+                                            <p class="card-text text-muted small">Sent when admin approves the application</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/application-approval" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('application-approval')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Admin Notification Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-warning">
+                                                <i class="fas fa-bell"></i>
+                                            </div>
+                                            <h6 class="card-title">Admin Notification</h6>
+                                            <p class="card-text text-muted small">Sent to admin when new registration is received</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/admin-notification" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('admin-notification')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Team Member Confirmation Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-info">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                            <h6 class="card-title">Team Member Confirmation</h6>
+                                            <p class="card-text text-muted small">Sent to team members when registration is confirmed</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/team-member-confirmation" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('team-member-confirmation')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Team Cancellation Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-danger">
+                                                <i class="fas fa-times-circle"></i>
+                                            </div>
+                                            <h6 class="card-title">Team Cancellation</h6>
+                                            <p class="card-text text-muted small">Sent when team registration is cancelled</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/team-cancellation" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('team-cancellation')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Individual Cancellation Template -->
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card template-card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="template-icon text-danger">
+                                                <i class="fas fa-user-times"></i>
+                                            </div>
+                                            <h6 class="card-title">Individual Cancellation</h6>
+                                            <p class="card-text text-muted small">Sent when individual registration is cancelled</p>
+                                            <div class="d-grid gap-2">
+                                                <a href="/admin/email-templates/edit/individual-cancellation" class="btn btn-edit btn-sm">
+                                                    <i class="fas fa-edit me-1"></i>Edit Template
+                                                </a>
+                                                <button class="btn btn-outline-secondary btn-sm" onclick="previewTemplate('individual-cancellation')">
+                                                    <i class="fas fa-eye me-1"></i>Preview
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Modal -->
+    <div class="modal fade" id="previewModal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Template Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <iframe id="previewFrame" style="width: 100%; height: 600px; border: none;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function refreshStats() {
+            location.reload();
+        }
+
+        function previewTemplate(templateName) {
+            // This would make an AJAX call to get template preview
+            // For now, just show a placeholder
+            const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+            const frame = document.getElementById('previewFrame');
+            frame.src = 'data:text/html;charset=utf-8,' + encodeURIComponent('<h3>Template Preview for: ' + templateName + '</h3><p>Preview functionality will be implemented with the template editor.</p>');
+            modal.show();
+        }
+    </script>
+</body>
+</html>

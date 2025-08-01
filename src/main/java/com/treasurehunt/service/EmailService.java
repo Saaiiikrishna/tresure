@@ -1,5 +1,6 @@
 package com.treasurehunt.service;
 
+import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.UserRegistration;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -57,7 +58,7 @@ public class EmailService {
             // Set email properties
             helper.setFrom(fromEmail);
             helper.setTo(registration.getEmail());
-            helper.setSubject("Registration Confirmation - " + registration.getPlan().getName());
+            helper.setSubject("Registration Received for " + registration.getPlan().getName());
 
             // Create email content using Thymeleaf template
             Context context = new Context();
@@ -139,7 +140,7 @@ public class EmailService {
     public CompletableFuture<Void> sendAdminNotification(UserRegistration registration) {
         try {
             logger.info("Sending admin notification for new registration ID: {}", registration.getId());
-            
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -157,12 +158,53 @@ public class EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            
+
             logger.info("Successfully sent admin notification for registration ID: {}", registration.getId());
             return CompletableFuture.completedFuture(null);
-            
+
         } catch (MessagingException e) {
             logger.error("Failed to send admin notification for registration ID: {}", registration.getId(), e);
+            return CompletableFuture.failedFuture(e);
+        }
+    }
+
+    /**
+     * Send application approval email asynchronously
+     * @param registration User registration
+     * @return CompletableFuture for async processing
+     */
+    @Async
+    public CompletableFuture<Void> sendApplicationApproval(UserRegistration registration) {
+        try {
+            logger.info("Sending application approval email to: {}", registration.getEmail());
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            // Set email properties
+            helper.setFrom(fromEmail);
+            helper.setTo(registration.getEmail());
+            helper.setSubject("Application Approved - " + registration.getPlan().getName() + " Participation Confirmed");
+
+            // Create email content using Thymeleaf template
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+
+            String htmlContent = templateEngine.process("email/application-approval", context);
+            helper.setText(htmlContent, true);
+
+            // Send email
+            mailSender.send(message);
+
+            logger.info("Successfully sent application approval email to: {}", registration.getEmail());
+            return CompletableFuture.completedFuture(null);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send application approval email to: {}", registration.getEmail(), e);
             return CompletableFuture.failedFuture(e);
         }
     }
@@ -219,6 +261,137 @@ public class EmailService {
                 return "Your registration is currently being reviewed. We'll update you once the review is complete.";
             default:
                 return "Your registration status has been updated.";
+        }
+    }
+
+    /**
+     * Send confirmation email to individual team member
+     * @param registration Team registration
+     * @param member Team member to send email to
+     * @return CompletableFuture for async processing
+     */
+    @Async
+    public CompletableFuture<Void> sendTeamMemberConfirmation(UserRegistration registration, TeamMember member) {
+        logger.info("Sending team member confirmation email to: {}", member.getEmail());
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(member.getEmail());
+            helper.setSubject("Registration Confirmed - " + registration.getPlan().getName());
+
+            // Create email content using Thymeleaf template
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("member", member);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+            context.setVariable("teamName", registration.getTeamName());
+            context.setVariable("isTeamLeader", member.isTeamLeader());
+
+            // Add pre-hunt checklist
+            context.setVariable("checklist", getPreHuntChecklist());
+
+            String htmlContent = templateEngine.process("email/team-member-confirmation", context);
+            helper.setText(htmlContent, true);
+
+            // Send email
+            mailSender.send(message);
+
+            logger.info("Successfully sent team member confirmation email to: {}", member.getEmail());
+            return CompletableFuture.completedFuture(null);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send team member confirmation email to: {}", member.getEmail(), e);
+            throw new RuntimeException("Failed to send team member confirmation email", e);
+        }
+    }
+
+    /**
+     * Send cancellation email to team leader
+     * @param registration Team registration
+     * @param teamLeader Team leader to send email to
+     * @return CompletableFuture for async processing
+     */
+    @Async
+    public CompletableFuture<Void> sendTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
+        logger.info("Sending team cancellation email to team leader: {}", teamLeader.getEmail());
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(teamLeader.getEmail());
+            helper.setSubject("Team Registration Cancelled - " + registration.getPlan().getName());
+
+            // Create email content using Thymeleaf template
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("teamLeader", teamLeader);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+            context.setVariable("teamName", registration.getTeamName());
+            context.setVariable("teamMembers", registration.getTeamMembers());
+
+            String htmlContent = templateEngine.process("email/team-cancellation", context);
+            helper.setText(htmlContent, true);
+
+            // Send email
+            mailSender.send(message);
+
+            logger.info("Successfully sent team cancellation email to team leader: {}", teamLeader.getEmail());
+            return CompletableFuture.completedFuture(null);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send team cancellation email to team leader: {}", teamLeader.getEmail(), e);
+            throw new RuntimeException("Failed to send team cancellation email", e);
+        }
+    }
+
+    /**
+     * Send individual cancellation email
+     * @param registration Individual registration
+     * @return CompletableFuture for async processing
+     */
+    @Async
+    public CompletableFuture<Void> sendCancellationEmail(UserRegistration registration) {
+        logger.info("Sending cancellation email to: {}", registration.getEmail());
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail);
+            helper.setTo(registration.getEmail());
+            helper.setSubject("Registration Cancelled - " + registration.getPlan().getName());
+
+            // Create email content using Thymeleaf template
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+
+            String htmlContent = templateEngine.process("email/individual-cancellation", context);
+            helper.setText(htmlContent, true);
+
+            // Send email
+            mailSender.send(message);
+
+            logger.info("Successfully sent cancellation email to: {}", registration.getEmail());
+            return CompletableFuture.completedFuture(null);
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send cancellation email to: {}", registration.getEmail(), e);
+            throw new RuntimeException("Failed to send cancellation email", e);
         }
     }
 }

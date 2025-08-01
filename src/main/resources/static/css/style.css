@@ -206,11 +206,33 @@ section {
     text-align: center;
     transition: all 0.3s ease;
     cursor: pointer;
+    position: relative;
+    user-select: none;
+}
+
+.file-upload-area::before {
+    content: "📁 Click to select files";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 0.8rem;
+    color: #666;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 4px 8px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.file-upload-area:hover::before {
+    opacity: 1;
 }
 
 .file-upload-area:hover {
     border-color: var(--primary-color);
     background-color: rgba(44, 90, 160, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .file-upload-area.dragover {
@@ -430,4 +452,119 @@ footer {
 
 .rounded-custom {
     border-radius: var(--border-radius);
+}
+
+/* Success Modal Styling */
+#successModal .modal-content {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+#successModal .modal-header {
+    background: linear-gradient(135deg, var(--success-color), #20c997);
+    border: none;
+}
+
+#successModal .success-icon {
+    animation: successPulse 1s ease-in-out;
+}
+
+@keyframes successPulse {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.1);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+#successModal .card {
+    transition: transform 0.2s ease;
+}
+
+#successModal .card:hover {
+    transform: translateY(-2px);
+}
+
+/* Team Registration Styles */
+.member-form {
+    position: relative;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+}
+
+.member-form:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-color: var(--primary-color);
+}
+
+.member-form .badge {
+    font-size: 0.9rem;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+/* Team registration alerts */
+.alert-info {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: none;
+    color: #1565c0;
+}
+
+.alert-primary {
+    background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
+    border: none;
+    color: #6a1b9a;
+}
+
+/* Form validation styling */
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: var(--danger-color);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.invalid-feedback {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--danger-color);
+    margin-top: 0.25rem;
+}
+
+/* Enhanced modal styling for team registration */
+.modal-lg {
+    max-width: 900px;
+}
+
+/* Responsive team registration */
+@media (max-width: 768px) {
+    .modal-lg {
+        max-width: 95%;
+    }
+
+    .member-form {
+        margin-bottom: 2rem;
+    }
+
+    .member-form .badge {
+        width: 25px;
+        height: 25px;
+        font-size: 0.8rem;
+    }
 }
