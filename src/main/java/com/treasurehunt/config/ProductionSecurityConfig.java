@@ -7,11 +7,17 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Production security configuration
@@ -137,8 +143,8 @@ public class ProductionSecurityConfig {
             return request.getRemoteAddr();
         }
         
-        private static final org.slf4j.Logger logger = 
-            org.slf4j.LoggerFactory.getLogger(RequestLoggingFilter.class);
+        private static final Logger logger =
+            LoggerFactory.getLogger(RequestLoggingFilter.class);
     }
 
     /**
@@ -183,7 +189,7 @@ public class ProductionSecurityConfig {
             // Check rate limit
             java.util.concurrent.atomic.AtomicInteger count = requestCounts.get(clientIp);
             if (count != null && count.incrementAndGet() > MAX_REQUESTS_PER_MINUTE) {
-                response.setStatus(HttpServletResponse.SC_TOO_MANY_REQUESTS);
+                response.setStatus(429); // HTTP 429 Too Many Requests
                 response.getWriter().write("{\"error\":\"Rate limit exceeded. Please try again later.\"}");
                 response.setContentType("application/json");
                 
@@ -202,7 +208,7 @@ public class ProductionSecurityConfig {
             return request.getRemoteAddr();
         }
         
-        private static final org.slf4j.Logger logger = 
-            org.slf4j.LoggerFactory.getLogger(RateLimitingFilter.class);
+        private static final Logger logger =
+            LoggerFactory.getLogger(RateLimitingFilter.class);
     }
 }
