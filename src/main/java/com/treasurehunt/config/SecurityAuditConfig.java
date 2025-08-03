@@ -5,13 +5,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
 
 /**
  * Security audit configuration to validate production readiness
+ * ONLY RUNS IN PRODUCTION PROFILE
  */
 @Configuration
+@Profile("production")
 public class SecurityAuditConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityAuditConfig.class);
