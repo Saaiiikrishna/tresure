@@ -33,8 +33,8 @@ public class AsyncConfig {
     /**
      * Task executor for general async operations
      */
-    @Bean(name = "taskExecutor")
-    public Executor taskExecutor() {
+    @Bean(name = "generalTaskExecutor")
+    public Executor generalTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(4);
