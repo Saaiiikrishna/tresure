@@ -7,7 +7,7 @@ spring:
 
   # Database Configuration - Azure PostgreSQL for production
   datasource:
-    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&autoReconnect=true&useUnicode=true&characterEncoding=UTF-8
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&useUnicode=true&characterEncoding=UTF-8
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
@@ -22,6 +22,8 @@ spring:
       connection-test-query: SELECT 1
       validation-timeout: 5000
       auto-commit: false
+      # Force transaction management
+      connection-init-sql: SET autocommit = false
 
   # JPA/Hibernate Configuration - Production settings
   jpa:
@@ -40,8 +42,12 @@ spring:
         batch_versioned_data: true
         connection:
           provider_disables_autocommit: true
+          autocommit: false
         temp:
           use_jdbc_metadata_defaults: false
+        transaction:
+          jta:
+            platform: org.hibernate.engine.transaction.jta.platform.internal.NoJtaPlatform
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
 
