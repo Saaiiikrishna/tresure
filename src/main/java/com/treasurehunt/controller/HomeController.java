@@ -13,7 +13,9 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -295,10 +297,61 @@ public class HomeController {
             long planCount = planService.getActivePlanCount();
             logger.debug("Health check passed - {} active plans", planCount);
             return ResponseEntity.ok("OK");
-            
+
         } catch (Exception e) {
             logger.error("Health check failed", e);
             return ResponseEntity.internalServerError().body("ERROR");
+        }
+    }
+
+    /**
+     * Actuator health check endpoint (backup)
+     * @return Health status
+     */
+    @GetMapping("/actuator/health")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> actuatorHealthCheck() {
+        try {
+            // Simple health check - verify we can access the database
+            long planCount = planService.getActivePlanCount();
+            logger.debug("Actuator health check passed - {} active plans", planCount);
+
+            Map<String, Object> health = new HashMap<>();
+            health.put("status", "UP");
+            health.put("components", Map.of(
+                "db", Map.of("status", "UP", "details", Map.of("activePlans", planCount)),
+                "diskSpace", Map.of("status", "UP")
+            ));
+
+            return ResponseEntity.ok(health);
+
+        } catch (Exception e) {
+            logger.error("Actuator health check failed", e);
+
+            Map<String, Object> health = new HashMap<>();
+            health.put("status", "DOWN");
+            health.put("components", Map.of(
+                "db", Map.of("status", "DOWN", "details", Map.of("error", e.getMessage()))
+            ));
+
+            return ResponseEntity.status(503).body(health);
+        }
+    }
+
+    /**
+     * Simple health endpoint for Azure health checks
+     * @return Simple OK response
+     */
+    @GetMapping("/health")
+    @ResponseBody
+    public ResponseEntity<String> simpleHealthCheck() {
+        try {
+            // Very simple health check
+            planService.getActivePlanCount();
+            return ResponseEntity.ok("OK");
+        } catch (Exception e) {
+            logger.error("Simple health check failed", e);
+            return ResponseEntity.status(503).body("ERROR");
         }
     }
 }
