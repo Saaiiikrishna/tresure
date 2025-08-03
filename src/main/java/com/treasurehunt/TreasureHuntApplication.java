@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.beans.factory.annotation.Autowired;
+import io.github.cdimascio.dotenv.Dotenv;
 
 /**
  * Main Spring Boot application class for Treasure Hunt Registration System
@@ -33,6 +34,26 @@ public class TreasureHuntApplication {
     private Environment environment;
 
     public static void main(String[] args) {
+        // Load .env file BEFORE Spring Boot starts
+        try {
+            Dotenv dotenv = Dotenv.configure()
+                .directory(".")
+                .ignoreIfMalformed()
+                .ignoreIfMissing()
+                .load();
+
+            // Set environment variables from .env file
+            dotenv.entries().forEach(entry -> {
+                System.setProperty(entry.getKey(), entry.getValue());
+                System.out.println("🔧 Loaded env var: " + entry.getKey() + " = " +
+                                 (entry.getKey().contains("PASSWORD") ? "***HIDDEN***" : entry.getValue()));
+            });
+
+            System.out.println("✅ Environment variables loaded from .env file");
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not load .env file: " + e.getMessage());
+        }
+
         SpringApplication.run(TreasureHuntApplication.class, args);
     }
 
