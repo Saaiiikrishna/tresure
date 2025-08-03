@@ -70,31 +70,37 @@ public class SecurityAuditConfig {
     private boolean checkHardcodedCredentials() {
         boolean hasIssues = false;
 
-        // Check database password
+        // Check database password - verify it's loaded from environment
         String dbPassword = environment.getProperty("spring.datasource.password");
-        if (isHardcodedValue(dbPassword)) {
-            logger.warn("⚠️  Database password appears to be hardcoded");
-            hasIssues = true;
-        }
-
-        // Check mail password - improved detection for environment variables
-        String mailPassword = environment.getProperty("spring.mail.password");
-        if (isHardcodedValue(mailPassword)) {
-            // Additional check: see if it's loaded from environment variable
-            String gmailPassword = System.getenv("GMAIL_PASSWORD");
-            if (gmailPassword == null || gmailPassword.trim().isEmpty()) {
-                logger.warn("⚠️  Mail password appears to be hardcoded");
+        String dbPasswordEnv = System.getenv("DB_PASSWORD");
+        if (dbPassword != null && !dbPassword.trim().isEmpty()) {
+            if (dbPasswordEnv == null || dbPasswordEnv.trim().isEmpty()) {
+                logger.warn("⚠️  Database password not loaded from environment variable");
                 hasIssues = true;
             } else {
-                logger.debug("✅ Mail password loaded from environment variable GMAIL_PASSWORD");
+                logger.debug("✅ Database password loaded from environment variable DB_PASSWORD");
             }
         }
 
-        // Check admin password
+        // Check mail password - verify it's loaded from environment
+        String mailPassword = environment.getProperty("spring.mail.password");
+        String mailPasswordEnv = System.getenv("MAIL_PASSWORD");
+        if (mailPassword != null && !mailPassword.trim().isEmpty()) {
+            if (mailPasswordEnv == null || mailPasswordEnv.trim().isEmpty()) {
+                logger.warn("⚠️  Mail password not loaded from environment variable");
+                hasIssues = true;
+            } else {
+                logger.debug("✅ Mail password loaded from environment variable MAIL_PASSWORD");
+            }
+        }
+
+        // Check admin password - verify it's not default
         String adminPassword = environment.getProperty("app.security.admin.password");
-        if ("admin123".equals(adminPassword)) {
+        if ("admin123".equals(adminPassword) || "password".equals(adminPassword) || "admin".equals(adminPassword)) {
             logger.warn("⚠️  Default admin password detected - change immediately!");
             hasIssues = true;
+        } else if (adminPassword != null && !adminPassword.trim().isEmpty()) {
+            logger.debug("✅ Admin password configured");
         }
 
         return hasIssues;
