@@ -34,11 +34,11 @@ public class ProductionValidationConfig {
     @Value("${MAIL_SUPPORT_ADDRESS:}")
     private String mailSupportAddress;
 
-    @Value("${GMAIL_USERNAME:}")
-    private String gmailUsername;
+    @Value("${MAIL_USERNAME:}")
+    private String mailUsername;
 
-    @Value("${GMAIL_PASSWORD:}")
-    private String gmailPassword;
+    @Value("${MAIL_PASSWORD:}")
+    private String mailPassword;
 
     @Value("${DB_USERNAME:}")
     private String dbUsername;
@@ -78,11 +78,11 @@ public class ProductionValidationConfig {
         if (!StringUtils.hasText(mailSupportAddress)) {
             missingVariables.add("MAIL_SUPPORT_ADDRESS");
         }
-        if (!StringUtils.hasText(gmailUsername)) {
-            missingVariables.add("GMAIL_USERNAME");
+        if (!StringUtils.hasText(mailUsername)) {
+            missingVariables.add("MAIL_USERNAME");
         }
-        if (!StringUtils.hasText(gmailPassword)) {
-            missingVariables.add("GMAIL_PASSWORD");
+        if (!StringUtils.hasText(mailPassword)) {
+            missingVariables.add("MAIL_PASSWORD");
         }
         if (!StringUtils.hasText(dbUsername)) {
             missingVariables.add("DB_USERNAME");
