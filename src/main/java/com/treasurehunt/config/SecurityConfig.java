@@ -45,6 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/about", "/contact", "/privacy", "/terms").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll() // Allow health checks
                 // Debug and test endpoints - DISABLED in production for security
                 // .requestMatchers("/debug/**").permitAll() // Debug endpoints - REMOVED for production
                 // .requestMatchers("/test", "/test-admin").permitAll() // Test pages - REMOVED for production

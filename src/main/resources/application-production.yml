@@ -183,9 +183,7 @@ management:
       enabled: true
       mode: simple
   security:
-    enabled: true
-  server:
-    port: ${MANAGEMENT_PORT}
+    enabled: false
 
 # Graceful Shutdown Configuration
 spring.lifecycle.timeout-per-shutdown-phase: 30s
