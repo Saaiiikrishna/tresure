@@ -52,9 +52,19 @@ public class TreasureHuntApplication {
             System.out.println("✅ Environment variables loaded from .env file");
         } catch (Exception e) {
             System.err.println("⚠️ Could not load .env file: " + e.getMessage());
+            e.printStackTrace();
         }
 
-        SpringApplication.run(TreasureHuntApplication.class, args);
+        try {
+            System.out.println("🚀 Starting Spring Boot application...");
+            SpringApplication.run(TreasureHuntApplication.class, args);
+            System.out.println("✅ Spring Boot application started successfully");
+        } catch (Exception e) {
+            System.err.println("❌ CRITICAL: Spring Boot application failed to start");
+            System.err.println("❌ Error: " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
 
     @EventListener(ApplicationReadyEvent.class)

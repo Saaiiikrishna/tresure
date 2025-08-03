@@ -124,15 +124,20 @@ app:
 # Logging Configuration - Production appropriate
 logging:
   level:
-    root: WARN
-    com.treasurehunt: INFO
-    org.springframework.security: WARN
-    org.springframework.mail: WARN
-    org.hibernate: WARN
-    org.springframework.web: WARN
+    root: INFO
+    com.treasurehunt: DEBUG
+    org.springframework.security: INFO
+    org.springframework.mail: INFO
+    org.hibernate: INFO
+    org.springframework.web: INFO
+    org.springframework.boot: INFO
+    org.springframework.context: INFO
+    org.springframework.beans: INFO
+    org.postgresql: INFO
+    com.zaxxer.hikari: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: ${LOG_FILE_PATH:logs/treasure-hunt.log}
     max-size: ${LOG_MAX_SIZE:10MB}
