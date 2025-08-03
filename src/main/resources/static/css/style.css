@@ -155,6 +155,33 @@ html {
     margin: 1rem 0;
 }
 
+/* Schedule display styling */
+.schedule-display {
+    max-width: 60%;
+    line-height: 1.2;
+}
+
+.schedule-date {
+    font-size: 0.9rem;
+    color: var(--text-color);
+    margin-bottom: 0.1rem;
+}
+
+.schedule-time {
+    font-size: 0.8rem;
+    color: var(--muted-color, #6c757d);
+    white-space: nowrap;
+}
+
+/* Legacy schedule text styling for backward compatibility */
+.schedule-text {
+    max-width: 60%;
+    word-wrap: break-word;
+    hyphens: auto;
+    line-height: 1.3;
+    font-size: 0.9rem;
+}
+
 /* Filter Buttons */
 .btn-group .btn {
     border-radius: 0;
@@ -337,24 +364,112 @@ section {
 /* Footer */
 footer {
     margin-top: auto;
+    background-color: #212529 !important; /* Ensure dark background */
 }
 
+/* Footer text contrast fixes */
+footer .text-light {
+    color: #f8f9fa !important;
+}
+
+footer .text-white {
+    color: #ffffff !important;
+}
+
+/* Footer links styling */
+.footer-link {
+    color: #f8f9fa !important;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    opacity: 0.8;
+}
+
+.footer-link:hover {
+    color: #ffffff !important;
+    opacity: 1;
+    text-decoration: underline;
+    transform: translateX(3px);
+}
+
+/* Contact Section Hero Styling */
+#contact {
+    min-height: 600px;
+    overflow: hidden;
+}
+
+.contact-hero-bg {
+    z-index: 1;
+}
+
+.contact-hero-image {
+    object-fit: cover;
+    filter: brightness(0.4) contrast(1.1);
+}
+
+.contact-hero-overlay {
+    background: linear-gradient(135deg, rgba(44, 90, 160, 0.8) 0%, rgba(248, 193, 70, 0.6) 100%);
+    z-index: 2;
+}
+
+.contact-info-card {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    z-index: 3;
+    position: relative;
+}
+
+.contact-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 15px rgba(44, 90, 160, 0.3);
+}
+
+.contact-icon-wrapper i {
+    color: white !important;
+}
+
+/* Social media links */
 .social-links a {
     font-size: 1.25rem;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
+    border-color: #6c757d !important;
+    color: #f8f9fa !important;
 }
 
 .social-links a:hover {
-    color: var(--secondary-color) !important;
+    color: #ffffff !important;
+    border-color: var(--primary-color) !important;
+    background-color: var(--primary-color) !important;
+    transform: translateY(-2px);
 }
 
-.footer-links a {
-    text-decoration: none;
-    transition: color 0.3s ease;
+/* Footer icons */
+footer .text-primary {
+    color: var(--primary-color) !important;
 }
 
-.footer-links a:hover {
-    color: white !important;
+/* Footer headings */
+footer h5, footer h6 {
+    color: #ffffff !important;
+    margin-bottom: 1rem;
+}
+
+/* Footer contact info */
+footer .contact-info small {
+    color: #f8f9fa !important;
+    opacity: 0.9;
+}
+
+/* Footer copyright section */
+footer hr {
+    border-color: #495057 !important;
+    opacity: 0.3;
 }
 
 /* Responsive Design */
@@ -380,6 +495,51 @@ footer {
     .plan-details {
         margin: 0.5rem 0;
         padding: 0.75rem;
+    }
+
+    /* Better mobile layout for plan cards */
+    .plan-details .d-flex {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 0.25rem;
+    }
+
+    .schedule-display {
+        max-width: 100%;
+        margin-top: 0.25rem;
+    }
+
+    .schedule-date {
+        font-size: 0.85rem;
+    }
+
+    .schedule-time {
+        font-size: 0.75rem;
+    }
+
+    /* Legacy schedule text styling for mobile */
+    .schedule-text {
+        max-width: 100%;
+        font-size: 0.85rem;
+        margin-top: 0.25rem;
+    }
+
+    /* Contact section mobile adjustments */
+    #contact {
+        min-height: 500px;
+    }
+
+    .contact-info-card {
+        margin-top: 2rem;
+    }
+
+    .contact-icon-wrapper {
+        width: 60px;
+        height: 60px;
+    }
+
+    .contact-icon-wrapper i {
+        font-size: 1.5rem !important;
     }
 }
 
@@ -566,5 +726,194 @@ footer {
         width: 25px;
         height: 25px;
         font-size: 0.8rem;
+    }
+}
+
+/* Print Styles - Fix for registration confirmation modal printing */
+@media print {
+    /* Set page margins and size */
+    @page {
+        margin: 0.5in;
+        size: A4;
+    }
+
+    /* Hide everything by default */
+    * {
+        visibility: hidden;
+    }
+
+    /* Only show the success modal content when printing */
+    #successModal,
+    #successModal * {
+        visibility: visible;
+    }
+
+    /* Position the modal content for printing */
+    #successModal {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        box-shadow: none !important;
+        border: none !important;
+        page-break-inside: avoid !important;
+    }
+
+    /* Remove modal backdrop and positioning */
+    #successModal .modal-dialog {
+        position: static !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+    }
+
+    /* Style the modal content for print */
+    #successModal .modal-content {
+        border: none !important;
+        box-shadow: none !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+    }
+
+    /* Hide modal header close button and footer buttons */
+    #successModal .modal-header .btn-close,
+    #successModal .modal-footer .btn {
+        display: none !important;
+    }
+
+    /* Compact modal header for print */
+    #successModal .modal-header {
+        border-bottom: 1px solid #2c5aa0 !important;
+        padding: 8px 0 !important;
+        margin-bottom: 10px !important;
+        background: white !important;
+    }
+
+    #successModal .modal-title {
+        font-size: 16pt !important;
+        color: #2c5aa0 !important;
+        margin: 0 !important;
+    }
+
+    /* Compact modal body spacing */
+    #successModal .modal-body {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Hide footer completely */
+    #successModal .modal-footer {
+        display: none !important;
+    }
+
+    /* Compact cards and content for print */
+    #successModal .card {
+        border: 1px solid #dee2e6 !important;
+        margin-bottom: 8px !important;
+        page-break-inside: avoid !important;
+    }
+
+    #successModal .card-body {
+        padding: 8px !important;
+    }
+
+    /* Compact success icon */
+    #successModal .success-icon {
+        margin-bottom: 8px !important;
+    }
+
+    #successModal .success-icon i {
+        font-size: 1.5rem !important;
+    }
+
+    /* Ensure text is black for print */
+    #successModal * {
+        color: black !important;
+        background: white !important;
+    }
+
+    /* Keep important colors for badges and highlights */
+    #successModal .badge {
+        background-color: #2c5aa0 !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        font-size: 9pt !important;
+        padding: 2px 6px !important;
+    }
+
+    #successModal .alert-warning {
+        background-color: #fff3cd !important;
+        border-color: #ffeaa7 !important;
+        color: #856404 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        padding: 8px !important;
+        margin: 8px 0 !important;
+    }
+
+    /* Compact font sizes for print */
+    #successModal h1, #successModal h2, #successModal h3 {
+        font-size: 14pt !important;
+        font-weight: bold !important;
+        margin: 8px 0 4px 0 !important;
+        line-height: 1.2 !important;
+    }
+
+    #successModal h4, #successModal h5, #successModal h6 {
+        font-size: 12pt !important;
+        font-weight: bold !important;
+        margin: 6px 0 3px 0 !important;
+        line-height: 1.2 !important;
+    }
+
+    #successModal p, #successModal li, #successModal span, #successModal td {
+        font-size: 10pt !important;
+        line-height: 1.3 !important;
+        margin: 2px 0 !important;
+    }
+
+    #successModal .text-center h4 {
+        margin: 4px 0 !important;
+    }
+
+    /* Compact row and column spacing */
+    #successModal .row {
+        margin: 0 !important;
+    }
+
+    #successModal .col-md-4,
+    #successModal .col-md-6 {
+        padding: 2px !important;
+    }
+
+    /* Remove any animations or transitions for print */
+    #successModal * {
+        animation: none !important;
+        transition: none !important;
+        transform: none !important;
+    }
+
+    /* Ensure single page layout */
+    #successModal .modal-body > div {
+        margin-bottom: 6px !important;
+    }
+
+    /* Compact member cards for team registrations */
+    #successModal #teamMembersList .card {
+        margin-bottom: 4px !important;
+    }
+
+    #successModal #teamMembersList .card-body {
+        padding: 4px 8px !important;
     }
 }

@@ -394,4 +394,14 @@ public class EmailService {
             throw new RuntimeException("Failed to send cancellation email", e);
         }
     }
+
+    /**
+     * Cleanup method for application shutdown
+     */
+    @javax.annotation.PreDestroy
+    public void cleanup() {
+        logger.info("EmailService cleanup initiated");
+        // Any cleanup operations if needed (e.g., cancel pending async operations)
+        logger.info("EmailService cleanup completed");
+    }
 }

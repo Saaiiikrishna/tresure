@@ -1,7 +1,9 @@
 package com.treasurehunt.service;
 
 import com.treasurehunt.entity.TreasureHuntPlan;
+import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.repository.TreasureHuntPlanRepository;
+import com.treasurehunt.repository.UserRegistrationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,10 +24,13 @@ public class TreasureHuntPlanService {
     private static final Logger logger = LoggerFactory.getLogger(TreasureHuntPlanService.class);
 
     private final TreasureHuntPlanRepository planRepository;
+    private final UserRegistrationRepository registrationRepository;
 
     @Autowired
-    public TreasureHuntPlanService(TreasureHuntPlanRepository planRepository) {
+    public TreasureHuntPlanService(TreasureHuntPlanRepository planRepository,
+                                   UserRegistrationRepository registrationRepository) {
         this.planRepository = planRepository;
+        this.registrationRepository = registrationRepository;
     }
 
     /**
@@ -46,6 +51,16 @@ public class TreasureHuntPlanService {
     public List<TreasureHuntPlan> getAvailablePlans() {
         logger.debug("Fetching available treasure hunt plans");
         return planRepository.findAvailablePlans();
+    }
+
+    /**
+     * Get all active treasure hunt plans
+     * @return List of active plans
+     */
+    @Transactional(readOnly = true)
+    public List<TreasureHuntPlan> getActivePlans() {
+        logger.debug("Fetching all active treasure hunt plans");
+        return planRepository.findByStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
     }
 
     /**
@@ -77,7 +92,16 @@ public class TreasureHuntPlanService {
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getAllPlans() {
         logger.debug("Fetching all treasure hunt plans for admin");
-        return planRepository.findAll();
+        List<TreasureHuntPlan> plans = planRepository.findAll();
+
+        // Add confirmed registrations count to each plan
+        for (TreasureHuntPlan plan : plans) {
+            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
+                plan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+            plan.setConfirmedRegistrationsCount(confirmedCount);
+        }
+
+        return plans;
     }
 
     /**
@@ -124,12 +148,114 @@ public class TreasureHuntPlanService {
         existingPlan.setDurationHours(updatedPlan.getDurationHours());
         existingPlan.setDifficultyLevel(updatedPlan.getDifficultyLevel());
         existingPlan.setMaxParticipants(updatedPlan.getMaxParticipants());
-        existingPlan.setPriceUsd(updatedPlan.getPriceUsd());
+        existingPlan.setPriceInr(updatedPlan.getPriceInr());
+        existingPlan.setPrizeMoney(updatedPlan.getPrizeMoney());
         existingPlan.setStatus(updatedPlan.getStatus());
         
         TreasureHuntPlan savedPlan = planRepository.save(existingPlan);
         logger.info("Successfully updated treasure hunt plan with ID: {}", savedPlan.getId());
         
+        return savedPlan;
+    }
+
+    /**
+     * Update an existing treasure hunt plan
+     * @param plan Plan with updated data (must have ID set)
+     * @return Updated plan
+     * @throws IllegalArgumentException if plan not found
+     */
+    public TreasureHuntPlan updatePlan(TreasureHuntPlan plan) {
+        if (plan.getId() == null) {
+            throw new IllegalArgumentException("Plan ID must be set for update operation");
+        }
+
+        logger.info("Updating treasure hunt plan with ID: {}", plan.getId());
+
+        TreasureHuntPlan existingPlan = planRepository.findById(plan.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + plan.getId()));
+
+        // Validate updated plan data
+        validatePlan(plan);
+
+        // Update fields
+        existingPlan.setName(plan.getName());
+        existingPlan.setDescription(plan.getDescription());
+        existingPlan.setDurationHours(plan.getDurationHours());
+        existingPlan.setDifficultyLevel(plan.getDifficultyLevel());
+        existingPlan.setMaxParticipants(plan.getMaxParticipants());
+        existingPlan.setTeamSize(plan.getTeamSize());
+        existingPlan.setTeamType(plan.getTeamType());
+        existingPlan.setPriceInr(plan.getPriceInr());
+        existingPlan.setPrizeMoney(plan.getPrizeMoney());
+        existingPlan.setBatchesCompleted(plan.getBatchesCompleted());
+        existingPlan.setRating(plan.getRating());
+        existingPlan.setAvailableSlots(plan.getAvailableSlots());
+        existingPlan.setPreviewVideoUrl(plan.getPreviewVideoUrl());
+
+        TreasureHuntPlan savedPlan = planRepository.save(existingPlan);
+        logger.info("Successfully updated treasure hunt plan with ID: {}", savedPlan.getId());
+
+        return savedPlan;
+    }
+
+    /**
+     * Get the featured plan for hero section
+     * @return Featured plan or null if none is featured
+     */
+    public TreasureHuntPlan getFeaturedPlan() {
+        logger.debug("Fetching featured plan");
+        return planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
+                .orElse(null);
+    }
+
+    /**
+     * Set a plan as featured (unsets any previously featured plan)
+     * @param planId Plan ID to set as featured
+     * @return Updated plan
+     * @throws IllegalArgumentException if plan not found
+     */
+    public TreasureHuntPlan setFeaturedPlan(Long planId) {
+        logger.info("Setting plan {} as featured", planId);
+
+        TreasureHuntPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + planId));
+
+        // Unset any previously featured plan
+        planRepository.findByIsFeaturedTrue().ifPresent(currentFeatured -> {
+            currentFeatured.setIsFeatured(false);
+            planRepository.save(currentFeatured);
+            logger.info("Unfeatured previous plan with ID: {}", currentFeatured.getId());
+        });
+
+        // Set the new featured plan
+        plan.setIsFeatured(true);
+        TreasureHuntPlan savedPlan = planRepository.save(plan);
+
+        logger.info("Successfully set plan {} as featured", planId);
+        return savedPlan;
+    }
+
+    /**
+     * Update available slots for a plan
+     * @param planId Plan ID
+     * @param availableSlots New available slots value
+     * @return Updated plan
+     * @throws IllegalArgumentException if plan not found or invalid slots value
+     */
+    public TreasureHuntPlan updateAvailableSlots(Long planId, Integer availableSlots) {
+        logger.info("Updating available slots for plan {} to {}", planId, availableSlots);
+
+        if (availableSlots < 0) {
+            throw new IllegalArgumentException("Available slots must be non-negative");
+        }
+
+        TreasureHuntPlan plan = planRepository.findById(planId)
+                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + planId));
+
+        plan.setAvailableSlots(availableSlots);
+        TreasureHuntPlan savedPlan = planRepository.save(plan);
+
+        logger.info("Successfully updated available slots for plan {} to {}", planId, availableSlots);
         return savedPlan;
     }
 
@@ -159,15 +285,21 @@ public class TreasureHuntPlanService {
     /**
      * Delete a treasure hunt plan
      * @param id Plan ID
-     * @throws IllegalArgumentException if plan not found
+     * @throws IllegalArgumentException if plan not found or has existing registrations
      */
     public void deletePlan(Long id) {
         logger.info("Deleting treasure hunt plan with ID: {}", id);
-        
-        if (!planRepository.existsById(id)) {
-            throw new IllegalArgumentException("Plan not found with ID: " + id);
+
+        TreasureHuntPlan plan = planRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + id));
+
+        // Check if plan has any registrations
+        if (!plan.getRegistrations().isEmpty()) {
+            throw new IllegalArgumentException("Cannot delete plan with existing registrations. " +
+                "Plan has " + plan.getRegistrations().size() + " registration(s). " +
+                "Please cancel all registrations first or set plan status to INACTIVE.");
         }
-        
+
         planRepository.deleteById(id);
         logger.info("Successfully deleted treasure hunt plan with ID: {}", id);
     }
@@ -180,7 +312,7 @@ public class TreasureHuntPlanService {
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getPlansByDifficulty(TreasureHuntPlan.DifficultyLevel difficultyLevel) {
         logger.debug("Fetching plans with difficulty level: {}", difficultyLevel);
-        return planRepository.findByDifficultyLevelAndStatusOrderByPriceUsdAsc(
+        return planRepository.findByDifficultyLevelAndStatusOrderByPriceInrAsc(
                 difficultyLevel, TreasureHuntPlan.PlanStatus.ACTIVE);
     }
 
@@ -215,15 +347,15 @@ public class TreasureHuntPlanService {
             throw new IllegalArgumentException("Plan name is required");
         }
         
-        if (plan.getDurationHours() == null || plan.getDurationHours() < 1 || plan.getDurationHours() > 24) {
-            throw new IllegalArgumentException("Duration must be between 1 and 24 hours");
+        if (plan.getDurationHours() == null || plan.getDurationHours() < 1) {
+            throw new IllegalArgumentException("Duration must be at least 1 hour");
         }
         
         if (plan.getMaxParticipants() == null || plan.getMaxParticipants() < 1 || plan.getMaxParticipants() > 100) {
             throw new IllegalArgumentException("Maximum participants must be between 1 and 100");
         }
         
-        if (plan.getPriceUsd() == null || plan.getPriceUsd().compareTo(java.math.BigDecimal.ZERO) < 0) {
+        if (plan.getPriceInr() == null || plan.getPriceInr().compareTo(java.math.BigDecimal.ZERO) < 0) {
             throw new IllegalArgumentException("Price must be non-negative");
         }
         

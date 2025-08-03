@@ -1,6 +1,7 @@
 package com.treasurehunt.controller;
 
 import com.treasurehunt.entity.TreasureHuntPlan;
+import com.treasurehunt.service.AppSettingsService;
 import com.treasurehunt.service.TreasureHuntPlanService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,10 +26,12 @@ public class HomeController {
     private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
 
     private final TreasureHuntPlanService planService;
+    private final AppSettingsService appSettingsService;
 
     @Autowired
-    public HomeController(TreasureHuntPlanService planService) {
+    public HomeController(TreasureHuntPlanService planService, AppSettingsService appSettingsService) {
         this.planService = planService;
+        this.appSettingsService = appSettingsService;
     }
 
     /**
@@ -42,10 +45,47 @@ public class HomeController {
         
         try {
             List<TreasureHuntPlan> availablePlans = planService.getAvailablePlans();
+            String heroVideoUrl = appSettingsService.getHeroVideoUrl();
+            String heroFallbackImageUrl = appSettingsService.getHeroFallbackImageUrl();
+            String aboutSectionImageUrl = appSettingsService.getAboutSectionImageUrl();
+            String contactBackgroundImageUrl = appSettingsService.getContactBackgroundImageUrl();
+            boolean backgroundMediaEnabled = appSettingsService.getBackgroundMediaEnabled();
+            TreasureHuntPlan featuredPlan = planService.getFeaturedPlan();
+
+            // Debug logging for image URLs
+            logger.info("=== HOME PAGE IMAGE URLS ===");
+            logger.info("Hero Video URL: {}", heroVideoUrl);
+            logger.info("Hero Fallback Image URL: {}", heroFallbackImageUrl);
+            logger.info("About Section Image URL: {}", aboutSectionImageUrl);
+            logger.info("Contact Background Image URL: {}", contactBackgroundImageUrl);
+            logger.info("Background Media Enabled: {}", backgroundMediaEnabled);
+            logger.info("=== END IMAGE URLS ===");
+
+            // If no featured plan, use the first available plan as fallback
+            if (featuredPlan == null && !availablePlans.isEmpty()) {
+                featuredPlan = availablePlans.get(0);
+            }
+
             model.addAttribute("plans", availablePlans);
             model.addAttribute("totalPlans", availablePlans.size());
-            
+            model.addAttribute("heroVideoUrl", heroVideoUrl); // Background video
+            model.addAttribute("heroPreviewVideoUrl", "https://www.youtube.com/embed/dQw4w9WgXcQ"); // Preview video
+            model.addAttribute("heroFallbackImageUrl", heroFallbackImageUrl);
+            model.addAttribute("aboutSectionImageUrl", aboutSectionImageUrl);
+            model.addAttribute("contactBackgroundImageUrl", contactBackgroundImageUrl);
+            model.addAttribute("backgroundMediaEnabled", backgroundMediaEnabled);
+            model.addAttribute("featuredPlan", featuredPlan);
+
+            // Add footer data
+            model.addAttribute("companyInfo", appSettingsService.getCompanyInfo());
+            model.addAttribute("socialLinks", appSettingsService.getSocialMediaLinks());
+            model.addAttribute("footerLinks", appSettingsService.getFooterLinks());
+            model.addAttribute("contactInfo", appSettingsService.getContactInfo());
+
             logger.debug("Found {} available plans for home page", availablePlans.size());
+            if (featuredPlan != null) {
+                logger.debug("Featured plan: {}", featuredPlan.getName());
+            }
             return "index";
             
         } catch (Exception e) {
@@ -63,6 +103,16 @@ public class HomeController {
     public String test() {
         logger.info("Displaying test page");
         return "test";
+    }
+
+    /**
+     * Test admin functionality page
+     * @return Template name
+     */
+    @GetMapping("/test-admin")
+    public String testAdmin() {
+        logger.info("Displaying test admin page");
+        return "test-admin";
     }
 
     /**

@@ -106,16 +106,36 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/admin/images">
+                    <i class="fas fa-images me-2"></i>
+                    Image Management
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/cron">
+                    <i class="fas fa-clock me-2"></i>
+                    Cron Jobs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/settings">
+                    <i class="fas fa-cog me-2"></i>
+                    Settings
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="/" target="_blank">
                     <i class="fas fa-external-link-alt me-2"></i>
                     View Website
                 </a>
             </li>
             <li class="nav-item mt-4">
-                <a class="nav-link text-danger" href="/admin/logout">
-                    <i class="fas fa-sign-out-alt me-2"></i>
-                    Logout
-                </a>
+                <form th:action="@{/admin/logout}" method="post" style="display: inline;">
+                    <button type="submit" class="nav-link text-danger btn btn-link p-0 border-0 text-start w-100" style="background: none;">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </button>
+                </form>
             </li>
         </ul>
     </nav>
@@ -276,7 +296,7 @@
                                         <span th:text="${registration.plan.name}">Plan Name</span>
                                         <br>
                                         <small class="text-muted">
-                                            $<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span>
+                                            ₹<span th:text="${#numbers.formatDecimal(registration.plan.priceInr, 1, 2)}">0.00</span>
                                         </small>
                                     </div>
                                 </td>
@@ -416,22 +436,28 @@
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    alert('Error loading registration details.');
+                    showErrorToast('Error loading registration details.');
                 });
         }
 
         // Confirm registration
         function confirmRegistration(id) {
-            if (confirm('Are you sure you want to confirm this registration? This will send confirmation emails to all participants.')) {
-                updateRegistrationStatus(id, 'CONFIRMED');
-            }
+            showConfirmModal(
+                'Confirm Registration',
+                'Are you sure you want to confirm this registration? This will send confirmation emails to all participants.',
+                'success',
+                () => updateRegistrationStatus(id, 'CONFIRMED')
+            );
         }
 
         // Cancel registration
         function cancelRegistration(id) {
-            if (confirm('Are you sure you want to cancel this registration? This will send cancellation emails to participants.')) {
-                updateRegistrationStatus(id, 'CANCELLED');
-            }
+            showConfirmModal(
+                'Cancel Registration',
+                'Are you sure you want to cancel this registration? This will send cancellation emails to participants.',
+                'danger',
+                () => updateRegistrationStatus(id, 'CANCELLED')
+            );
         }
 
         // Update registration status
@@ -496,6 +522,87 @@
                     mainContent.insertBefore(alertDiv, mainContent.firstChild);
                 }
             });
+        }
+        // Modal and Toast utilities (same as plans.html)
+        function showConfirmModal(title, message, type, onConfirm) {
+            const modal = document.getElementById('confirmModal') || createConfirmModal();
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+
+            const confirmBtn = document.getElementById('confirmModalBtn');
+            confirmBtn.className = `btn btn-${type}`;
+            confirmBtn.onclick = () => {
+                bootstrap.Modal.getInstance(modal).hide();
+                onConfirm();
+            };
+
+            new bootstrap.Modal(modal).show();
+        }
+
+        function createConfirmModal() {
+            const modalHtml = `
+                <div class="modal fade" id="confirmModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmModalTitle">Confirm Action</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p id="confirmModalMessage">Are you sure?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" id="confirmModalBtn">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            return document.getElementById('confirmModal');
+        }
+
+        function showSuccessToast(message) {
+            showToast(message, 'success');
+        }
+
+        function showErrorToast(message) {
+            showToast(message, 'danger');
+        }
+
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toastId = 'toast-' + Date.now();
+
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+
+            // Remove toast element after it's hidden
+            document.getElementById(toastId).addEventListener('hidden.bs.toast', () => {
+                document.getElementById(toastId).remove();
+            });
+        }
+
+        function createToastContainer() {
+            const containerHtml = `
+                <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', containerHtml);
+            return document.getElementById('toastContainer');
         }
     </script>
 </body>

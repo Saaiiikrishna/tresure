@@ -23,10 +23,10 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    @Value("${app.security.admin.username:admin}")
+    @Value("${app.security.admin.username}")
     private String adminUsername;
 
-    @Value("${app.security.admin.password:admin123}")
+    @Value("${app.security.admin.password}")
     private String adminPassword;
 
     /**
@@ -42,12 +42,16 @@ public class SecurityConfig {
                 // Public endpoints
                 .requestMatchers("/", "/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
                 .requestMatchers("/about", "/contact", "/privacy", "/terms").permitAll()
                 .requestMatchers("/error").permitAll()
-                .requestMatchers("/debug/**").permitAll() // Debug endpoints
+                // Debug and test endpoints - DISABLED in production for security
+                // .requestMatchers("/debug/**").permitAll() // Debug endpoints - REMOVED for production
+                // .requestMatchers("/test", "/test-admin").permitAll() // Test pages - REMOVED for production
                 
                 // Admin endpoints - require authentication
                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/images/**").hasRole("ADMIN")
                 
                 // All other requests require authentication
                 .anyRequest().authenticated()
@@ -76,11 +80,14 @@ public class SecurityConfig {
                 .ignoringRequestMatchers("/api/**", "/admin/email-templates/**") // Disable CSRF for API and email template endpoints
             )
             .headers(headers -> headers
-                .frameOptions(frameOptions -> frameOptions.deny())
+                .frameOptions(frameOptions -> frameOptions.sameOrigin())
                 .contentTypeOptions(contentTypeOptions -> {})
                 .httpStrictTransportSecurity(hstsConfig -> hstsConfig
                     .maxAgeInSeconds(31536000)
                     .includeSubDomains(true)
+                )
+                .contentSecurityPolicy(csp -> csp
+                    .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; frame-src 'self' https://www.youtube.com https://youtube.com; media-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://vimeo.com https:")
                 )
             );
 

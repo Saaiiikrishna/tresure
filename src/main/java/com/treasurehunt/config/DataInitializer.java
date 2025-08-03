@@ -9,12 +9,15 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Data initializer to create sample treasure hunt plans
- * Runs on application startup to populate the database with initial data
+ * DISABLED FOR PRODUCTION - Only runs in development/test profiles
  */
 @Component
+@Profile({"development", "test", "!production"})
 public class DataInitializer implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(DataInitializer.class);
@@ -59,7 +62,7 @@ public class DataInitializer implements CommandLineRunner {
                 3,
                 TreasureHuntPlan.DifficultyLevel.BEGINNER,
                 15,
-                new BigDecimal("29.99")
+                new BigDecimal("2499.17")
         );
         // Individual plan (default)
 
@@ -71,7 +74,7 @@ public class DataInitializer implements CommandLineRunner {
                 2,
                 TreasureHuntPlan.DifficultyLevel.BEGINNER,
                 20,
-                new BigDecimal("24.99")
+                new BigDecimal("2074.17")
         );
         // Set as team-based plan
         beginnerPlan2.setTeamType(TreasureHuntPlan.TeamType.TEAM);
@@ -87,7 +90,7 @@ public class DataInitializer implements CommandLineRunner {
                 4,
                 TreasureHuntPlan.DifficultyLevel.INTERMEDIATE,
                 12,
-                new BigDecimal("45.99")
+                new BigDecimal("3817.17")
         );
         // Set as team-based plan with 3 members
         intermediatePlan.setTeamType(TreasureHuntPlan.TeamType.TEAM);
@@ -102,7 +105,7 @@ public class DataInitializer implements CommandLineRunner {
                 5,
                 TreasureHuntPlan.DifficultyLevel.INTERMEDIATE,
                 10,
-                new BigDecimal("52.99")
+                new BigDecimal("4398.17")
         );
         // Individual plan (default)
 
@@ -116,7 +119,7 @@ public class DataInitializer implements CommandLineRunner {
                 8,
                 TreasureHuntPlan.DifficultyLevel.ADVANCED,
                 6,
-                new BigDecimal("89.99")
+                new BigDecimal("7469.17")
         );
         // Set as team-based plan with 5 members
         advancedPlan.setTeamType(TreasureHuntPlan.TeamType.TEAM);
@@ -131,11 +134,56 @@ public class DataInitializer implements CommandLineRunner {
                 6,
                 TreasureHuntPlan.DifficultyLevel.ADVANCED,
                 8,
-                new BigDecimal("75.99")
+                new BigDecimal("6307.17")
         );
         // Set as team-based plan with 4 members
         advancedPlan2.setTeamType(TreasureHuntPlan.TeamType.TEAM);
         advancedPlan2.setTeamSize(4);
+
+        // Set prize money for all plans
+        beginnerPlan.setPrizeMoney(new BigDecimal("5000.00"));      // Urban Explorer
+        beginnerPlan2.setPrizeMoney(new BigDecimal("3000.00"));     // Park Adventure
+        intermediatePlan.setPrizeMoney(new BigDecimal("8000.00"));  // Mystery of the Lost Museum
+        intermediatePlan2.setPrizeMoney(new BigDecimal("10000.00")); // Downtown Detective
+        advancedPlan.setPrizeMoney(new BigDecimal("25000.00"));     // The Ultimate Challenge
+        advancedPlan2.setPrizeMoney(new BigDecimal("15000.00"));    // Nighttime Expedition
+
+        // Set date/time fields for all plans (required for new validation)
+        LocalDate eventDate = LocalDate.now().plusDays(7); // Next week
+        LocalTime startTime = LocalTime.of(9, 0); // 9:00 AM
+
+        // Set event dates and times for all plans
+        beginnerPlan.setEventDate(eventDate);
+        beginnerPlan.setStartTime(startTime);
+        beginnerPlan.setEndDate(eventDate);
+        beginnerPlan.setEndTime(startTime.plusHours(3)); // 3 hour duration
+
+        beginnerPlan2.setEventDate(eventDate.plusDays(1));
+        beginnerPlan2.setStartTime(startTime);
+        beginnerPlan2.setEndDate(eventDate.plusDays(1));
+        beginnerPlan2.setEndTime(startTime.plusHours(2)); // 2 hour duration
+
+        intermediatePlan.setEventDate(eventDate.plusDays(2));
+        intermediatePlan.setStartTime(startTime);
+        intermediatePlan.setEndDate(eventDate.plusDays(2));
+        intermediatePlan.setEndTime(startTime.plusHours(4)); // 4 hour duration
+
+        intermediatePlan2.setEventDate(eventDate.plusDays(3));
+        intermediatePlan2.setStartTime(startTime);
+        intermediatePlan2.setEndDate(eventDate.plusDays(3));
+        intermediatePlan2.setEndTime(startTime.plusHours(5)); // 5 hour duration
+
+        advancedPlan.setEventDate(eventDate.plusDays(4));
+        advancedPlan.setStartTime(startTime);
+        advancedPlan.setEndDate(eventDate.plusDays(4));
+        advancedPlan.setEndTime(startTime.plusHours(8)); // 8 hour duration
+
+        advancedPlan2.setEventDate(eventDate.plusDays(5));
+        advancedPlan2.setStartTime(startTime);
+        advancedPlan2.setEndDate(eventDate.plusDays(5));
+        advancedPlan2.setEndTime(startTime.plusHours(6)); // 6 hour duration
+
+
 
         // Save all plans
         try {

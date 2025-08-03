@@ -4,9 +4,11 @@ import com.treasurehunt.entity.EmailQueue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -140,6 +142,8 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
     /**
      * Delete old emails (cleanup)
      */
+    @Modifying
+    @Transactional
     @Query("DELETE FROM EmailQueue e WHERE e.createdDate < :cutoffDate AND e.status = 'SENT'")
     void deleteOldSentEmails(@Param("cutoffDate") LocalDateTime cutoffDate);
 

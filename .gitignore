@@ -1,7 +1,13 @@
 .env
+.env.template
 .mvn/
 target/
 .idea/
 node_modules/
 
 logs/
+
+# Archive folder containing old migration files and other archived content
+archive/
+
+docs/

@@ -51,8 +51,8 @@ public interface TreasureHuntPlanRepository extends JpaRepository<TreasureHuntPl
      * @param difficultyLevel Difficulty level
      * @return List of plans with specified difficulty
      */
-    List<TreasureHuntPlan> findByDifficultyLevelAndStatusOrderByPriceUsdAsc(
-            TreasureHuntPlan.DifficultyLevel difficultyLevel, 
+    List<TreasureHuntPlan> findByDifficultyLevelAndStatusOrderByPriceInrAsc(
+            TreasureHuntPlan.DifficultyLevel difficultyLevel,
             TreasureHuntPlan.PlanStatus status);
 
     /**
@@ -78,4 +78,24 @@ public interface TreasureHuntPlanRepository extends JpaRepository<TreasureHuntPl
      */
     List<TreasureHuntPlan> findByNameContainingIgnoreCaseAndStatusOrderByNameAsc(
             String name, TreasureHuntPlan.PlanStatus status);
+
+    /**
+     * Find the featured plan with active status
+     * @param status Plan status
+     * @return Optional featured plan
+     */
+    Optional<TreasureHuntPlan> findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus status);
+
+    /**
+     * Find any featured plan (regardless of status)
+     * @return Optional featured plan
+     */
+    Optional<TreasureHuntPlan> findByIsFeaturedTrue();
+
+    /**
+     * Find all plans with a specific status
+     * @param status Plan status
+     * @return List of plans with the specified status
+     */
+    List<TreasureHuntPlan> findByStatus(TreasureHuntPlan.PlanStatus status);
 }

@@ -2,6 +2,7 @@ package com.treasurehunt.service;
 
 import com.treasurehunt.entity.EmailCampaign;
 import com.treasurehunt.entity.EmailQueue;
+import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.repository.EmailCampaignRepository;
 import com.treasurehunt.repository.UserRegistrationRepository;
@@ -122,24 +123,54 @@ public class EmailCampaignService {
             int emailsQueued = 0;
             for (UserRegistration recipient : recipients) {
                 try {
+                    String recipientEmail;
+                    String recipientName;
+
+                    // For team registrations, send email to team leader
+                    if (recipient.isTeamRegistration()) {
+                        // Load team members separately to avoid MultipleBagFetchException
+                        UserRegistration teamRegistration = registrationRepository.findByIdWithTeamMembers(recipient.getId())
+                            .orElse(recipient);
+
+                        TeamMember teamLeader = teamRegistration.getTeamMembers().stream()
+                            .filter(TeamMember::isTeamLeader)
+                            .findFirst()
+                            .orElse(null);
+
+                        if (teamLeader != null) {
+                            recipientEmail = teamLeader.getEmail();
+                            recipientName = teamLeader.getFullName();
+                            logger.debug("Sending team campaign email to team leader: {} for team: {}",
+                                recipientEmail, teamRegistration.getTeamName());
+                        } else {
+                            logger.warn("No team leader found for team registration ID: {}, skipping", recipient.getId());
+                            continue;
+                        }
+                    } else {
+                        // For individual registrations, use the registration email
+                        recipientEmail = recipient.getEmail();
+                        recipientName = recipient.getFullName();
+                        logger.debug("Sending individual campaign email to: {}", recipientEmail);
+                    }
+
                     // Personalize email content
                     String personalizedSubject = personalizeContent(campaign.getSubject(), recipient);
                     String personalizedBody = personalizeContent(campaign.getBody(), recipient);
-                    
+
                     // Queue the email
                     EmailQueue queuedEmail = emailQueueService.queueCampaignEmail(
-                        recipient.getEmail(),
-                        recipient.getFullName(),
+                        recipientEmail,
+                        recipientName,
                         personalizedSubject,
                         personalizedBody,
                         campaignTrackingId,
                         campaign.getName()
                     );
-                    
+
                     // Set priority from campaign
                     queuedEmail.setPriority(campaign.getPriority());
                     emailsQueued++;
-                    
+
                 } catch (Exception e) {
                     logger.error("Error queuing email for recipient: {}", recipient.getEmail(), e);
                 }
@@ -212,19 +243,33 @@ public class EmailCampaignService {
      * Get recipients based on target audience
      */
     private List<UserRegistration> getRecipients(String targetAudience) {
+        logger.debug("Getting recipients for target audience: {}", targetAudience);
+
         if (targetAudience == null || targetAudience.equals("ALL")) {
             return registrationRepository.findAll();
         }
-        
+
         switch (targetAudience) {
             case "INDIVIDUAL_REGISTRATIONS":
-                return registrationRepository.findByTeamNameIsNull();
+                List<UserRegistration> individualRegistrations = registrationRepository.findByTeamNameIsNull();
+                logger.debug("Found {} individual registrations", individualRegistrations.size());
+                return individualRegistrations;
+
             case "TEAM_REGISTRATIONS":
-                return registrationRepository.findByTeamNameIsNotNull();
+                // For team registrations, we only want to send one email per team (to team leader)
+                // Each team registration record represents one team, so we get all team registrations
+                List<UserRegistration> teamRegistrations = registrationRepository.findByTeamNameIsNotNull();
+                logger.debug("Found {} team registrations", teamRegistrations.size());
+                return teamRegistrations;
+
             case "RECENT_REGISTRATIONS":
                 LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
-                return registrationRepository.findByRegistrationDateAfter(oneWeekAgo);
+                List<UserRegistration> recentRegistrations = registrationRepository.findByRegistrationDateAfter(oneWeekAgo);
+                logger.debug("Found {} recent registrations", recentRegistrations.size());
+                return recentRegistrations;
+
             default:
+                logger.warn("Unknown target audience: {}, returning all registrations", targetAudience);
                 return registrationRepository.findAll();
         }
     }

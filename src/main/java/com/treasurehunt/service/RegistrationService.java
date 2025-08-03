@@ -5,6 +5,7 @@ import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.TreasureHuntPlan;
 import com.treasurehunt.entity.UploadedDocument;
 import com.treasurehunt.entity.UserRegistration;
+import com.treasurehunt.repository.TeamMemberRepository;
 import com.treasurehunt.repository.UserRegistrationRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,25 +33,31 @@ public class RegistrationService {
     private static final Logger logger = LoggerFactory.getLogger(RegistrationService.class);
 
     private final UserRegistrationRepository registrationRepository;
+    private final TeamMemberRepository teamMemberRepository;
     private final TreasureHuntPlanService planService;
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
     private final EmailQueueService emailQueueService;
+    private final ApplicationIdService applicationIdService;
 
     @Value("${app.email.support}")
     private String supportEmail;
 
     @Autowired
     public RegistrationService(UserRegistrationRepository registrationRepository,
+                              TeamMemberRepository teamMemberRepository,
                               TreasureHuntPlanService planService,
                               FileStorageService fileStorageService,
                               EmailService emailService,
-                              EmailQueueService emailQueueService) {
+                              EmailQueueService emailQueueService,
+                              ApplicationIdService applicationIdService) {
         this.registrationRepository = registrationRepository;
+        this.teamMemberRepository = teamMemberRepository;
         this.planService = planService;
         this.fileStorageService = fileStorageService;
         this.emailService = emailService;
         this.emailQueueService = emailQueueService;
+        this.applicationIdService = applicationIdService;
     }
 
     /**
@@ -112,11 +119,30 @@ public class RegistrationService {
             logger.info("Successfully created registration with ID: {}", savedRegistration.getId());
             return savedRegistration;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             // Rollback: delete registration if file processing fails
-            logger.error("Failed to process files for registration, rolling back", e);
-            registrationRepository.delete(savedRegistration);
-            throw e;
+            logger.error("Failed to process files for registration ID {}, rolling back: {}",
+                        savedRegistration.getId(), e.getMessage());
+            try {
+                registrationRepository.delete(savedRegistration);
+                logger.info("Successfully rolled back registration ID: {}", savedRegistration.getId());
+            } catch (Exception rollbackException) {
+                logger.error("Failed to rollback registration ID {}: {}",
+                           savedRegistration.getId(), rollbackException.getMessage());
+            }
+            throw new RuntimeException("Registration failed due to file processing error", e);
+        } catch (Exception e) {
+            // Rollback: delete registration for any other unexpected errors
+            logger.error("Unexpected error during registration creation for ID {}, rolling back: {}",
+                        savedRegistration.getId(), e.getMessage());
+            try {
+                registrationRepository.delete(savedRegistration);
+                logger.info("Successfully rolled back registration ID: {}", savedRegistration.getId());
+            } catch (Exception rollbackException) {
+                logger.error("Failed to rollback registration ID {}: {}",
+                           savedRegistration.getId(), rollbackException.getMessage());
+            }
+            throw new RuntimeException("Registration failed due to unexpected error", e);
         }
     }
 
@@ -129,6 +155,51 @@ public class RegistrationService {
     public Optional<UserRegistration> getRegistrationById(Long id) {
         logger.debug("Fetching registration with ID: {}", id);
         return registrationRepository.findById(id);
+    }
+
+    /**
+     * Get registration by ID with all related data loaded for admin view
+     * @param id Registration ID
+     * @return Optional registration with team members and documents
+     */
+    @Transactional(readOnly = true)
+    public Optional<UserRegistration> getRegistrationByIdWithDetails(Long id) {
+        logger.debug("Fetching registration with details for ID: {}", id);
+
+        try {
+            // First, get the registration with team members
+            Optional<UserRegistration> registrationOpt = registrationRepository.findByIdWithTeamMembers(id);
+
+            if (registrationOpt.isPresent()) {
+                UserRegistration registration = registrationOpt.get();
+
+                // Force load documents separately to avoid MultipleBagFetchException
+                registration.getDocuments().size(); // This triggers lazy loading
+
+                // Sort team members by position if it's a team registration
+                if (registration.isTeamRegistration() && registration.getTeamMembers() != null) {
+                    registration.getTeamMembers().sort((m1, m2) -> {
+                        Integer pos1 = m1.getMemberPosition();
+                        Integer pos2 = m2.getMemberPosition();
+                        if (pos1 == null) pos1 = Integer.MAX_VALUE;
+                        if (pos2 == null) pos2 = Integer.MAX_VALUE;
+                        return pos1.compareTo(pos2);
+                    });
+                }
+
+                logger.debug("Loaded registration {} with {} team members and {} documents",
+                            id, registration.getTeamMembers().size(), registration.getDocuments().size());
+
+                return Optional.of(registration);
+            }
+
+            logger.warn("Registration not found for ID: {}", id);
+            return Optional.empty();
+
+        } catch (Exception e) {
+            logger.error("Error loading registration details for ID: {}", id, e);
+            throw new RuntimeException("Failed to load registration details", e);
+        }
     }
 
     /**
@@ -161,6 +232,29 @@ public class RegistrationService {
     public List<UserRegistration> getRegistrationsByStatus(UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations with status: {}", status);
         return registrationRepository.findByStatusOrderByRegistrationDateDesc(status);
+    }
+
+    /**
+     * Get registrations by plan ID
+     * @param planId Plan ID
+     * @return List of registrations for the plan
+     */
+    @Transactional(readOnly = true)
+    public List<UserRegistration> getRegistrationsByPlan(Long planId) {
+        logger.debug("Fetching registrations for plan ID: {}", planId);
+        return registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
+    }
+
+    /**
+     * Get registrations by plan ID and status
+     * @param planId Plan ID
+     * @param status Registration status
+     * @return List of registrations matching criteria
+     */
+    @Transactional(readOnly = true)
+    public List<UserRegistration> getRegistrationsByPlanAndStatus(Long planId, UserRegistration.RegistrationStatus status) {
+        logger.debug("Fetching registrations for plan ID: {} with status: {}", planId, status);
+        return registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
     }
 
     /**
@@ -273,7 +367,6 @@ public class RegistrationService {
      * @param registration Registration to send confirmations for
      */
     @Async
-    @Transactional
     public void sendConfirmationEmails(UserRegistration registration) {
         logger.info("Sending approval emails for registration ID: {}", registration.getId());
 
@@ -296,26 +389,42 @@ public class RegistrationService {
      * @param registration Registration to send cancellation for
      */
     @Async
+    @Transactional
     public void sendCancellationEmail(UserRegistration registration) {
         logger.info("Sending cancellation email for registration ID: {}", registration.getId());
 
         try {
-            if (registration.isTeamRegistration()) {
-                // Send cancellation email to team leader only
-                TeamMember teamLeader = registration.getTeamMembers().stream()
+            // Fetch the registration with plan to avoid lazy loading issues
+            UserRegistration fullRegistration = registrationRepository.findById(registration.getId())
+                .orElseThrow(() -> new RuntimeException("Registration not found"));
+
+            // Force load the plan to avoid lazy initialization
+            fullRegistration.getPlan().getName(); // This triggers the lazy loading
+
+            if (fullRegistration.isTeamRegistration()) {
+                // For team registrations, queue cancellation email for team leader
+                List<TeamMember> teamMembers = teamMemberRepository.findByRegistrationOrderByMemberPosition(fullRegistration);
+
+                TeamMember teamLeader = teamMembers.stream()
                     .filter(TeamMember::isTeamLeader)
                     .findFirst()
                     .orElse(null);
 
                 if (teamLeader != null) {
-                    emailService.sendTeamCancellationEmail(registration, teamLeader);
+                    logger.info("Sending team cancellation email to team leader: {}", teamLeader.getEmail());
+                    queueTeamCancellationEmail(fullRegistration, teamLeader);
+                } else {
+                    logger.warn("No team leader found for team registration ID: {}", fullRegistration.getId());
                 }
             } else {
-                // Send cancellation email to individual participant
-                emailService.sendCancellationEmail(registration);
+                // Queue cancellation email for individual participant
+                logger.info("Queuing individual cancellation email to: {}", fullRegistration.getEmail());
+                queueIndividualCancellationEmail(fullRegistration);
             }
+
+            logger.info("Successfully queued cancellation email for registration ID: {}", fullRegistration.getId());
         } catch (Exception e) {
-            logger.error("Error sending cancellation email for registration ID: {}", registration.getId(), e);
+            logger.error("Error queuing cancellation email for registration ID: {}", registration.getId(), e);
         }
     }
 
@@ -487,6 +596,56 @@ public class RegistrationService {
             logger.info("Queued admin notification email");
         } catch (Exception e) {
             logger.error("Error queuing admin notification email for registration ID: {}", registration.getId(), e);
+        }
+    }
+
+    /**
+     * Queue team cancellation email for team leader
+     */
+    private void queueTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
+        logger.info("Queuing team cancellation email for registration ID: {} to team leader: {}",
+                   registration.getId(), teamLeader.getEmail());
+
+        try {
+            String subject = "Registration Cancelled - " + registration.getPlan().getName();
+            String body = buildTeamCancellationEmail(registration, teamLeader);
+
+            emailQueueService.queueEmail(
+                teamLeader.getEmail(),
+                teamLeader.getFullName(),
+                subject,
+                body,
+                EmailQueue.EmailType.CANCELLATION_EMAIL
+            );
+
+            logger.info("Queued team cancellation email for team leader: {}", teamLeader.getEmail());
+        } catch (Exception e) {
+            logger.error("Error queuing team cancellation email for registration ID: {}", registration.getId(), e);
+        }
+    }
+
+    /**
+     * Queue individual cancellation email
+     */
+    private void queueIndividualCancellationEmail(UserRegistration registration) {
+        logger.info("Queuing individual cancellation email for registration ID: {} to: {}",
+                   registration.getId(), registration.getEmail());
+
+        try {
+            String subject = "Registration Cancelled - " + registration.getPlan().getName();
+            String body = buildIndividualCancellationEmail(registration);
+
+            emailQueueService.queueEmail(
+                registration.getEmail(),
+                registration.getFullName(),
+                subject,
+                body,
+                EmailQueue.EmailType.CANCELLATION_EMAIL
+            );
+
+            logger.info("Queued individual cancellation email for: {}", registration.getEmail());
+        } catch (Exception e) {
+            logger.error("Error queuing individual cancellation email for registration ID: {}", registration.getId(), e);
         }
     }
 
@@ -840,13 +999,60 @@ public class RegistrationService {
     }
 
     /**
+     * Build team cancellation email body
+     */
+    private String buildTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
+        StringBuilder body = new StringBuilder();
+        body.append("Dear ").append(teamLeader.getFullName()).append(",\n\n");
+        body.append("We regret to inform you that your team registration for \"")
+            .append(registration.getPlan().getName()).append("\" has been cancelled.\n\n");
+        body.append("Registration Details:\n");
+        body.append("- Team Name: ").append(registration.getTeamName()).append("\n");
+        body.append("- Application ID: ").append(generateRegistrationNumber(registration)).append("\n");
+        body.append("- Plan: ").append(registration.getPlan().getName()).append("\n");
+        body.append("- Registration Date: ").append(registration.getRegistrationDate()).append("\n\n");
+        body.append("If you have any questions or concerns, please contact us at ").append(getSupportEmail()).append(".\n\n");
+        body.append("Thank you for your interest in Treasure Hunt Adventures.\n\n");
+        body.append("Best regards,\n");
+        body.append("Treasure Hunt Adventures Team");
+        return body.toString();
+    }
+
+    /**
+     * Build individual cancellation email body
+     */
+    private String buildIndividualCancellationEmail(UserRegistration registration) {
+        StringBuilder body = new StringBuilder();
+        body.append("Dear ").append(registration.getFullName()).append(",\n\n");
+        body.append("We regret to inform you that your registration for \"")
+            .append(registration.getPlan().getName()).append("\" has been cancelled.\n\n");
+        body.append("Registration Details:\n");
+        body.append("- Application ID: ").append(generateRegistrationNumber(registration)).append("\n");
+        body.append("- Plan: ").append(registration.getPlan().getName()).append("\n");
+        body.append("- Registration Date: ").append(registration.getRegistrationDate()).append("\n\n");
+        body.append("If you have any questions or concerns, please contact us at ").append(getSupportEmail()).append(".\n\n");
+        body.append("Thank you for your interest in Treasure Hunt Adventures.\n\n");
+        body.append("Best regards,\n");
+        body.append("Treasure Hunt Adventures Team");
+        return body.toString();
+    }
+
+    /**
      * Generate registration number for display purposes
+     * Uses the new ApplicationIdService for consistent ID generation
      */
     private String generateRegistrationNumber(UserRegistration registration) {
-        if (registration.isTeamRegistration()) {
-            return "TH-TEAM-" + String.format("%03d", registration.getId());
-        } else {
-            return "TH-IND-" + String.format("%03d", registration.getId());
+        try {
+            Long planId = registration.getPlan().getId();
+            if (registration.isTeamRegistration()) {
+                return applicationIdService.generateTeamApplicationId(planId);
+            } else {
+                return applicationIdService.generateIndividualApplicationId(planId);
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to generate application ID using service, falling back to entity method", e);
+            // Fallback to entity's own method
+            return registration.getRegistrationNumber();
         }
     }
 

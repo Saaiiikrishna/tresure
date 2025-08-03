@@ -20,6 +20,7 @@ public class EmailConfig {
     /**
      * Mock email service for development/testing only
      * This bean will be used when app.email.mock.enabled=true
+     * CURRENTLY DISABLED - Real SMTP is enabled
      */
     @Bean
     @Primary

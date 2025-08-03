@@ -64,6 +64,10 @@ public class UserRegistration {
     @Column(name = "emergency_contact_phone", nullable = false)
     private String emergencyContactPhone;
 
+    @Size(max = 2000, message = "Bio must not exceed 2000 characters")
+    @Column(name = "bio", length = 2000)
+    private String bio;
+
     @NotNull(message = "Medical consent must be given")
     @Column(name = "medical_consent_given", nullable = false)
     private Boolean medicalConsentGiven = false;
@@ -157,7 +161,43 @@ public class UserRegistration {
 
     // Helper methods
     public String getRegistrationNumber() {
-        return String.format("TH-%06d", id);
+        if (id == null) {
+            return "TH-PENDING";
+        }
+
+        // Use the new ApplicationIdService format
+        if (isTeamRegistration()) {
+            return generateApplicationId("TEAM");
+        } else {
+            return generateApplicationId("IND");
+        }
+    }
+
+    /**
+     * Generate application ID using the new format
+     * @param type Registration type (IND or TEAM)
+     * @return Formatted application ID
+     */
+    private String generateApplicationId(String type) {
+        if (id == null || plan == null) {
+            return "TH-PENDING";
+        }
+
+        try {
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            String yearMonth = now.format(java.time.format.DateTimeFormatter.ofPattern("yyMM"));
+
+            // New format: PPPPAA where PPPP=Plan ID, AA=sequence (simplified for entity method)
+            // For proper sequence generation, use ApplicationIdService in the service layer
+            String planPart = String.format("%04d", plan.getId());
+            String sequencePart = String.format("%02d", id % 100); // Simple fallback
+            String combinedSequence = planPart + sequencePart;
+
+            return String.format("TH-%s-%s-%s", yearMonth, type, combinedSequence);
+        } catch (Exception e) {
+            // Fallback to simple format
+            return String.format("TH-%s-%06d", type, id);
+        }
     }
 
     public boolean hasRequiredDocuments() {
@@ -186,6 +226,14 @@ public class UserRegistration {
 
     public void setTeamName(String teamName) {
         this.teamName = teamName;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
     }
 
     public boolean isTeamRegistration() {

@@ -38,18 +38,24 @@ public class TeamMember {
     @Column(name = "phone_number", nullable = false, length = 10)
     private String phoneNumber;
 
-    @NotBlank(message = "Emergency contact name is required")
+    // Emergency contact fields - only required for team leaders, optional for team members
     @Size(min = 2, max = 100, message = "Emergency contact name must be between 2 and 100 characters")
-    @Column(name = "emergency_contact_name", nullable = false, length = 100)
+    @Column(name = "emergency_contact_name", nullable = true, length = 100)
     private String emergencyContactName;
 
-    @NotBlank(message = "Emergency contact phone is required")
     @Pattern(regexp = "^[6-9][0-9]{9}$", message = "Please provide a valid 10-digit Indian mobile number")
-    @Column(name = "emergency_contact_phone", nullable = false, length = 10)
+    @Column(name = "emergency_contact_phone", nullable = true, length = 10)
     private String emergencyContactPhone;
+
+    @Size(max = 2000, message = "Bio must not exceed 2000 characters")
+    @Column(name = "bio", length = 2000)
+    private String bio;
 
     @Column(name = "member_position", nullable = false)
     private Integer memberPosition; // 1 for team leader, 2+ for other members
+
+    @Column(name = "medical_consent_given", nullable = true)
+    private Boolean medicalConsentGiven;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "registration_id", nullable = false)
@@ -59,9 +65,9 @@ public class TeamMember {
     // Constructors
     public TeamMember() {}
 
-    public TeamMember(String fullName, Integer age, String gender, String email, 
-                     String phoneNumber, String emergencyContactName, 
-                     String emergencyContactPhone, Integer memberPosition) {
+    public TeamMember(String fullName, Integer age, String gender, String email,
+                     String phoneNumber, String emergencyContactName,
+                     String emergencyContactPhone, String bio, Integer memberPosition) {
         this.fullName = fullName;
         this.age = age;
         this.gender = gender;
@@ -69,6 +75,7 @@ public class TeamMember {
         this.phoneNumber = phoneNumber;
         this.emergencyContactName = emergencyContactName;
         this.emergencyContactPhone = emergencyContactPhone;
+        this.bio = bio;
         this.memberPosition = memberPosition;
     }
 
@@ -137,12 +144,28 @@ public class TeamMember {
         this.emergencyContactPhone = emergencyContactPhone;
     }
 
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
     public Integer getMemberPosition() {
         return memberPosition;
     }
 
     public void setMemberPosition(Integer memberPosition) {
         this.memberPosition = memberPosition;
+    }
+
+    public Boolean getMedicalConsentGiven() {
+        return medicalConsentGiven;
+    }
+
+    public void setMedicalConsentGiven(Boolean medicalConsentGiven) {
+        this.medicalConsentGiven = medicalConsentGiven;
     }
 
     public UserRegistration getRegistration() {

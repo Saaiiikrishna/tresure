@@ -26,6 +26,14 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
     List<UploadedDocument> findByRegistrationOrderByUploadDateDesc(UserRegistration registration);
 
     /**
+     * Find documents by registration ID
+     * @param registrationId Registration ID
+     * @return List of documents for the registration
+     */
+    @Query("SELECT d FROM UploadedDocument d WHERE d.registration.id = :registrationId ORDER BY d.uploadDate DESC")
+    List<UploadedDocument> findByRegistrationId(@Param("registrationId") Long registrationId);
+
+    /**
      * Find documents by registration and document type
      * @param registration User registration
      * @param documentType Document type

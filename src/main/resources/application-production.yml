@@ -1,0 +1,177 @@
+# Production Configuration for Treasure Hunt Application
+# All configuration values are externalized to environment variables
+
+spring:
+  application:
+    name: treasure-hunt-registration
+
+  # Database Configuration - Azure PostgreSQL for production
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE}
+      minimum-idle: ${DB_POOL_MIN_IDLE}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT}
+      idle-timeout: ${DB_IDLE_TIMEOUT}
+      max-lifetime: ${DB_MAX_LIFETIME}
+      leak-detection-threshold: ${DB_LEAK_DETECTION}
+      # Azure PostgreSQL specific settings
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+
+  # JPA/Hibernate Configuration - Production settings
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO}
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        connection:
+          provider_disables_autocommit: true
+
+  # H2 Console - DISABLED in production
+  h2:
+    console:
+      enabled: false
+  
+  # Thymeleaf Configuration - Production optimized
+  thymeleaf:
+    cache: true  # Enable caching in production
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+  
+  # Mail Configuration - Use environment variables
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT}
+          timeout: ${MAIL_TIMEOUT}
+          writetimeout: ${MAIL_WRITE_TIMEOUT}
+          ssl:
+            trust: ${MAIL_HOST}
+
+  # File Upload Configuration - Production limits
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE}
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+  # Security Configuration
+  security:
+    require-ssl: ${REQUIRE_SSL}
+
+# Custom Application Properties
+app:
+  file-storage:
+    upload-dir: ${FILE_UPLOAD_DIR}
+    max-photo-size: ${MAX_PHOTO_SIZE}
+    max-document-size: ${MAX_DOCUMENT_SIZE}
+    allowed-photo-types: ${ALLOWED_PHOTO_TYPES}
+    allowed-document-types: ${ALLOWED_DOCUMENT_TYPES}
+
+  email:
+    from: ${MAIL_FROM_ADDRESS}
+    support: ${MAIL_SUPPORT_ADDRESS}
+    company-name: ${COMPANY_NAME}
+    mock:
+      enabled: false
+
+  security:
+    admin:
+      username: ${ADMIN_USERNAME}
+      password: ${ADMIN_PASSWORD}
+
+# Logging Configuration - Production appropriate
+logging:
+  level:
+    root: WARN
+    com.treasurehunt: INFO
+    org.springframework.security: WARN
+    org.springframework.mail: WARN
+    org.hibernate: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE_PATH:logs/treasure-hunt.log}
+    max-size: ${LOG_MAX_SIZE:10MB}
+    max-history: ${LOG_MAX_HISTORY:30}
+
+# Server Configuration - Production hardened
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: /
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  http2:
+    enabled: ${HTTP2_ENABLED}
+
+# Actuator Configuration - Secured for production monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_DETAILS}
+      show-components: always
+      probes:
+        enabled: true
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+      export:
+        prometheus:
+          enabled: ${PROMETHEUS_ENABLED}
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: simple
+  security:
+    enabled: true
+  server:
+    port: ${MANAGEMENT_PORT}
+
+# Graceful Shutdown Configuration
+spring.lifecycle.timeout-per-shutdown-phase: 30s

@@ -90,9 +90,16 @@ public class FileStorageService {
         Path registrationDir = this.fileStorageLocation.resolve(registration.getId().toString());
         Files.createDirectories(registrationDir);
 
-        // Store file
+        // Store file with proper resource management and error handling
         Path targetLocation = registrationDir.resolve(storedFilename);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        try (var inputStream = file.getInputStream()) {
+            Files.copy(inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            logger.debug("File successfully written to: {}", targetLocation);
+        } catch (IOException e) {
+            logger.error("Failed to store file {} for registration {}: {}",
+                        originalFilename, registration.getId(), e.getMessage());
+            throw new IOException("Failed to store file: " + originalFilename, e);
+        }
 
         // Create document entity
         UploadedDocument document = new UploadedDocument(
@@ -325,5 +332,16 @@ public class FileStorageService {
         }
 
         throw new IOException("Physical file not found: " + filename);
+    }
+
+    /**
+     * Cleanup method for application shutdown
+     * Ensures all resources are properly released
+     */
+    @javax.annotation.PreDestroy
+    public void cleanup() {
+        logger.info("FileStorageService cleanup initiated");
+        // Any cleanup operations if needed
+        logger.info("FileStorageService cleanup completed");
     }
 }

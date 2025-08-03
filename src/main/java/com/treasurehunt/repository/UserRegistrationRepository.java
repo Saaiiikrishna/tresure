@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -94,6 +95,14 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     long countByStatus(UserRegistration.RegistrationStatus status);
 
     /**
+     * Find old completed registrations for cleanup
+     * @param cutoffDate Date before which registrations are considered old
+     * @return List of old registrations for completed events
+     */
+    @Query("SELECT r FROM UserRegistration r JOIN r.plan p WHERE p.eventDate < :cutoffDate AND r.status IN ('CONFIRMED', 'CANCELLED')")
+    List<UserRegistration> findOldCompletedRegistrations(@Param("cutoffDate") LocalDate cutoffDate);
+
+    /**
      * Get registration statistics by plan
      * @return List of plan statistics
      */
@@ -132,4 +141,50 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
      * Find registrations after a specific date
      */
     List<UserRegistration> findByRegistrationDateAfter(LocalDateTime date);
+
+    /**
+     * Find registrations by plan ID
+     * @param planId Plan ID
+     * @return List of registrations for the plan
+     */
+    List<UserRegistration> findByPlanIdOrderByRegistrationDateDesc(Long planId);
+
+    /**
+     * Find registrations by plan ID and status
+     * @param planId Plan ID
+     * @param status Registration status
+     * @return List of registrations matching criteria
+     */
+    List<UserRegistration> findByPlanIdAndStatusOrderByRegistrationDateDesc(Long planId, UserRegistration.RegistrationStatus status);
+
+    /**
+     * Find registration by ID with team members eagerly loaded
+     * @param id Registration ID
+     * @return Optional registration with team members
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r LEFT JOIN FETCH r.teamMembers WHERE r.id = :id")
+    Optional<UserRegistration> findByIdWithTeamMembers(@Param("id") Long id);
+
+    /**
+     * Find registration by ID with documents eagerly loaded
+     * @param id Registration ID
+     * @return Optional registration with documents
+     */
+    @Query("SELECT r FROM UserRegistration r LEFT JOIN FETCH r.documents WHERE r.id = :id")
+    Optional<UserRegistration> findByIdWithDocuments(@Param("id") Long id);
+
+    /**
+     * Count registrations by plan ID and status
+     * @param planId Plan ID
+     * @param status Registration status
+     * @return Count of registrations matching criteria
+     */
+    long countByPlanIdAndStatus(Long planId, UserRegistration.RegistrationStatus status);
+
+    /**
+     * Count all registrations by plan ID (for application ID sequence generation)
+     * @param planId Plan ID
+     * @return Total count of registrations for the plan
+     */
+    long countByPlanId(Long planId);
 }
