@@ -50,7 +50,16 @@ public class TreasureHuntPlanService {
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getAvailablePlans() {
         logger.debug("Fetching available treasure hunt plans");
-        return planRepository.findAvailablePlans();
+        List<TreasureHuntPlan> plans = planRepository.findAvailablePlans();
+
+        // Set confirmed registrations count for each plan to avoid lazy loading issues
+        for (TreasureHuntPlan plan : plans) {
+            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
+                plan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+            plan.setConfirmedRegistrationsCount(confirmedCount);
+        }
+
+        return plans;
     }
 
     /**
@@ -202,10 +211,20 @@ public class TreasureHuntPlanService {
      * Get the featured plan for hero section
      * @return Featured plan or null if none is featured
      */
+    @Transactional(readOnly = true)
     public TreasureHuntPlan getFeaturedPlan() {
         logger.debug("Fetching featured plan");
-        return planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
+        TreasureHuntPlan featuredPlan = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
                 .orElse(null);
+
+        if (featuredPlan != null) {
+            // Set confirmed registrations count to avoid lazy loading issues
+            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
+                featuredPlan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+            featuredPlan.setConfirmedRegistrationsCount(confirmedCount);
+        }
+
+        return featuredPlan;
     }
 
     /**

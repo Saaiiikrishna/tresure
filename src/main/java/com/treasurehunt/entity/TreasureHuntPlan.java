@@ -206,9 +206,20 @@ public class TreasureHuntPlan {
     }
 
     public long getRegistrationCount() {
-        return registrations.stream()
-                .filter(reg -> reg.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
-                .count();
+        // Use pre-loaded count to avoid lazy loading issues
+        if (confirmedRegistrationsCount != null) {
+            return confirmedRegistrationsCount;
+        }
+
+        // Fallback to collection count if available (when session is active)
+        try {
+            return registrations.stream()
+                    .filter(reg -> reg.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
+                    .count();
+        } catch (Exception e) {
+            // If lazy loading fails, return 0 as fallback
+            return 0;
+        }
     }
 
     public boolean isAvailable() {
