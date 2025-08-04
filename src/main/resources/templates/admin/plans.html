@@ -389,6 +389,25 @@
                                 <div class="form-text">Number of slots available for registration</div>
                             </div>
                             <div class="col-md-6">
+                                <label for="editRegistrationDeadline" class="form-label">Registration Deadline</label>
+                                <input type="date" class="form-control" id="editRegistrationDeadline" name="registrationDeadline">
+                                <div class="form-text">Last date for registration (leave empty for open registration)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="editDiscountEnabled" name="discountEnabled">
+                                    <label class="form-check-label" for="editDiscountEnabled">
+                                        Enable Discount
+                                    </label>
+                                </div>
+                                <div class="mt-2" id="editDiscountPercentageContainer" style="display: none;">
+                                    <label for="editDiscountPercentage" class="form-label">Discount Percentage</label>
+                                    <input type="number" class="form-control" id="editDiscountPercentage" name="discountPercentage"
+                                           min="0" max="100" step="0.01" placeholder="0.00">
+                                    <div class="form-text">Discount percentage (0-100%)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
                                 <label for="editMaxParticipants" class="form-label">Max Participants (Admin Only) *</label>
                                 <input type="number" class="form-control" id="editMaxParticipants" name="maxParticipants" min="1" required>
                                 <div class="form-text">Maximum participants (not shown to public)</div>
@@ -488,6 +507,25 @@
                                 <div class="form-text">Prize money in Indian Rupees</div>
                             </div>
                             <div class="col-md-6">
+                                <label for="registrationDeadline" class="form-label">Registration Deadline</label>
+                                <input type="date" class="form-control" id="registrationDeadline" th:field="*{registrationDeadline}">
+                                <div class="form-text">Last date for registration (leave empty for open registration)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="discountEnabled" th:field="*{discountEnabled}">
+                                    <label class="form-check-label" for="discountEnabled">
+                                        Enable Discount
+                                    </label>
+                                </div>
+                                <div class="mt-2" id="discountPercentageContainer" style="display: none;">
+                                    <label for="discountPercentage" class="form-label">Discount Percentage</label>
+                                    <input type="number" class="form-control" id="discountPercentage" th:field="*{discountPercentage}"
+                                           min="0" max="100" step="0.01" placeholder="0.00">
+                                    <div class="form-text">Discount percentage (0-100%)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
                                 <label for="availableSlots" class="form-label">Available Slots *</label>
                                 <input type="number" class="form-control" id="availableSlots" th:field="*{availableSlots}" min="0" required>
                                 <div class="form-text">Number of slots available for registration</div>
@@ -558,7 +596,13 @@
                         document.getElementById('editRating').value = plan.rating || 0.0;
                         document.getElementById('editPrizeMoney').value = plan.prizeMoney || 0;
                         document.getElementById('editAvailableSlots').value = plan.availableSlots || 0;
+                        document.getElementById('editRegistrationDeadline').value = plan.registrationDeadline || '';
+                        document.getElementById('editDiscountEnabled').checked = plan.discountEnabled || false;
+                        document.getElementById('editDiscountPercentage').value = plan.discountPercentage || 0;
                         document.getElementById('editDescription').value = plan.description;
+
+                        // Show/hide discount percentage field based on toggle
+                        toggleEditDiscountField();
 
                         // Store plan ID for form submission
                         document.getElementById('editPlanForm').dataset.planId = id;
@@ -934,6 +978,36 @@
             document.body.insertAdjacentHTML('beforeend', containerHtml);
             return document.getElementById('toastContainer');
         }
+
+        // Discount toggle functionality
+        function toggleDiscountField() {
+            const discountEnabled = document.getElementById('discountEnabled').checked;
+            const container = document.getElementById('discountPercentageContainer');
+            container.style.display = discountEnabled ? 'block' : 'none';
+
+            if (!discountEnabled) {
+                document.getElementById('discountPercentage').value = '0';
+            }
+        }
+
+        function toggleEditDiscountField() {
+            const discountEnabled = document.getElementById('editDiscountEnabled').checked;
+            const container = document.getElementById('editDiscountPercentageContainer');
+            container.style.display = discountEnabled ? 'block' : 'none';
+
+            if (!discountEnabled) {
+                document.getElementById('editDiscountPercentage').value = '0';
+            }
+        }
+
+        // Add event listeners for discount toggles
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('discountEnabled').addEventListener('change', toggleDiscountField);
+            document.getElementById('editDiscountEnabled').addEventListener('change', toggleEditDiscountField);
+
+            // Initialize discount field visibility
+            toggleDiscountField();
+        });
     </script>
 </body>
 </html>

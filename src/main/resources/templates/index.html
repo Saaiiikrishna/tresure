@@ -31,7 +31,7 @@
             --border-color: #dee2e6;
             --card-bg: #ffffff;
             --navbar-bg: rgba(255, 255, 255, 0.95);
-            --hero-overlay: rgba(255, 255, 255, 0.85);
+            --hero-overlay: rgba(255, 255, 255, 0.45);
             --contact-overlay: rgba(0, 0, 0, 0.7);
             --btn-primary-bg: #0d6efd;
             --btn-primary-border: #0d6efd;
@@ -117,6 +117,28 @@
             background: var(--hero-overlay) !important;
         }
 
+        /* Hero text styling for better visibility */
+        .hero-title {
+            color: var(--text-primary) !important;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero-description {
+            color: var(--text-secondary) !important;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Dark mode hero text improvements */
+        [data-bs-theme="dark"] .hero-title {
+            color: #ffffff !important;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+        }
+
+        [data-bs-theme="dark"] .hero-description {
+            color: #e0e0e0 !important;
+            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+        }
+
         /* Update contact overlay */
         .contact-hero-overlay {
             background: var(--contact-overlay) !important;
@@ -168,6 +190,31 @@
             color: var(--text-primary);
         }
 
+        /* Plan card styling */
+        .plan-card .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .plan-card .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .plan-card .card-body {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        .plan-card .card-text {
+            color: var(--text-secondary) !important;
+        }
+
+        .plan-card .text-muted {
+            color: var(--text-muted) !important;
+        }
+
         /* Plan card pricing */
         .plan-card .price {
             color: var(--text-primary);
@@ -176,6 +223,53 @@
 
         .plan-card .price-currency {
             color: var(--text-muted);
+        }
+
+        .plan-card .original-price {
+            color: var(--text-muted);
+            text-decoration: line-through;
+            font-size: 0.9em;
+        }
+
+        .plan-card .discounted-price {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .plan-card .discount-badge {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.75em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+        }
+
+        .plan-card .deadline-info {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 0.375rem;
+            padding: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        /* Dark mode specific improvements */
+        [data-bs-theme="dark"] .plan-card .card {
+            background-color: #2d2d2d;
+            border-color: #404040;
+        }
+
+        [data-bs-theme="dark"] .plan-card .card:hover {
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        [data-bs-theme="dark"] .plan-card .card-header {
+            background-color: #0d6efd !important;
+            border-bottom-color: #404040;
+        }
+
+        [data-bs-theme="dark"] .plan-card .deadline-info {
+            background-color: #1a1a1a;
+            border-color: #404040;
         }
 
         /* Contact section styling */
@@ -489,9 +583,14 @@
                 <!-- YouTube iframe (if YouTube URL) -->
                 <iframe th:if="${heroVideoUrl != null and (heroVideoUrl.contains('youtube.com') or heroVideoUrl.contains('youtu.be'))}"
                         id="hero-youtube-iframe"
-                        th:src="${heroVideoUrl.contains('embed') ? heroVideoUrl + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' :
-                                 (heroVideoUrl.contains('youtube.com/watch?v=') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' :
-                                 (heroVideoUrl.contains('youtu.be/') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' : heroVideoUrl))}"
+                        th:src="${heroVideoUrl.contains('embed') ?
+                                 (heroVideoUrl.contains('?') ? heroVideoUrl + '&autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] :
+                                  heroVideoUrl + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1)) :
+                                 (heroVideoUrl.contains('youtube.com/watch?v=') ?
+                                  'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] :
+                                 (heroVideoUrl.contains('youtu.be/') ?
+                                  'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] :
+                                  heroVideoUrl))}"
                         class="w-100 h-100"
                         style="object-fit: cover; border: none; pointer-events: none;"
                         allow="autoplay; encrypted-media"
@@ -537,11 +636,11 @@
         <div class="container position-relative" style="z-index: 2;">
             <div class="row align-items-center min-vh-100">
                 <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold text-dark mb-4"
+                    <h1 class="display-4 fw-bold hero-title mb-4"
                         th:text="${featuredPlan != null ? featuredPlan.name : 'Epic Treasure Hunt Adventures Await!'}">
                         Epic Treasure Hunt Adventures Await!
                     </h1>
-                    <p class="lead text-muted mb-4"
+                    <p class="lead hero-description mb-4"
                        th:text="${featuredPlan != null ? featuredPlan.description : 'Embark on thrilling treasure hunts with professional guides. Solve puzzles, discover hidden clues, and create unforgettable memories in our carefully crafted adventure experiences.'}">
                         Embark on thrilling treasure hunts with professional guides.
                         Solve puzzles, discover hidden clues, and create unforgettable memories
@@ -645,6 +744,16 @@
                             <p class="card-text text-muted mb-3" 
                                th:text="${plan.getTruncatedDescription(150)}">Plan description...</p>
                             
+                            <!-- Registration Deadline Info -->
+                            <div class="deadline-info text-center" th:if="${plan.registrationDeadline != null}">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Registrations remain <strong th:class="${plan.registrationDeadlinePassed ? 'text-danger' : 'text-success'}"
+                                                                th:text="${plan.registrationDeadlinePassed ? 'closed' : 'open'}">open</strong> till:
+                                    <strong th:text="${plan.formattedRegistrationDeadline}">25th Dec</strong>
+                                </small>
+                            </div>
+
                             <div class="plan-details mb-3">
                                 <div class="d-flex justify-content-between align-items-start mb-2">
                                     <span class="flex-shrink-0"><i class="fas fa-clock text-primary me-1"></i> Schedule:</span>
@@ -668,10 +777,26 @@
                             </div>
                             
                             <div class="mt-auto">
+                                <!-- Pricing Section with Discount Support -->
                                 <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h4 class="text-primary mb-0">
-                                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>
-                                    </h4>
+                                    <div class="pricing-container">
+                                        <!-- Show discount pricing if enabled -->
+                                        <div th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="original-price">₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">1000</span></span>
+                                                <h4 class="discounted-price mb-0">
+                                                    ₹<span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">900</span>
+                                                </h4>
+                                                <span class="discount-badge" th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)} + '% OFF'">10% OFF</span>
+                                            </div>
+                                        </div>
+                                        <!-- Show regular pricing if no discount -->
+                                        <div th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                                            <h4 class="text-primary mb-0">
+                                                ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>
+                                            </h4>
+                                        </div>
+                                    </div>
                                     <small class="text-muted">per person</small>
                                 </div>
                                 
@@ -680,13 +805,18 @@
                                             class="btn btn-primary register-btn"
                                             th:data-plan-id="${plan.id}"
                                             th:data-plan-name="${plan.name}"
-                                            th:data-plan-price="${plan.priceInr}"
+                                            th:data-plan-price="${plan.discountedPrice}"
+                                            th:data-original-price="${plan.priceInr}"
+                                            th:data-discount-enabled="${plan.discountEnabled}"
+                                            th:data-discount-percentage="${plan.discountPercentage}"
                                             th:data-team-size="${plan.teamSize}"
                                             th:data-team-type="${plan.teamType}"
-                                            th:disabled="${!plan.available}">
-                                        <i class="fas fa-user-plus me-2"></i>
-                                        <span th:if="${plan.available}">Register Now</span>
-                                        <span th:unless="${plan.available}">Fully Booked</span>
+                                            th:disabled="${!plan.available or plan.registrationDeadlinePassed}">
+                                        <i class="fas fa-user-plus me-2" th:unless="${!plan.available or plan.registrationDeadlinePassed}"></i>
+                                        <i class="fas fa-times me-2" th:if="${!plan.available or plan.registrationDeadlinePassed}"></i>
+                                        <span th:if="${plan.available and !plan.registrationDeadlinePassed}">Register Now</span>
+                                        <span th:if="${!plan.available and !plan.registrationDeadlinePassed}">Fully Booked</span>
+                                        <span th:if="${plan.registrationDeadlinePassed}">Registration Closed</span>
                                     </button>
                                     <button type="button" class="btn btn-outline-secondary btn-sm preview-btn"
                                             th:data-plan-id="${plan.id}">

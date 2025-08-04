@@ -6,6 +6,7 @@ import jakarta.validation.constraints.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -113,6 +114,19 @@ public class TreasureHuntPlan {
     @NotNull(message = "End time is required")
     @Column(name = "end_time")
     private LocalTime endTime;
+
+    // Registration deadline
+    @Column(name = "registration_deadline")
+    private LocalDate registrationDeadline;
+
+    // Discount fields
+    @Column(name = "discount_enabled", nullable = false)
+    private Boolean discountEnabled = false;
+
+    @DecimalMin(value = "0.0", message = "Discount percentage must be non-negative")
+    @DecimalMax(value = "100.0", message = "Discount percentage cannot exceed 100%")
+    @Column(name = "discount_percentage", precision = 5, scale = 2)
+    private BigDecimal discountPercentage = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "plan", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @JsonIgnore
@@ -495,5 +509,69 @@ public class TreasureHuntPlan {
         }
 
         return startDateFormatted;
+    }
+
+    // Getters and setters for new fields
+    public LocalDate getRegistrationDeadline() {
+        return registrationDeadline;
+    }
+
+    public void setRegistrationDeadline(LocalDate registrationDeadline) {
+        this.registrationDeadline = registrationDeadline;
+    }
+
+    public Boolean getDiscountEnabled() {
+        return discountEnabled;
+    }
+
+    public void setDiscountEnabled(Boolean discountEnabled) {
+        this.discountEnabled = discountEnabled;
+    }
+
+    public BigDecimal getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(BigDecimal discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
+    /**
+     * Calculate discounted price
+     * @return Discounted price if discount is enabled, otherwise original price
+     */
+    public BigDecimal getDiscountedPrice() {
+        if (discountEnabled != null && discountEnabled && discountPercentage != null && discountPercentage.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discountAmount = priceInr.multiply(discountPercentage).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            return priceInr.subtract(discountAmount);
+        }
+        return priceInr;
+    }
+
+    /**
+     * Check if registration deadline has passed
+     * @return true if deadline has passed, false otherwise
+     */
+    public boolean isRegistrationDeadlinePassed() {
+        if (registrationDeadline == null) {
+            return false;
+        }
+        return LocalDate.now().isAfter(registrationDeadline);
+    }
+
+    /**
+     * Get formatted registration deadline
+     * @return Formatted deadline string or "Open" if no deadline
+     */
+    public String getFormattedRegistrationDeadline() {
+        if (registrationDeadline == null) {
+            return "Open";
+        }
+
+        String dayWithSuffix = getDayWithOrdinalSuffix(registrationDeadline.getDayOfMonth());
+        String monthName = registrationDeadline.getMonth().toString().toLowerCase();
+        monthName = monthName.substring(0, 1).toUpperCase() + monthName.substring(1);
+
+        return String.format("%s %s", dayWithSuffix, monthName);
     }
 }
