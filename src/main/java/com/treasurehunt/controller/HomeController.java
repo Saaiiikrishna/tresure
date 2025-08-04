@@ -12,6 +12,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -39,12 +40,18 @@ public class HomeController {
     /**
      * Display main landing page with available plans
      * @param model Thymeleaf model
+     * @param response HTTP response for cache control
      * @return Template name
      */
     @GetMapping("/")
-    public String home(Model model) {
+    public String home(Model model, HttpServletResponse response) {
         logger.debug("Displaying home page");
-        
+
+        // Prevent caching to ensure fresh data
+        response.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setHeader("Expires", "0");
+
         try {
             List<TreasureHuntPlan> availablePlans = planService.getAvailablePlans();
             String heroVideoUrl = appSettingsService.getHeroVideoUrl();

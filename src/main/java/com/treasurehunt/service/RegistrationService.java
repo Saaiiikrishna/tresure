@@ -209,7 +209,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getAllRegistrations() {
         logger.debug("Fetching all registrations");
-        return registrationRepository.findAll();
+        List<UserRegistration> registrations = registrationRepository.findAll();
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -220,7 +229,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(TreasureHuntPlan plan) {
         logger.debug("Fetching registrations for plan ID: {}", plan.getId());
-        return registrationRepository.findByPlanOrderByRegistrationDateDesc(plan);
+        List<UserRegistration> registrations = registrationRepository.findByPlanOrderByRegistrationDateDesc(plan);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -231,7 +249,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByStatus(UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations with status: {}", status);
-        return registrationRepository.findByStatusOrderByRegistrationDateDesc(status);
+        List<UserRegistration> registrations = registrationRepository.findByStatusOrderByRegistrationDateDesc(status);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -242,7 +269,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(Long planId) {
         logger.debug("Fetching registrations for plan ID: {}", planId);
-        return registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
+        List<UserRegistration> registrations = registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -254,7 +290,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlanAndStatus(Long planId, UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations for plan ID: {} with status: {}", planId, status);
-        return registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
+        List<UserRegistration> registrations = registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**

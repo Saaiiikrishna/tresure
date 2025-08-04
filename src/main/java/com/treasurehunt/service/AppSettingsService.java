@@ -118,8 +118,18 @@ public class AppSettingsService {
      * @return Updated setting
      */
     public AppSettings updateHeroVideoUrl(String videoUrl) {
+        logger.info("=== UPDATING HERO VIDEO URL ===");
+        logger.info("New video URL: {}", videoUrl);
+
         // Use the correct key that matches ImageManagementService
-        return updateSetting("hero_background_video_url", videoUrl, "Main hero section video URL");
+        AppSettings result = updateSetting("hero_background_video_url", videoUrl, "Main hero section video URL");
+
+        // Verify the update was successful
+        String retrievedValue = getHeroVideoUrl();
+        logger.info("Updated hero video URL. Retrieved value: {}", retrievedValue);
+        logger.info("=== HERO VIDEO URL UPDATE COMPLETE ===");
+
+        return result;
     }
 
     /**
