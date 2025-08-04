@@ -67,11 +67,21 @@ public class EmailService {
             context.setVariable("companyName", companyName);
             context.setVariable("supportEmail", supportEmail);
             context.setVariable("registrationNumber", registration.getRegistrationNumber());
-            
+
             // Add pre-hunt checklist
             context.setVariable("checklist", getPreHuntChecklist());
 
+            logger.info("=== PROCESSING EMAIL TEMPLATE ===");
+            logger.info("Template: email/registration-confirmation");
+            logger.info("Registration ID: {}", registration.getId());
+            logger.info("Plan: {}", registration.getPlan().getName());
+
             String htmlContent = templateEngine.process("email/registration-confirmation", context);
+
+            // Log template content preview for debugging
+            String preview = htmlContent.length() > 500 ? htmlContent.substring(0, 500) + "..." : htmlContent;
+            logger.info("Template content preview: {}", preview);
+            logger.info("=== EMAIL TEMPLATE PROCESSING COMPLETE ===");
             helper.setText(htmlContent, true);
 
             // Send email

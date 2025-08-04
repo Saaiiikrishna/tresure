@@ -62,7 +62,7 @@ spring:
   
   # Thymeleaf Configuration - Production optimized
   thymeleaf:
-    cache: true  # Enable caching in production
+    cache: false  # Temporarily disable caching to force template refresh
     prefix: classpath:/templates/
     suffix: .html
     encoding: UTF-8
