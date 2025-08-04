@@ -559,18 +559,9 @@ public class RegistrationService {
 
                 logger.info("Queued registration confirmation emails for {} team members", registration.getTeamMembers().size());
             } else {
-                // Queue registration received email for individual participant
-                String subject = "Registration Received for " + registration.getPlan().getName();
-                String body = buildIndividualConfirmationEmail(registration);
-
-                emailQueueService.queueRegistrationEmail(
-                    registration,
-                    subject,
-                    body,
-                    EmailQueue.EmailType.REGISTRATION_CONFIRMATION
-                );
-
-                logger.info("Queued registration confirmation email for individual registration");
+                // Use EmailService to send proper Thymeleaf template instead of hardcoded HTML
+                logger.info("Sending registration confirmation email using EmailService for individual registration");
+                emailService.sendRegistrationConfirmation(registration);
             }
         } catch (Exception e) {
             logger.error("Error queuing confirmation emails for registration ID: {}", registration.getId(), e);
@@ -958,66 +949,7 @@ public class RegistrationService {
         return html.toString();
     }
 
-    /**
-     * Build individual confirmation email content
-     */
-    private String buildIndividualConfirmationEmail(UserRegistration registration) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html><head><meta charset='UTF-8'><title>Registration Confirmed</title></head>");
-        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
-        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
-
-        // Header
-        html.append("<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
-        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Registration Confirmed!</h1>");
-        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Welcome to the Adventure!</p>");
-        html.append("</div>");
-
-        // Content
-        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
-        html.append("<h2 style='color: #667eea; margin-top: 0;'>Hello ").append(registration.getFullName()).append("!</h2>");
-        html.append("<p>Congratulations! Your registration has been confirmed. Here are your details:</p>");
-
-        // Registration Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>📋 Registration Details</h3>");
-        html.append("<p><strong>Registration Number:</strong> <span style='background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
-                   .append(generateRegistrationNumber(registration)).append("</span></p>");
-        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
-        html.append("<p><strong>Registration Date:</strong> ").append(registration.getRegistrationDate().toLocalDate()).append("</p>");
-        html.append("</div>");
-
-        // Participant Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>👤 Your Details</h3>");
-        html.append("<p><strong>Name:</strong> ").append(registration.getFullName()).append("</p>");
-        html.append("<p><strong>Email:</strong> ").append(registration.getEmail()).append("</p>");
-        html.append("<p><strong>Phone:</strong> +91 ").append(registration.getPhoneNumber()).append("</p>");
-        html.append("<p><strong>Age:</strong> ").append(registration.getAge()).append(" years</p>");
-        html.append("</div>");
-
-        // What's Next
-        html.append("<div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;'>");
-        html.append("<h3 style='margin-top: 0; color: #856404;'>📅 What's Next?</h3>");
-        html.append("<ul style='margin: 0; padding-left: 20px;'>");
-        html.append("<li>You will receive event details and instructions closer to the date</li>");
-        html.append("<li>Please arrive 15 minutes before the scheduled start time</li>");
-        html.append("<li>Bring a valid ID and comfortable walking shoes</li>");
-        html.append("<li>Mobile phones will be required for the treasure hunt</li>");
-        html.append("</ul>");
-        html.append("</div>");
-
-        // Footer
-        html.append("<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;'>");
-        html.append("<p style='color: #6c757d; margin: 0;'>Questions? Contact us at <a href='mailto:support@treasurehunt.com' style='color: #667eea;'>support@treasurehunt.com</a></p>");
-        html.append("<p style='color: #6c757d; margin: 5px 0 0 0; font-size: 14px;'>© 2024 Treasure Hunt Adventures. All rights reserved.</p>");
-        html.append("</div>");
-
-        html.append("</div></div></body></html>");
-
-        return html.toString();
-    }
+    // Removed buildIndividualConfirmationEmail method - now using EmailService with Thymeleaf templates
 
     /**
      * Create a UserRegistration object from TeamMember for email purposes
