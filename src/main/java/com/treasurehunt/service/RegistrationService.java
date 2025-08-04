@@ -173,6 +173,11 @@ public class RegistrationService {
             if (registrationOpt.isPresent()) {
                 UserRegistration registration = registrationOpt.get();
 
+                // Force load plan data to avoid lazy loading issues in templates
+                if (registration.getPlan() != null) {
+                    registration.getPlan().getName(); // This triggers lazy loading
+                }
+
                 // Force load documents separately to avoid MultipleBagFetchException
                 registration.getDocuments().size(); // This triggers lazy loading
 
@@ -211,7 +216,7 @@ public class RegistrationService {
         logger.debug("Fetching all registrations");
         List<UserRegistration> registrations = registrationRepository.findAll();
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             try {
                 if (registration.getPlan() != null) {
@@ -220,6 +225,10 @@ public class RegistrationService {
                 } else {
                     logger.warn("Registration ID {} has null plan", registration.getId());
                 }
+
+                // Force load team members for template access
+                registration.getTeamMembers().size(); // This triggers lazy loading
+
             } catch (Exception e) {
                 logger.error("Error loading plan data for registration ID: {}", registration.getId(), e);
                 // Continue processing other registrations
@@ -239,11 +248,13 @@ public class RegistrationService {
         logger.debug("Fetching registrations for plan ID: {}", plan.getId());
         List<UserRegistration> registrations = registrationRepository.findByPlanOrderByRegistrationDateDesc(plan);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -259,11 +270,13 @@ public class RegistrationService {
         logger.debug("Fetching registrations with status: {}", status);
         List<UserRegistration> registrations = registrationRepository.findByStatusOrderByRegistrationDateDesc(status);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -279,11 +292,13 @@ public class RegistrationService {
         logger.debug("Fetching registrations for plan ID: {}", planId);
         List<UserRegistration> registrations = registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -300,11 +315,13 @@ public class RegistrationService {
         logger.debug("Fetching registrations for plan ID: {} with status: {}", planId, status);
         List<UserRegistration> registrations = registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -379,11 +396,13 @@ public class RegistrationService {
         logger.debug("Searching registrations by email: {}", email);
         List<UserRegistration> registrations = registrationRepository.findByEmailIgnoreCaseOrderByRegistrationDateDesc(email);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -399,11 +418,13 @@ public class RegistrationService {
         logger.debug("Searching registrations by name: {}", name);
         List<UserRegistration> registrations = registrationRepository.findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(name);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
@@ -418,11 +439,13 @@ public class RegistrationService {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
         List<UserRegistration> registrations = registrationRepository.findRecentRegistrations(cutoffDate);
 
-        // Force load plan data to avoid lazy loading issues in templates
+        // Force load plan data and team members to avoid lazy loading issues in templates
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
             }
+            // Force load team members for template access
+            registration.getTeamMembers().size(); // This triggers lazy loading
         }
 
         return registrations;
