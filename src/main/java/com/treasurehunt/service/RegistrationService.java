@@ -377,7 +377,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> searchByEmail(String email) {
         logger.debug("Searching registrations by email: {}", email);
-        return registrationRepository.findByEmailIgnoreCaseOrderByRegistrationDateDesc(email);
+        List<UserRegistration> registrations = registrationRepository.findByEmailIgnoreCaseOrderByRegistrationDateDesc(email);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -388,7 +397,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> searchByName(String name) {
         logger.debug("Searching registrations by name: {}", name);
-        return registrationRepository.findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(name);
+        List<UserRegistration> registrations = registrationRepository.findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(name);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -398,7 +416,16 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRecentRegistrations() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-        return registrationRepository.findRecentRegistrations(cutoffDate);
+        List<UserRegistration> registrations = registrationRepository.findRecentRegistrations(cutoffDate);
+
+        // Force load plan data to avoid lazy loading issues in templates
+        for (UserRegistration registration : registrations) {
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers lazy loading
+            }
+        }
+
+        return registrations;
     }
 
     /**
