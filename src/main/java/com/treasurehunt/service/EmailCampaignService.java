@@ -306,29 +306,61 @@ public class EmailCampaignService {
      */
     public Map<String, Object> getCampaignStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        
-        // Count by status
-        Map<String, Long> statusCounts = new HashMap<>();
-        List<Object[]> statusStats = campaignRepository.getCampaignStatisticsByStatus();
-        for (Object[] stat : statusStats) {
-            statusCounts.put(stat[0].toString(), (Long) stat[1]);
+
+        try {
+            // Count by status
+            Map<String, Long> statusCounts = new HashMap<>();
+            try {
+                List<Object[]> statusStats = campaignRepository.getCampaignStatisticsByStatus();
+                for (Object[] stat : statusStats) {
+                    if (stat != null && stat.length >= 2 && stat[0] != null && stat[1] != null) {
+                        statusCounts.put(stat[0].toString(), (Long) stat[1]);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Error getting campaign status statistics", e);
+            }
+            stats.put("statusCounts", statusCounts);
+
+            // Count by type
+            Map<String, Long> typeCounts = new HashMap<>();
+            try {
+                List<Object[]> typeStats = campaignRepository.getCampaignStatisticsByType();
+                for (Object[] stat : typeStats) {
+                    if (stat != null && stat.length >= 2 && stat[0] != null && stat[1] != null) {
+                        typeCounts.put(stat[0].toString(), (Long) stat[1]);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Error getting campaign type statistics", e);
+            }
+            stats.put("typeCounts", typeCounts);
+
+            // Total counts with error handling
+            try {
+                stats.put("totalCampaigns", campaignRepository.count());
+                stats.put("activeCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENDING));
+                stats.put("scheduledCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SCHEDULED));
+                stats.put("sentCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENT));
+            } catch (Exception e) {
+                logger.warn("Error getting campaign counts", e);
+                stats.put("totalCampaigns", 0L);
+                stats.put("activeCampaigns", 0L);
+                stats.put("scheduledCampaigns", 0L);
+                stats.put("sentCampaigns", 0L);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error getting campaign statistics", e);
+            // Return empty stats to prevent template errors
+            stats.put("statusCounts", new HashMap<>());
+            stats.put("typeCounts", new HashMap<>());
+            stats.put("totalCampaigns", 0L);
+            stats.put("activeCampaigns", 0L);
+            stats.put("scheduledCampaigns", 0L);
+            stats.put("sentCampaigns", 0L);
         }
-        stats.put("statusCounts", statusCounts);
-        
-        // Count by type
-        Map<String, Long> typeCounts = new HashMap<>();
-        List<Object[]> typeStats = campaignRepository.getCampaignStatisticsByType();
-        for (Object[] stat : typeStats) {
-            typeCounts.put(stat[0].toString(), (Long) stat[1]);
-        }
-        stats.put("typeCounts", typeCounts);
-        
-        // Total counts
-        stats.put("totalCampaigns", campaignRepository.count());
-        stats.put("activeCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENDING));
-        stats.put("scheduledCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SCHEDULED));
-        stats.put("sentCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENT));
-        
+
         return stats;
     }
 

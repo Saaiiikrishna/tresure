@@ -69,7 +69,14 @@ public class TreasureHuntPlanService {
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getActivePlans() {
         logger.debug("Fetching all active treasure hunt plans");
-        return planRepository.findByStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
+        try {
+            List<TreasureHuntPlan> plans = planRepository.findByStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
+            logger.debug("Found {} active plans", plans.size());
+            return plans;
+        } catch (Exception e) {
+            logger.error("Error fetching active plans", e);
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -214,17 +221,30 @@ public class TreasureHuntPlanService {
     @Transactional(readOnly = true)
     public TreasureHuntPlan getFeaturedPlan() {
         logger.debug("Fetching featured plan");
-        TreasureHuntPlan featuredPlan = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
-                .orElse(null);
+        try {
+            TreasureHuntPlan featuredPlan = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
+                    .orElse(null);
 
-        if (featuredPlan != null) {
-            // Set confirmed registrations count to avoid lazy loading issues
-            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
-                featuredPlan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
-            featuredPlan.setConfirmedRegistrationsCount(confirmedCount);
+            if (featuredPlan != null) {
+                // Set confirmed registrations count to avoid lazy loading issues
+                try {
+                    long confirmedCount = registrationRepository.countByPlanIdAndStatus(
+                        featuredPlan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+                    featuredPlan.setConfirmedRegistrationsCount(confirmedCount);
+                    logger.debug("Featured plan {} has {} confirmed registrations", featuredPlan.getName(), confirmedCount);
+                } catch (Exception e) {
+                    logger.warn("Error loading registration count for featured plan {}", featuredPlan.getId(), e);
+                    featuredPlan.setConfirmedRegistrationsCount(0L);
+                }
+            } else {
+                logger.debug("No featured plan found");
+            }
+
+            return featuredPlan;
+        } catch (Exception e) {
+            logger.error("Error fetching featured plan", e);
+            return null;
         }
-
-        return featuredPlan;
     }
 
     /**

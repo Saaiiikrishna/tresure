@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -25,13 +26,86 @@ public class AppSettingsService {
     private AppSettingsRepository appSettingsRepository;
 
     /**
+     * Initialize default settings on startup
+     */
+    @PostConstruct
+    public void initializeDefaultSettings() {
+        try {
+            logger.info("Initializing default application settings...");
+
+            // Check if settings table is accessible
+            long settingsCount = appSettingsRepository.count();
+            logger.debug("Found {} existing settings", settingsCount);
+
+            // Initialize default settings if none exist
+            if (settingsCount == 0) {
+                initializeDefaults();
+            }
+
+            logger.info("Application settings initialization completed successfully");
+        } catch (Exception e) {
+            logger.error("Error initializing application settings", e);
+            // Don't throw exception to prevent application startup failure
+        }
+    }
+
+    /**
+     * Initialize default settings
+     */
+    private void initializeDefaults() {
+        try {
+            // Default hero video URL
+            updateSetting("hero_video_url", "https://www.youtube.com/embed/dQw4w9WgXcQ", "Default hero video URL");
+
+            // Default company info
+            Map<String, String> defaultCompanyInfo = new HashMap<>();
+            defaultCompanyInfo.put("name", "Treasure Hunt Adventures");
+            defaultCompanyInfo.put("address", "123 Adventure Street, City, State 12345");
+            defaultCompanyInfo.put("phone", "+1-234-567-8900");
+            defaultCompanyInfo.put("email", "info@treasurehuntadventures.com");
+            updateCompanyInfo(defaultCompanyInfo);
+
+            // Default contact info
+            Map<String, String> defaultContactInfo = new HashMap<>();
+            defaultContactInfo.put("phone", "+1-234-567-8900");
+            defaultContactInfo.put("email", "contact@treasurehuntadventures.com");
+            defaultContactInfo.put("address", "123 Adventure Street, City, State 12345");
+            defaultContactInfo.put("hours", "Mon-Fri: 9AM-6PM, Sat-Sun: 10AM-4PM");
+            defaultContactInfo.put("emergency", "+1-234-567-8911");
+            updateContactInfo(defaultContactInfo);
+
+            // Default social media links
+            Map<String, String> defaultSocialLinks = new HashMap<>();
+            defaultSocialLinks.put("facebook", "https://facebook.com/treasurehuntadventures");
+            defaultSocialLinks.put("twitter", "https://twitter.com/treasurehuntadv");
+            defaultSocialLinks.put("instagram", "https://instagram.com/treasurehuntadventures");
+            defaultSocialLinks.put("linkedin", "https://linkedin.com/company/treasurehuntadventures");
+            defaultSocialLinks.put("youtube", "https://youtube.com/treasurehuntadventures");
+            updateSocialMediaLinks(defaultSocialLinks);
+
+            logger.info("Default settings initialized successfully");
+        } catch (Exception e) {
+            logger.error("Error initializing default settings", e);
+        }
+    }
+
+    /**
      * Get setting value by key
      * @param key Setting key
      * @return Setting value or null if not found
      */
     public String getSettingValue(String key) {
-        Optional<AppSettings> setting = appSettingsRepository.findBySettingKey(key);
-        return setting.map(AppSettings::getSettingValue).orElse(null);
+        try {
+            if (key == null || key.trim().isEmpty()) {
+                logger.warn("Attempted to get setting with null or empty key");
+                return null;
+            }
+            Optional<AppSettings> setting = appSettingsRepository.findBySettingKey(key);
+            return setting.map(AppSettings::getSettingValue).orElse(null);
+        } catch (Exception e) {
+            logger.error("Error getting setting value for key: {}", key, e);
+            return null;
+        }
     }
 
     /**
@@ -53,22 +127,31 @@ public class AppSettingsService {
      * @return Updated AppSettings
      */
     public AppSettings updateSetting(String key, String value, String description) {
-        Optional<AppSettings> existingSetting = appSettingsRepository.findBySettingKey(key);
-        
-        AppSettings setting;
-        if (existingSetting.isPresent()) {
-            setting = existingSetting.get();
-            setting.setSettingValue(value);
-            if (description != null) {
-                setting.setDescription(description);
+        try {
+            if (key == null || key.trim().isEmpty()) {
+                throw new IllegalArgumentException("Setting key cannot be null or empty");
             }
-        } else {
-            setting = new AppSettings(key, value, description);
+
+            Optional<AppSettings> existingSetting = appSettingsRepository.findBySettingKey(key);
+
+            AppSettings setting;
+            if (existingSetting.isPresent()) {
+                setting = existingSetting.get();
+                setting.setSettingValue(value);
+                if (description != null) {
+                    setting.setDescription(description);
+                }
+            } else {
+                setting = new AppSettings(key, value, description);
+            }
+
+            AppSettings savedSetting = appSettingsRepository.save(setting);
+            logger.info("Updated setting: {} = {}", key, value);
+            return savedSetting;
+        } catch (Exception e) {
+            logger.error("Error updating setting: {} = {}", key, value, e);
+            throw new RuntimeException("Failed to update setting: " + key, e);
         }
-        
-        AppSettings savedSetting = appSettingsRepository.save(setting);
-        logger.info("Updated setting: {} = {}", key, value);
-        return savedSetting;
     }
 
     /**
