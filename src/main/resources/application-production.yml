@@ -4,6 +4,8 @@
 spring:
   application:
     name: treasure-hunt-registration
+    insights:
+      enabled: false
 
   # Completely disable Azure Application Insights to prevent telemetry warnings
   cloud:
@@ -11,9 +13,6 @@ spring:
       application-insights:
         enabled: false
         connection-string: ""
-  application:
-    insights:
-      enabled: false
 
   # Database Configuration - Azure PostgreSQL for production
   datasource:
