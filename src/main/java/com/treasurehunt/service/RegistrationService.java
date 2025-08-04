@@ -567,25 +567,20 @@ public class RegistrationService {
 
                 logger.info("Queued registration confirmation emails for {} team members", registration.getTeamMembers().size());
             } else {
-                // Queue registration confirmation email for individual participant using EmailService
+                // Queue registration confirmation email for individual participant
                 logger.info("Queuing registration confirmation email for individual registration");
 
-                // Use async EmailService call to ensure it gets processed
-                try {
-                    emailService.sendRegistrationConfirmation(registration);
-                    logger.info("Successfully queued individual registration confirmation email");
-                } catch (Exception e) {
-                    logger.error("Error sending individual registration confirmation email, will retry", e);
-                    // Fallback: Queue it manually if direct sending fails
-                    String subject = "Registration Received for " + registration.getPlan().getName();
-                    emailQueueService.queueEmail(
-                        registration.getEmail(),
-                        registration.getFullName(),
-                        subject,
-                        "Your registration has been received and is being processed. You will receive detailed confirmation shortly.",
-                        EmailQueue.EmailType.REGISTRATION_CONFIRMATION
-                    );
-                }
+                String subject = "Registration Received for " + registration.getPlan().getName();
+
+                // Queue the email using the proper email queue system
+                emailQueueService.queueRegistrationEmail(
+                    registration,
+                    subject,
+                    null, // Let EmailQueueService generate the body using EmailService
+                    EmailQueue.EmailType.REGISTRATION_CONFIRMATION
+                );
+
+                logger.info("Successfully queued individual registration confirmation email for: {}", registration.getEmail());
             }
         } catch (Exception e) {
             logger.error("Error queuing confirmation emails for registration ID: {}", registration.getId(), e);

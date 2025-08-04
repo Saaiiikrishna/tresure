@@ -17,6 +17,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
@@ -38,8 +40,17 @@ public class EmailQueueService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private TemplateEngine templateEngine;
+
     @Value("${app.email.from}")
     private String fromEmail;
+
+    @Value("${app.email.company-name}")
+    private String companyName;
+
+    @Value("${app.email.support}")
+    private String supportEmail;
 
     /**
      * Add email to queue
@@ -57,15 +68,27 @@ public class EmailQueueService {
     /**
      * Add email to queue with registration reference
      */
-    public EmailQueue queueRegistrationEmail(UserRegistration registration, String subject, 
+    public EmailQueue queueRegistrationEmail(UserRegistration registration, String subject,
                                            String body, EmailQueue.EmailType emailType) {
         logger.info("Queuing registration email for registration ID: {}", registration.getId());
-        
-        EmailQueue email = new EmailQueue(registration.getEmail(), registration.getFullName(), 
-                                         subject, body, emailType);
+
+        // If body is null, generate it using EmailService template
+        String emailBody = body;
+        if (emailBody == null || emailBody.trim().isEmpty()) {
+            logger.info("Generating email body using EmailService template for registration ID: {}", registration.getId());
+            try {
+                emailBody = generateRegistrationEmailBody(registration);
+            } catch (Exception e) {
+                logger.error("Error generating email body for registration ID: {}, using fallback", registration.getId(), e);
+                emailBody = generateFallbackEmailBody(registration);
+            }
+        }
+
+        EmailQueue email = new EmailQueue(registration.getEmail(), registration.getFullName(),
+                                         subject, emailBody, emailType);
         email.setRegistrationId(registration.getId());
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
@@ -384,5 +407,84 @@ public class EmailQueueService {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30); // Keep emails for 30 days
         emailQueueRepository.deleteOldSentEmails(cutoffDate);
         logger.info("Cleaned up old sent emails before: {}", cutoffDate);
+    }
+
+    /**
+     * Generate registration email body using Thymeleaf template
+     */
+    private String generateRegistrationEmailBody(UserRegistration registration) {
+        logger.info("Generating registration email body using Thymeleaf template for registration ID: {}", registration.getId());
+
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+
+        // Add pre-hunt checklist
+        context.setVariable("checklist", getPreHuntChecklist());
+
+        String htmlContent = templateEngine.process("email/registration-confirmation", context);
+        logger.info("Successfully generated registration email body using Thymeleaf template");
+
+        return htmlContent;
+    }
+
+    /**
+     * Generate fallback email body if template processing fails
+     */
+    private String generateFallbackEmailBody(UserRegistration registration) {
+        logger.info("Generating fallback email body for registration ID: {}", registration.getId());
+
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html><head><meta charset='UTF-8'><title>Registration Confirmed</title></head>");
+        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+
+        // Header with corporate colors
+        html.append("<div style='background: linear-gradient(135deg, #2c5aa0 0%, #3182ce 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
+        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Registration Confirmed!</h1>");
+        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Welcome to the Adventure!</p>");
+        html.append("</div>");
+
+        // Content
+        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
+        html.append("<h2 style='color: #2c5aa0; margin-top: 0;'>Hello ").append(registration.getFullName()).append("!</h2>");
+        html.append("<p>Congratulations! Your registration has been confirmed. Here are your details:</p>");
+
+        // Registration Details
+        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2c5aa0;'>");
+        html.append("<h3 style='margin-top: 0; color: #333;'>📋 Registration Details</h3>");
+        html.append("<p><strong>Registration Number:</strong> <span style='background: #2c5aa0; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
+                   .append(registration.getRegistrationNumber()).append("</span></p>");
+        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
+        html.append("<p><strong>Registration Date:</strong> ").append(registration.getRegistrationDate().toLocalDate()).append("</p>");
+        html.append("</div>");
+
+        // Footer
+        html.append("<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;'>");
+        html.append("<p style='color: #6c757d; margin: 0;'>Questions? Contact us at <a href='mailto:").append(supportEmail).append("' style='color: #2c5aa0;'>").append(supportEmail).append("</a></p>");
+        html.append("<p style='color: #6c757d; margin: 5px 0 0 0; font-size: 14px;'>© 2024 ").append(companyName).append(". All rights reserved.</p>");
+        html.append("</div>");
+
+        html.append("</div></div></body></html>");
+
+        return html.toString();
+    }
+
+    /**
+     * Get pre-hunt checklist items
+     */
+    private List<String> getPreHuntChecklist() {
+        return Arrays.asList(
+            "Bring a fully charged mobile phone",
+            "Wear comfortable walking shoes",
+            "Carry a valid photo ID",
+            "Arrive 15 minutes before start time",
+            "Bring a water bottle",
+            "Follow all safety instructions"
+        );
     }
 }
