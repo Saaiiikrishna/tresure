@@ -77,7 +77,14 @@ public class HomeController {
 
             model.addAttribute("plans", availablePlans);
             model.addAttribute("totalPlans", availablePlans.size());
-            model.addAttribute("heroVideoUrl", heroVideoUrl); // Background video
+            // Add cache-busting parameter only for non-YouTube URLs to force refresh
+            String cacheBustedVideoUrl = heroVideoUrl;
+            if (heroVideoUrl != null && !heroVideoUrl.isEmpty() &&
+                !heroVideoUrl.contains("youtube.com") && !heroVideoUrl.contains("youtu.be")) {
+                String separator = heroVideoUrl.contains("?") ? "&" : "?";
+                cacheBustedVideoUrl = heroVideoUrl + separator + "t=" + System.currentTimeMillis();
+            }
+            model.addAttribute("heroVideoUrl", cacheBustedVideoUrl); // Background video
             model.addAttribute("heroPreviewVideoUrl", "https://www.youtube.com/embed/dQw4w9WgXcQ"); // Preview video
             model.addAttribute("heroFallbackImageUrl", heroFallbackImageUrl);
             model.addAttribute("aboutSectionImageUrl", aboutSectionImageUrl);
