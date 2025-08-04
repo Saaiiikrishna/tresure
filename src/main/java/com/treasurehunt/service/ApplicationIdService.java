@@ -193,7 +193,7 @@ public class ApplicationIdService {
         
         try {
             // Expected format: TH-YYMM-TYPE-NNNNNN
-            String[] parts = applicationId.split("-");
+            String[] parts = applicationId.split("\\-");
             if (parts.length >= 4) {
                 String sequencePart = parts[parts.length - 1]; // Last part is the sequence
                 return Long.parseLong(sequencePart);

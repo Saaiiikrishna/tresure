@@ -233,21 +233,8 @@ public class RegistrationController {
         }
         // If medical consent IS given, medical certificate is OPTIONAL (no validation needed)
 
-        // Temporarily disable file size validation for testing email functionality
-        /*
-        // Validate file sizes (basic check - detailed validation in FileStorageService)
-        if (photoFile.getSize() > 2 * 1024 * 1024) { // 2MB
-            return "Photo file size must not exceed 2MB";
-        }
-
-        if (idFile.getSize() > 5 * 1024 * 1024) { // 5MB
-            return "ID document file size must not exceed 5MB";
-        }
-
-        if (medicalFile.getSize() > 5 * 1024 * 1024) { // 5MB
-            return "Medical certificate file size must not exceed 5MB";
-        }
-        */
+        // File size validation is handled in FileStorageService with configurable limits
+        // This ensures consistent validation across the application
 
         // Temporarily disable file type validation for testing email functionality
         /*

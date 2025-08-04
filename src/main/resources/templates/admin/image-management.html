@@ -252,7 +252,11 @@
                                              onclick="document.getElementById('file-input-' + this.dataset.category).click()">
                                             <i class="fas fa-cloud-upload-alt fa-2x mb-2 text-muted"></i>
                                             <p class="mb-0 text-muted">Click to select file or drag & drop</p>
-                                            <small class="text-muted">Images (5MB max) • Videos (50MB max) • JPG, PNG, WebP, MP4</small>
+                                            <small class="text-muted">
+                                                Images (<span th:text="${T(java.lang.Math).round(T(java.lang.Double).parseDouble(@environment.getProperty('app.file-storage.max-image-size', '5242880')) / 1024 / 1024)}">5</span>MB max) •
+                                                Videos (<span th:text="${T(java.lang.Math).round(T(java.lang.Double).parseDouble(@environment.getProperty('app.file-storage.max-video-size', '52428800')) / 1024 / 1024)}">50</span>MB max) •
+                                                JPG, PNG, WebP, MP4
+                                            </small>
                                         </div>
                                         <input type="file" th:id="'file-input-' + ${category.value}"
                                                class="d-none" accept="image/jpeg,image/jpg,image/png,image/webp,video/mp4,video/webm,video/ogg"
@@ -350,7 +354,18 @@
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
+    <!-- Configuration Script -->
+    <script th:inline="javascript">
+        // File size configuration from server
+        window.FILE_SIZE_CONFIG = {
+            maxImageSize: /*[[${@environment.getProperty('app.file-storage.max-image-size', '5242880')}]]*/ 5242880,
+            maxVideoSize: /*[[${@environment.getProperty('app.file-storage.max-video-size', '52428800')}]]*/ 52428800,
+            maxPhotoSize: /*[[${@environment.getProperty('app.file-storage.max-photo-size', '2097152')}]]*/ 2097152,
+            maxDocumentSize: /*[[${@environment.getProperty('app.file-storage.max-document-size', '5242880')}]]*/ 5242880
+        };
+    </script>
+
     <script>
         // Global variables for file uploads
         let selectedFiles = {};
@@ -397,7 +412,7 @@
 
             // Validate file size based on type
             const isVideo = file.type.startsWith('video/');
-            const maxSize = isVideo ? 50 * 1024 * 1024 : 5 * 1024 * 1024; // 50MB for videos, 5MB for images
+            const maxSize = isVideo ? window.FILE_SIZE_CONFIG.maxVideoSize : window.FILE_SIZE_CONFIG.maxImageSize;
 
             if (file.size > maxSize) {
                 const maxSizeMB = maxSize / (1024 * 1024);

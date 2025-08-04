@@ -490,8 +490,8 @@
                 <iframe th:if="${heroVideoUrl != null and (heroVideoUrl.contains('youtube.com') or heroVideoUrl.contains('youtu.be'))}"
                         id="hero-youtube-iframe"
                         th:src="${heroVideoUrl.contains('embed') ? heroVideoUrl + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' :
-                                 (heroVideoUrl.contains('youtube.com/watch?v=') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('&')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' :
-                                 (heroVideoUrl.contains('youtu.be/') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('?')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' : heroVideoUrl))}"
+                                 (heroVideoUrl.contains('youtube.com/watch?v=') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' :
+                                 (heroVideoUrl.contains('youtu.be/') ? 'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1' : heroVideoUrl))}"
                         class="w-100 h-100"
                         style="object-fit: cover; border: none; pointer-events: none;"
                         allow="autoplay; encrypted-media"

@@ -357,7 +357,7 @@ public class ImageManagementService {
 
     private String extractFilenameFromUrl(String url) {
         try {
-            String[] parts = url.split("/");
+            String[] parts = url.split("\\/");
             String lastPart = parts[parts.length - 1];
             // Remove query parameters
             if (lastPart.contains("?")) {
@@ -433,7 +433,7 @@ public class ImageManagementService {
     private String extractYouTubeVideoId(String url) {
         try {
             if (url.contains("youtube.com/watch?v=")) {
-                String[] parts = url.split("v=");
+                String[] parts = url.split("v\\=");
                 if (parts.length > 1) {
                     String videoId = parts[1];
                     // Remove additional parameters
@@ -443,7 +443,7 @@ public class ImageManagementService {
                     return videoId;
                 }
             } else if (url.contains("youtu.be/")) {
-                String[] parts = url.split("youtu.be/");
+                String[] parts = url.split("youtu\\.be\\/");
                 if (parts.length > 1) {
                     String videoId = parts[1];
                     // Remove additional parameters

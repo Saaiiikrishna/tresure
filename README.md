@@ -127,14 +127,21 @@ src/
 ## 🔧 Configuration Options
 
 ### File Upload Settings
-```yaml
-app:
-  file-storage:
-    upload-dir: uploads/documents
-    max-photo-size: 2097152      # 2MB
-    max-document-size: 5242880   # 5MB
-    allowed-photo-types: image/jpeg,image/jpg,image/png
-    allowed-document-types: application/pdf,image/jpeg,image/jpg
+Configure via environment variables:
+```bash
+# File upload limits (in bytes)
+MAX_PHOTO_SIZE=2097152          # 2MB for registration photos
+MAX_DOCUMENT_SIZE=5242880       # 5MB for documents
+MAX_IMAGE_SIZE=5242880          # 5MB for admin image uploads
+MAX_VIDEO_SIZE=52428800         # 50MB for admin video uploads
+
+# File upload directories
+FILE_UPLOAD_DIR=uploads/documents
+IMAGE_UPLOAD_DIR=uploads/images
+
+# Allowed file types
+ALLOWED_PHOTO_TYPES=image/jpeg,image/jpg,image/png
+ALLOWED_DOCUMENT_TYPES=application/pdf,image/jpeg,image/jpg
 ```
 
 ### Email Settings

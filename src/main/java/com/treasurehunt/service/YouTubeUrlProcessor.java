@@ -50,7 +50,7 @@ public class YouTubeUrlProcessor {
         try {
             // Handle youtube.com/watch?v=VIDEO_ID format
             if (url.contains("youtube.com/watch?v=")) {
-                String[] parts = url.split("v=");
+                String[] parts = url.split("v\\=");
                 if (parts.length > 1) {
                     String videoId = parts[1];
                     // Remove additional parameters
@@ -66,7 +66,7 @@ public class YouTubeUrlProcessor {
             
             // Handle youtu.be/VIDEO_ID format
             if (url.contains("youtu.be/")) {
-                String[] parts = url.split("youtu.be/");
+                String[] parts = url.split("youtu\\.be\\/");
                 if (parts.length > 1) {
                     String videoId = parts[1];
                     // Remove additional parameters
@@ -82,7 +82,7 @@ public class YouTubeUrlProcessor {
 
             // Handle youtube.com/embed/VIDEO_ID format
             if (url.contains("youtube.com/embed/")) {
-                String[] parts = url.split("youtube.com/embed/");
+                String[] parts = url.split("youtube\\.com\\/embed\\/");
                 if (parts.length > 1) {
                     String videoId = parts[1];
                     // Remove additional parameters

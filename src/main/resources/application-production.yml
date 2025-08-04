@@ -100,6 +100,8 @@ app:
     upload-dir: ${FILE_UPLOAD_DIR}
     max-photo-size: ${MAX_PHOTO_SIZE}
     max-document-size: ${MAX_DOCUMENT_SIZE}
+    max-image-size: ${MAX_IMAGE_SIZE}
+    max-video-size: ${MAX_VIDEO_SIZE}
     allowed-photo-types: ${ALLOWED_PHOTO_TYPES}
     allowed-document-types: ${ALLOWED_DOCUMENT_TYPES}
 
