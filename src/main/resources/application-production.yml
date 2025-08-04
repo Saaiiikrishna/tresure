@@ -5,6 +5,12 @@ spring:
   application:
     name: treasure-hunt-registration
 
+  # Disable Azure Application Insights to prevent telemetry warnings
+  cloud:
+    azure:
+      application-insights:
+        enabled: false
+
   # Database Configuration - Azure PostgreSQL for production
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&useUnicode=true&characterEncoding=UTF-8

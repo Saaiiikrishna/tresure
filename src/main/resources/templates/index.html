@@ -252,24 +252,91 @@
             margin-bottom: 1rem;
         }
 
-        /* Dark mode specific improvements */
+        /* Dark mode complete redesign - Professional gradient theme */
         [data-bs-theme="dark"] .plan-card .card {
-            background-color: #2d2d2d;
-            border-color: #404040;
+            background: linear-gradient(145deg, #1a1f2e 0%, #16213e 100%);
+            border: 1px solid #2d3748;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         [data-bs-theme="dark"] .plan-card .card:hover {
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
+            border-color: #4299e1;
         }
 
         [data-bs-theme="dark"] .plan-card .card-header {
-            background-color: #0d6efd !important;
-            border-bottom-color: #404040;
+            background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%) !important;
+            border-bottom: 1px solid #2d3748;
+            color: #ffffff !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .card-body {
+            background: transparent;
+            color: #e2e8f0;
+        }
+
+        [data-bs-theme="dark"] .plan-card .card-text {
+            color: #cbd5e0 !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .text-muted {
+            color: #a0aec0 !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .text-primary {
+            color: #63b3ed !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .text-success {
+            color: #68d391 !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .text-warning {
+            color: #fbd38d !important;
         }
 
         [data-bs-theme="dark"] .plan-card .deadline-info {
-            background-color: #1a1a1a;
-            border-color: #404040;
+            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+            border: 1px solid #4a5568;
+            color: #e2e8f0;
+        }
+
+        [data-bs-theme="dark"] .plan-card .btn-primary {
+            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
+            border-color: #3182ce;
+            color: #ffffff;
+        }
+
+        [data-bs-theme="dark"] .plan-card .btn-primary:hover {
+            background: linear-gradient(135deg, #2c5282 0%, #2a4365 100%);
+            border-color: #2c5282;
+            transform: translateY(-2px);
+        }
+
+        [data-bs-theme="dark"] .plan-card .btn-outline-secondary {
+            border-color: #4a5568;
+            color: #a0aec0;
+            background: transparent;
+        }
+
+        [data-bs-theme="dark"] .plan-card .btn-outline-secondary:hover {
+            background: #4a5568;
+            border-color: #4a5568;
+            color: #ffffff;
+        }
+
+        [data-bs-theme="dark"] .plan-card .discounted-price {
+            color: #68d391 !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .original-price {
+            color: #a0aec0 !important;
+        }
+
+        [data-bs-theme="dark"] .plan-card .discount-badge {
+            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
+            color: #ffffff;
         }
 
         /* Contact section styling */
@@ -389,89 +456,13 @@
             border: 1px solid #bd2130;
         }
 
-        /* Dark mode improvements */
-        [data-theme="dark"] {
-            --bs-body-bg: #121212;
-            --bs-body-color: #e0e0e0;
-            --bs-card-bg: #1e1e1e;
-            --bs-border-color: #333333;
-        }
+        /* Old dark mode rules removed - now using [data-bs-theme="dark"] */
 
-        [data-theme="dark"] .card {
-            background-color: #1e1e1e !important;
-            border-color: #333333 !important;
-            color: #e0e0e0 !important;
-        }
 
-        [data-theme="dark"] .card-body {
-            background-color: #1e1e1e !important;
-            color: #e0e0e0 !important;
-        }
 
-        [data-theme="dark"] .text-muted {
-            color: #b0b0b0 !important;
-        }
 
-        [data-theme="dark"] .plan-card {
-            background: linear-gradient(145deg, #1e1e1e 0%, #252525 100%) !important;
-            border: 1px solid #333333 !important;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
-        }
 
-        [data-theme="dark"] .plan-card .card-body {
-            color: #e0e0e0 !important;
-        }
 
-        [data-theme="dark"] .plan-card .card-text {
-            color: #c0c0c0 !important;
-        }
-
-        [data-theme="dark"] .plan-card .text-muted {
-            color: #a0a0a0 !important;
-        }
-
-        [data-theme="dark"] .plan-card .schedule-display {
-            background-color: #2a2a2a !important;
-            border: 1px solid #404040 !important;
-            color: #e0e0e0 !important;
-        }
-
-        [data-theme="dark"] .plan-card .schedule-date {
-            color: #ffffff !important;
-        }
-
-        [data-theme="dark"] .plan-card .schedule-time {
-            color: #c0c0c0 !important;
-        }
-
-        /* Fix the plan details section in dark mode */
-        [data-theme="dark"] .plan-details {
-            color: #e0e0e0 !important;
-        }
-
-        [data-theme="dark"] .plan-details .d-flex {
-            color: #e0e0e0 !important;
-        }
-
-        [data-theme="dark"] .plan-details .d-flex span {
-            color: #e0e0e0 !important;
-        }
-
-        [data-theme="dark"] .plan-details .text-muted {
-            color: #a0a0a0 !important;
-        }
-
-        [data-theme="dark"] .plan-details .fw-bold {
-            color: #ffffff !important;
-        }
-
-        [data-theme="dark"] .plan-details .text-success {
-            color: #28a745 !important;
-        }
-
-        [data-theme="dark"] .plan-details .text-warning {
-            color: #ffc107 !important;
-        }
 
         [data-theme="dark"] .plan-details .text-primary {
             color: #6ea8fe !important;
@@ -755,24 +746,24 @@
                             </div>
 
                             <div class="plan-details mb-3">
-                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                    <span class="flex-shrink-0"><i class="fas fa-clock text-primary me-1"></i> Schedule:</span>
-                                    <div class="text-end schedule-display">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start mb-2">
+                                    <span class="flex-shrink-0 mb-1 mb-sm-0"><i class="fas fa-clock text-primary me-1"></i> Schedule:</span>
+                                    <div class="text-start text-sm-end schedule-display">
                                         <div class="schedule-date fw-bold" th:text="${plan.formattedDateRange}">23rd May</div>
                                         <div class="schedule-time text-muted small" th:text="${plan.formattedTimeRange}">09:00 AM - 06:00 PM (3 hours)</div>
                                     </div>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
-                                    <span th:text="${plan.availableSlots - plan.registrationCount}">Available spots</span>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
+                                    <span class="fw-bold" th:text="${plan.availableSlots - plan.registrationCount}">Available spots</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span><i class="fas fa-users-cog text-primary me-1"></i> Team Format:</span>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-users-cog text-primary me-1"></i> Team Format:</span>
                                     <span th:text="${plan.teamDescription}">Team format</span>
                                 </div>
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span><i class="fas fa-trophy text-warning me-1"></i> Prize Money:</span>
-                                    <span class="fw-bold text-success">₹<span th:text="${#numbers.formatDecimal(plan.prizeMoney, 1, 0)}">5000</span></span>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-trophy text-warning me-1"></i> Prize Money:</span>
+                                    <span class="fw-bold text-success">₹ <span th:text="${#numbers.formatDecimal(plan.prizeMoney, 1, 0)}">5000</span>/-</span>
                                 </div>
                             </div>
                             
@@ -782,10 +773,10 @@
                                     <div class="pricing-container">
                                         <!-- Show discount pricing if enabled -->
                                         <div th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
-                                            <div class="d-flex align-items-center gap-2">
-                                                <span class="original-price">₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">1000</span></span>
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">1000</span>/-</span>
                                                 <h4 class="discounted-price mb-0">
-                                                    ₹<span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">900</span>
+                                                    ₹ <span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">900</span>/-
                                                 </h4>
                                                 <span class="discount-badge" th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)} + '% OFF'">10% OFF</span>
                                             </div>
@@ -793,7 +784,7 @@
                                         <!-- Show regular pricing if no discount -->
                                         <div th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
                                             <h4 class="text-primary mb-0">
-                                                ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>
+                                                ₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>/-
                                             </h4>
                                         </div>
                                     </div>
@@ -1248,16 +1239,16 @@
 
         // Dark Mode Functionality
         function toggleDarkMode() {
-            const body = document.body;
+            const html = document.documentElement;
             const icon = document.getElementById('dark-mode-icon');
-            const currentTheme = body.getAttribute('data-theme');
+            const currentTheme = html.getAttribute('data-bs-theme');
 
             if (currentTheme === 'dark') {
-                body.removeAttribute('data-theme');
+                html.setAttribute('data-bs-theme', 'light');
                 icon.className = 'fas fa-moon';
                 localStorage.setItem('theme', 'light');
             } else {
-                body.setAttribute('data-theme', 'dark');
+                html.setAttribute('data-bs-theme', 'dark');
                 icon.className = 'fas fa-sun';
                 localStorage.setItem('theme', 'dark');
             }
@@ -1266,14 +1257,14 @@
         // Initialize dark mode from localStorage
         function initializeDarkMode() {
             const savedTheme = localStorage.getItem('theme');
-            const body = document.body;
+            const html = document.documentElement;
             const icon = document.getElementById('dark-mode-icon');
 
             if (savedTheme === 'dark') {
-                body.setAttribute('data-theme', 'dark');
+                html.setAttribute('data-bs-theme', 'dark');
                 icon.className = 'fas fa-sun';
             } else {
-                body.removeAttribute('data-theme');
+                html.setAttribute('data-bs-theme', 'light');
                 icon.className = 'fas fa-moon';
             }
         }
