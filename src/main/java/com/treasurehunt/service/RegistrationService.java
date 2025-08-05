@@ -176,6 +176,7 @@ public class RegistrationService {
                 // Force load plan data to avoid lazy loading issues in templates
                 if (registration.getPlan() != null) {
                     registration.getPlan().getName(); // This triggers lazy loading
+                    registration.getPlan().getId(); // Ensure ID is also loaded
                 }
 
                 // Force load documents separately to avoid MultipleBagFetchException
@@ -220,7 +221,9 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             try {
                 if (registration.getPlan() != null) {
+                    // Trigger lazy loading of plan data - load both name and id
                     registration.getPlan().getName(); // This triggers lazy loading
+                    registration.getPlan().getId(); // Ensure ID is also loaded
                     logger.debug("Loaded plan data for registration ID: {}", registration.getId());
                 } else {
                     logger.warn("Registration ID {} has null plan", registration.getId());
@@ -252,6 +255,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -274,6 +278,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -296,6 +301,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -319,6 +325,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -400,6 +407,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -422,6 +430,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading
@@ -443,6 +452,7 @@ public class RegistrationService {
         for (UserRegistration registration : registrations) {
             if (registration.getPlan() != null) {
                 registration.getPlan().getName(); // This triggers lazy loading
+                registration.getPlan().getId(); // Ensure ID is also loaded
             }
             // Force load team members for template access
             registration.getTeamMembers().size(); // This triggers lazy loading

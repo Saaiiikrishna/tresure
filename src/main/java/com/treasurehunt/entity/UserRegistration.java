@@ -179,24 +179,37 @@ public class UserRegistration {
      * @return Formatted application ID
      */
     private String generateApplicationId(String type) {
-        if (id == null || plan == null) {
-            return "TH-PENDING";
+        if (id == null) {
+            return "TH-PENDING-NO-ID";
+        }
+
+        if (plan == null) {
+            return "TH-PENDING-NO-PLAN-" + id;
         }
 
         try {
+            // Check if plan ID is accessible
+            Long planId = plan.getId();
+            if (planId == null) {
+                return "TH-PENDING-NULL-PLAN-ID-" + id;
+            }
+
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
             String yearMonth = now.format(java.time.format.DateTimeFormatter.ofPattern("yyMM"));
 
             // New format: PPPPAA where PPPP=Plan ID, AA=sequence (simplified for entity method)
             // For proper sequence generation, use ApplicationIdService in the service layer
-            String planPart = String.format("%04d", plan.getId());
+            String planPart = String.format("%04d", planId);
             String sequencePart = String.format("%02d", id % 100); // Simple fallback
             String combinedSequence = planPart + sequencePart;
 
             return String.format("TH-%s-%s-%s", yearMonth, type, combinedSequence);
+        } catch (org.hibernate.LazyInitializationException e) {
+            // Specific handling for lazy loading issues
+            return String.format("TH-LAZY-%s-%06d", type, id);
         } catch (Exception e) {
-            // Fallback to simple format
-            return String.format("TH-%s-%06d", type, id);
+            // Fallback to simple format for any other errors
+            return String.format("TH-ERROR-%s-%06d", type, id);
         }
     }
 
