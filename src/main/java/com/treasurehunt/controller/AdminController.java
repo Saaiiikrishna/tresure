@@ -643,11 +643,11 @@ public class AdminController {
         logger.debug("Loading settings management page");
 
         try {
-            String heroVideoUrl = appSettingsService.getHeroVideoUrl();
+            String heroPreviewVideoUrl = appSettingsService.getHeroPreviewVideoUrl();
             List<TreasureHuntPlan> activePlans = planService.getActivePlans();
             TreasureHuntPlan featuredPlan = planService.getFeaturedPlan();
 
-            model.addAttribute("heroVideoUrl", heroVideoUrl);
+            model.addAttribute("heroPreviewVideoUrl", heroPreviewVideoUrl);
             model.addAttribute("activePlans", activePlans);
             model.addAttribute("featuredPlan", featuredPlan);
             model.addAttribute("companyInfo", appSettingsService.getCompanyInfo());
@@ -664,8 +664,8 @@ public class AdminController {
     }
 
     /**
-     * Update hero video URL
-     * @param videoUrl New video URL
+     * Update hero preview video URL (YouTube embed only)
+     * @param videoUrl New YouTube embed URL
      * @return JSON response
      */
     @PostMapping("/settings/hero-video")
@@ -674,15 +674,19 @@ public class AdminController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            appSettingsService.updateHeroVideoUrl(videoUrl);
+            appSettingsService.updateHeroPreviewVideoUrl(videoUrl);
 
             response.put("success", true);
-            response.put("message", "Hero video URL updated successfully");
+            response.put("message", "Hero preview video updated successfully");
 
             return ResponseEntity.ok(response);
 
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         } catch (Exception e) {
-            logger.error("Error updating hero video URL", e);
+            logger.error("Error updating hero preview video URL", e);
             response.put("success", false);
             response.put("message", "Error updating video URL: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);

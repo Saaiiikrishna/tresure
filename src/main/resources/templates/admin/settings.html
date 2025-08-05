@@ -105,8 +105,8 @@
                         <form id="heroVideoForm">
                             <div class="mb-3">
                                 <label for="heroVideoUrl" class="form-label">Hero Video URL</label>
-                                <input type="url" class="form-control" id="heroVideoUrl" 
-                                       th:value="${heroVideoUrl}" 
+                                <input type="url" class="form-control" id="heroVideoUrl"
+                                       th:value="${heroPreviewVideoUrl}"
                                        placeholder="https://www.youtube.com/embed/VIDEO_ID"
                                        required>
                                 <div class="form-text">
@@ -118,8 +118,8 @@
                             <div class="mb-3">
                                 <label class="form-label">Preview</label>
                                 <div class="ratio ratio-16x9" style="max-width: 500px;">
-                                    <iframe id="heroVideoPreview" 
-                                            th:src="${heroVideoUrl}" 
+                                    <iframe id="heroVideoPreview"
+                                            th:src="${heroPreviewVideoUrl}"
                                             src="https://www.youtube.com/embed/dQw4w9WgXcQ"
                                             title="Hero Video Preview" 
                                             frameborder="0" 

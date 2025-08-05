@@ -54,12 +54,13 @@ public class AppSettingsService {
      */
     private void initializeDefaults() {
         try {
-            // Hero video URL from environment or default
-            String heroVideoUrl = System.getenv("HERO_VIDEO_URL");
-            if (heroVideoUrl == null || heroVideoUrl.trim().isEmpty()) {
-                heroVideoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ";
-            }
-            updateSetting("hero_background_video_url", heroVideoUrl, "Hero section video URL");
+            // Hero preview video URL (YouTube embed only)
+            String heroPreviewVideoUrl = getEnvOrDefault("HERO_PREVIEW_VIDEO_URL", "https://www.youtube.com/embed/dQw4w9WgXcQ");
+            updateSetting("hero_preview_video_url", heroPreviewVideoUrl, "Hero section preview video URL (YouTube only)");
+
+            // Hero background video URL (YouTube or uploaded video)
+            String heroBackgroundVideoUrl = getEnvOrDefault("HERO_BACKGROUND_VIDEO_URL", "");
+            updateSetting("hero_background_video_url", heroBackgroundVideoUrl, "Hero section background video URL");
 
             // Company info from environment variables or defaults
             Map<String, String> companyInfo = new HashMap<>();
@@ -183,13 +184,20 @@ public class AppSettingsService {
     }
 
     /**
-     * Get hero video URL
-     * @return Hero video URL or default
+     * Get hero background video URL (for background video)
+     * @return Hero background video URL or default
      */
     public String getHeroVideoUrl() {
-        // Use the correct key that matches ImageManagementService
-        String value = getSettingValue("hero_background_video_url", "https://www.youtube.com/embed/dQw4w9WgXcQ");
-        logger.debug("getHeroVideoUrl() returning: {}", value);
+        String value = getSettingValue("hero_background_video_url", "");
+        return value;
+    }
+
+    /**
+     * Get hero preview video URL (for preview video in hero section)
+     * @return Hero preview video URL or default
+     */
+    public String getHeroPreviewVideoUrl() {
+        String value = getSettingValue("hero_preview_video_url", "https://www.youtube.com/embed/dQw4w9WgXcQ");
         return value;
     }
 
@@ -224,23 +232,40 @@ public class AppSettingsService {
     }
 
     /**
-     * Update hero video URL
+     * Update hero preview video URL (YouTube embed only)
+     * @param videoUrl New YouTube embed URL
+     * @return Updated setting
+     */
+    public AppSettings updateHeroPreviewVideoUrl(String videoUrl) {
+        // Validate YouTube URL
+        if (videoUrl != null && !videoUrl.trim().isEmpty()) {
+            String trimmed = videoUrl.trim();
+            if (!trimmed.contains("youtube.com") && !trimmed.contains("youtu.be")) {
+                throw new IllegalArgumentException("Hero preview video must be a YouTube URL");
+            }
+        }
+
+        return updateSetting("hero_preview_video_url", videoUrl, "Hero section preview video URL (YouTube only)");
+    }
+
+    /**
+     * Update hero background video URL (YouTube or uploaded video)
      * @param videoUrl New video URL
      * @return Updated setting
      */
-    public AppSettings updateHeroVideoUrl(String videoUrl) {
-        logger.info("=== UPDATING HERO VIDEO URL ===");
-        logger.info("New video URL: {}", videoUrl);
+    public AppSettings updateHeroBackgroundVideoUrl(String videoUrl) {
+        // Validate URL - allow YouTube or uploaded videos only
+        if (videoUrl != null && !videoUrl.trim().isEmpty()) {
+            String trimmed = videoUrl.trim();
+            boolean isYouTube = trimmed.contains("youtube.com") || trimmed.contains("youtu.be");
+            boolean isUploadedVideo = trimmed.startsWith("/uploads/") || trimmed.startsWith("uploads/");
 
-        // Use the correct key that matches ImageManagementService
-        AppSettings result = updateSetting("hero_background_video_url", videoUrl, "Main hero section video URL");
+            if (!isYouTube && !isUploadedVideo) {
+                throw new IllegalArgumentException("Background video must be YouTube URL or uploaded video file");
+            }
+        }
 
-        // Verify the update was successful
-        String retrievedValue = getHeroVideoUrl();
-        logger.info("Updated hero video URL. Retrieved value: {}", retrievedValue);
-        logger.info("=== HERO VIDEO URL UPDATE COMPLETE ===");
-
-        return result;
+        return updateSetting("hero_background_video_url", videoUrl, "Hero section background video URL");
     }
 
     /**

@@ -247,6 +247,34 @@ public class AdminImageController {
     }
 
     /**
+     * Update hero background video URL (YouTube or uploaded video)
+     */
+    @PostMapping("/background-video")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateBackgroundVideo(@RequestParam String videoUrl) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            appSettingsService.updateHeroBackgroundVideoUrl(videoUrl);
+
+            response.put("success", true);
+            response.put("message", "Background video updated successfully");
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            response.put("success", false);
+            response.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            logger.error("Error updating background video URL", e);
+            response.put("success", false);
+            response.put("message", "Error updating background video: " + e.getMessage());
+            return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
      * Get images by category
      */
     @GetMapping("/category/{category}")

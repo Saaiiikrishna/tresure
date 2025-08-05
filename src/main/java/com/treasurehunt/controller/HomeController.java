@@ -85,7 +85,7 @@ public class HomeController {
                 cacheBustedVideoUrl = heroVideoUrl + separator + "t=" + System.currentTimeMillis();
             }
             model.addAttribute("heroVideoUrl", cacheBustedVideoUrl); // Background video
-            model.addAttribute("heroPreviewVideoUrl", "https://www.youtube.com/embed/dQw4w9WgXcQ"); // Preview video
+            model.addAttribute("heroPreviewVideoUrl", appSettingsService.getHeroPreviewVideoUrl()); // Preview video
             model.addAttribute("heroFallbackImageUrl", heroFallbackImageUrl);
             model.addAttribute("aboutSectionImageUrl", aboutSectionImageUrl);
             model.addAttribute("contactBackgroundImageUrl", contactBackgroundImageUrl);

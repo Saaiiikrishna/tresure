@@ -88,7 +88,7 @@ public class SecurityConfig {
                     .includeSubDomains(true)
                 )
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; frame-src 'self' https://www.youtube.com https://youtube.com; media-src 'self' https://www.youtube.com https://youtube.com https://player.vimeo.com https://vimeo.com https:")
+                    .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://www.youtube.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; img-src 'self' data: https:; font-src 'self' https://cdnjs.cloudflare.com; frame-src 'self' https://www.youtube.com https://youtube.com; media-src 'self' https://www.youtube.com https://youtube.com https:")
                 )
             );
 
