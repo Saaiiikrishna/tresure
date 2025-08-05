@@ -187,9 +187,17 @@ public class AppSettingsService {
      * Get hero background video URL (for background video)
      * @return Hero background video URL or default
      */
-    public String getHeroVideoUrl() {
+    public String getHeroBackgroundVideoUrl() {
         String value = getSettingValue("hero_background_video_url", "");
         return value;
+    }
+
+    /**
+     * @deprecated Use getHeroBackgroundVideoUrl() instead
+     */
+    @Deprecated
+    public String getHeroVideoUrl() {
+        return getHeroBackgroundVideoUrl();
     }
 
     /**

@@ -54,7 +54,7 @@ public class HomeController {
 
         try {
             List<TreasureHuntPlan> availablePlans = planService.getAvailablePlans();
-            String heroVideoUrl = appSettingsService.getHeroVideoUrl();
+            String heroVideoUrl = appSettingsService.getHeroBackgroundVideoUrl();
             String heroFallbackImageUrl = appSettingsService.getHeroFallbackImageUrl();
             String aboutSectionImageUrl = appSettingsService.getAboutSectionImageUrl();
             String contactBackgroundImageUrl = appSettingsService.getContactBackgroundImageUrl();
