@@ -50,43 +50,71 @@ public class AppSettingsService {
     }
 
     /**
-     * Initialize default settings
+     * Initialize default settings from environment variables or fallback to defaults
      */
     private void initializeDefaults() {
         try {
-            // Default hero video URL
-            updateSetting("hero_video_url", "https://www.youtube.com/embed/dQw4w9WgXcQ", "Default hero video URL");
+            // Hero video URL from environment or default
+            String heroVideoUrl = System.getenv("HERO_VIDEO_URL");
+            if (heroVideoUrl == null || heroVideoUrl.trim().isEmpty()) {
+                heroVideoUrl = "https://www.youtube.com/embed/dQw4w9WgXcQ";
+            }
+            updateSetting("hero_background_video_url", heroVideoUrl, "Hero section video URL");
 
-            // Default company info
-            Map<String, String> defaultCompanyInfo = new HashMap<>();
-            defaultCompanyInfo.put("name", "Treasure Hunt Adventures");
-            defaultCompanyInfo.put("address", "123 Adventure Street, City, State 12345");
-            defaultCompanyInfo.put("phone", "+1-234-567-8900");
-            defaultCompanyInfo.put("email", "info@treasurehuntadventures.com");
-            updateCompanyInfo(defaultCompanyInfo);
+            // Company info from environment variables or defaults
+            Map<String, String> companyInfo = new HashMap<>();
+            companyInfo.put("name", getEnvOrDefault("COMPANY_NAME", "Treasure Hunt Adventures"));
+            companyInfo.put("address", getEnvOrDefault("COMPANY_ADDRESS", "123 Adventure Street, City, State 12345"));
+            companyInfo.put("phone", getEnvOrDefault("COMPANY_PHONE", "+1-234-567-8900"));
+            companyInfo.put("email", getEnvOrDefault("COMPANY_EMAIL", "info@treasurehuntadventures.com"));
+            updateCompanyInfo(companyInfo);
 
-            // Default contact info
-            Map<String, String> defaultContactInfo = new HashMap<>();
-            defaultContactInfo.put("phone", "+1-234-567-8900");
-            defaultContactInfo.put("email", "contact@treasurehuntadventures.com");
-            defaultContactInfo.put("address", "123 Adventure Street, City, State 12345");
-            defaultContactInfo.put("hours", "Mon-Fri: 9AM-6PM, Sat-Sun: 10AM-4PM");
-            defaultContactInfo.put("emergency", "+1-234-567-8911");
-            updateContactInfo(defaultContactInfo);
+            // Contact info from environment variables or defaults
+            Map<String, String> contactInfo = new HashMap<>();
+            contactInfo.put("phone", getEnvOrDefault("CONTACT_PHONE", "+1-234-567-8900"));
+            contactInfo.put("email", getEnvOrDefault("CONTACT_EMAIL", "contact@treasurehuntadventures.com"));
+            contactInfo.put("address", getEnvOrDefault("CONTACT_ADDRESS", "123 Adventure Street, City, State 12345"));
+            contactInfo.put("hours", getEnvOrDefault("CONTACT_HOURS", "Mon-Fri: 9AM-6PM, Sat-Sun: 10AM-4PM"));
+            contactInfo.put("emergency", getEnvOrDefault("CONTACT_EMERGENCY", "+1-234-567-8911"));
+            updateContactInfo(contactInfo);
 
-            // Default social media links
-            Map<String, String> defaultSocialLinks = new HashMap<>();
-            defaultSocialLinks.put("facebook", "https://facebook.com/treasurehuntadventures");
-            defaultSocialLinks.put("twitter", "https://twitter.com/treasurehuntadv");
-            defaultSocialLinks.put("instagram", "https://instagram.com/treasurehuntadventures");
-            defaultSocialLinks.put("linkedin", "https://linkedin.com/company/treasurehuntadventures");
-            defaultSocialLinks.put("youtube", "https://youtube.com/treasurehuntadventures");
-            updateSocialMediaLinks(defaultSocialLinks);
+            // Social media links from environment variables or defaults
+            Map<String, String> socialLinks = new HashMap<>();
+            socialLinks.put("facebook", getEnvOrDefault("SOCIAL_FACEBOOK", "https://facebook.com/treasurehuntadventures"));
+            socialLinks.put("twitter", getEnvOrDefault("SOCIAL_TWITTER", "https://twitter.com/treasurehuntadv"));
+            socialLinks.put("instagram", getEnvOrDefault("SOCIAL_INSTAGRAM", "https://instagram.com/treasurehuntadventures"));
+            socialLinks.put("linkedin", getEnvOrDefault("SOCIAL_LINKEDIN", "https://linkedin.com/company/treasurehuntadventures"));
+            socialLinks.put("youtube", getEnvOrDefault("SOCIAL_YOUTUBE", "https://youtube.com/treasurehuntadventures"));
+            updateSocialMediaLinks(socialLinks);
 
-            logger.info("Default settings initialized successfully");
+            // Image URLs from environment variables or defaults
+            updateSetting("hero_fallback_image_url",
+                getEnvOrDefault("HERO_FALLBACK_IMAGE_URL", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
+                "Hero section fallback image URL");
+
+            updateSetting("about_section_image_url",
+                getEnvOrDefault("ABOUT_SECTION_IMAGE_URL", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
+                "About section image URL");
+
+            updateSetting("contact_background_image_url",
+                getEnvOrDefault("CONTACT_BACKGROUND_IMAGE_URL", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
+                "Contact section background image URL");
+
+            logger.info("Default settings initialized successfully from environment variables");
         } catch (Exception e) {
             logger.error("Error initializing default settings", e);
         }
+    }
+
+    /**
+     * Get environment variable value or return default
+     */
+    private String getEnvOrDefault(String envVar, String defaultValue) {
+        String value = System.getenv(envVar);
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        return value.trim();
     }
 
     /**
