@@ -29,10 +29,10 @@ public class TomcatValidationConfig {
         List<String> missingClasses = new ArrayList<>();
         List<String> criticalClasses = List.of(
             "org.apache.catalina.connector.Response",
-            "org.apache.catalina.connector.Request", 
+            "org.apache.catalina.connector.Request",
             "org.apache.catalina.connector.Connector",
             "org.apache.catalina.core.StandardContext",
-            "org.apache.tomcat.embed.tomcat.TomcatEmbeddedContext",
+            // FIXED: Removed invalid TomcatEmbeddedContext class that doesn't exist
             "org.apache.coyote.http11.Http11Processor",
             "org.apache.coyote.AbstractProcessorLight"
         );

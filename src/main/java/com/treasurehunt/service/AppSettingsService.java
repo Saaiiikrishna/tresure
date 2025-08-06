@@ -11,13 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.List;
-
-import jakarta.annotation.PostConstruct;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service for managing application settings
@@ -90,65 +89,71 @@ public class AppSettingsService {
     }
 
     /**
-     * Initialize default settings from environment variables or fallback to defaults
+     * PERFORMANCE FIX: Initialize default settings from environment variables or fallback to defaults
+     * Uses batch operations to reduce startup time
      */
     private void initializeDefaults() {
         try {
+            logger.info("Initializing default settings with batch operations...");
+
+            // PERFORMANCE FIX: Prepare all settings in memory first, then batch save
+            List<AppSettings> defaultSettings = new ArrayList<>();
+
             // Hero preview video URL (YouTube embed only)
             String heroPreviewVideoUrl = getEnvOrDefault("HERO_PREVIEW_VIDEO_URL", "https://www.youtube.com/embed/dQw4w9WgXcQ");
-            updateSetting("hero_preview_video_url", heroPreviewVideoUrl, "Hero section preview video URL (YouTube only)");
+            defaultSettings.add(new AppSettings("hero_preview_video_url", heroPreviewVideoUrl, "Hero section preview video URL (YouTube only)"));
 
             // Hero background video URL (YouTube or uploaded video)
             String heroBackgroundVideoUrl = getEnvOrDefault("HERO_BACKGROUND_VIDEO_URL", "");
-            updateSetting("hero_background_video_url", heroBackgroundVideoUrl, "Hero section background video URL");
+            defaultSettings.add(new AppSettings("hero_background_video_url", heroBackgroundVideoUrl, "Hero section background video URL"));
 
             // Company info from environment variables or defaults
-            Map<String, String> companyInfo = new HashMap<>();
-            companyInfo.put("name", getEnvOrDefault("COMPANY_NAME", "Treasure Hunt Adventures"));
-            companyInfo.put("address", getEnvOrDefault("COMPANY_ADDRESS", "123 Adventure Street, City, State 12345"));
-            companyInfo.put("phone", getEnvOrDefault("COMPANY_PHONE", "+1-234-567-8900"));
-            companyInfo.put("email", getEnvOrDefault("COMPANY_EMAIL", "info@treasurehuntadventures.com"));
-            updateCompanyInfo(companyInfo);
+            defaultSettings.add(new AppSettings("company_name", getEnvOrDefault("COMPANY_NAME", "Treasure Hunt Adventures"), "Company name"));
+            defaultSettings.add(new AppSettings("company_address", getEnvOrDefault("COMPANY_ADDRESS", "Treasure Hunt Adventures, Hyderabad, Telangana"), "Company address"));
+            defaultSettings.add(new AppSettings("company_phone", getEnvOrDefault("COMPANY_PHONE", "+91 852-085-7988"), "Company phone"));
+            defaultSettings.add(new AppSettings("company_email", getEnvOrDefault("COMPANY_EMAIL", "tresurhunting@gmail.com"), "Company email"));
 
             // Contact info from environment variables or defaults
-            Map<String, String> contactInfo = new HashMap<>();
-            contactInfo.put("phone", getEnvOrDefault("CONTACT_PHONE", "+1-234-567-8900"));
-            contactInfo.put("email", getEnvOrDefault("CONTACT_EMAIL", "contact@treasurehuntadventures.com"));
-            contactInfo.put("address", getEnvOrDefault("CONTACT_ADDRESS", "123 Adventure Street, City, State 12345"));
-            contactInfo.put("hours", getEnvOrDefault("CONTACT_HOURS", "Mon-Fri: 9AM-6PM, Sat-Sun: 10AM-4PM"));
-            contactInfo.put("emergency", getEnvOrDefault("CONTACT_EMERGENCY", "+1-234-567-8911"));
-            updateContactInfo(contactInfo);
+            defaultSettings.add(new AppSettings("contact.phone", getEnvOrDefault("CONTACT_PHONE", "+91 852-085-7988"), "Contact phone"));
+            defaultSettings.add(new AppSettings("contact.email", getEnvOrDefault("CONTACT_EMAIL", "tresurhunting@gmail.com"), "Contact email"));
+            defaultSettings.add(new AppSettings("contact.address", getEnvOrDefault("CONTACT_ADDRESS", "Treasure Hunt Adventures, Hyderabad, Telangana"), "Contact address"));
+            defaultSettings.add(new AppSettings("contact.hours", getEnvOrDefault("CONTACT_HOURS", "Mon-Fri, 9AM-6PM"), "Contact hours"));
+            defaultSettings.add(new AppSettings("contact.emergency", getEnvOrDefault("CONTACT_EMERGENCY", "+91 852-085-7988"), "Emergency contact"));
 
             // Social media links from environment variables or defaults
-            Map<String, String> socialLinks = new HashMap<>();
-            socialLinks.put("facebook", getEnvOrDefault("SOCIAL_FACEBOOK", "https://facebook.com/treasurehuntadventures"));
-            socialLinks.put("twitter", getEnvOrDefault("SOCIAL_TWITTER", "https://twitter.com/treasurehuntadv"));
-            socialLinks.put("instagram", getEnvOrDefault("SOCIAL_INSTAGRAM", "https://instagram.com/treasurehuntadventures"));
-            socialLinks.put("linkedin", getEnvOrDefault("SOCIAL_LINKEDIN", "https://linkedin.com/company/treasurehuntadventures"));
-            socialLinks.put("youtube", getEnvOrDefault("SOCIAL_YOUTUBE", "https://youtube.com/treasurehuntadventures"));
-            updateSocialMediaLinks(socialLinks);
+            defaultSettings.add(new AppSettings("facebook_url", getEnvOrDefault("SOCIAL_FACEBOOK", "https://facebook.com/treasurehuntadventures"), "Facebook URL"));
+            defaultSettings.add(new AppSettings("twitter_url", getEnvOrDefault("SOCIAL_TWITTER", "https://twitter.com/treasurehuntadv"), "Twitter URL"));
+            defaultSettings.add(new AppSettings("instagram_url", getEnvOrDefault("SOCIAL_INSTAGRAM", "https://instagram.com/treasurehuntadventures"), "Instagram URL"));
+            defaultSettings.add(new AppSettings("linkedin_url", getEnvOrDefault("SOCIAL_LINKEDIN", "https://linkedin.com/company/treasurehuntadventures"), "LinkedIn URL"));
+            defaultSettings.add(new AppSettings("youtube_url", getEnvOrDefault("SOCIAL_YOUTUBE", "https://youtube.com/treasurehuntadventures"), "YouTube URL"));
 
             // Image URLs from environment variables or defaults
-            updateSetting("hero_fallback_image_url",
+            defaultSettings.add(new AppSettings("hero_fallback_image_url",
                 getEnvOrDefault("HERO_FALLBACK_IMAGE_URL", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
-                "Hero section fallback image URL");
+                "Hero section fallback image URL"));
 
-            updateSetting("about_section_image_url",
+            defaultSettings.add(new AppSettings("about_section_image_url",
                 getEnvOrDefault("ABOUT_SECTION_IMAGE_URL", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
-                "About section image URL");
+                "About section image URL"));
 
-            updateSetting("contact_background_image_url",
+            defaultSettings.add(new AppSettings("contact_background_image_url",
                 getEnvOrDefault("CONTACT_BACKGROUND_IMAGE_URL", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
-                "Contact section background image URL");
+                "Contact section background image URL"));
 
             // Hero section blur intensity setting (0-10 scale)
-            String heroBlurIntensity = getEnvOrDefault("HERO_BLUR_INTENSITY", "3");
-            updateSetting("hero_blur_intensity", heroBlurIntensity, "Hero section background blur intensity (0=no blur, 10=maximum blur)");
+            defaultSettings.add(new AppSettings("hero_blur_intensity", getEnvOrDefault("HERO_BLUR_INTENSITY", "3"), "Hero section background blur intensity (0=no blur, 10=maximum blur)"));
 
-            logger.info("Default settings initialized successfully from environment variables");
+            // PERFORMANCE FIX: Batch save all settings at once
+            long startTime = System.currentTimeMillis();
+            appSettingsRepository.saveAll(defaultSettings);
+            long endTime = System.currentTimeMillis();
 
-            // Refresh cache after all settings are initialized
-            loadAllSettingsIntoCache();
+            logger.info("✅ Batch initialized {} default settings in {}ms", defaultSettings.size(), (endTime - startTime));
+
+            // Update cache with new settings
+            for (AppSettings setting : defaultSettings) {
+                settingsCache.put(setting.getSettingKey(), setting.getSettingValue());
+            }
 
         } catch (Exception e) {
             logger.error("Error initializing default settings", e);
