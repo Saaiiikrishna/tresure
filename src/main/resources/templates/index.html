@@ -791,7 +791,8 @@
                                   heroVideoUrl))}"
                         class="w-100 h-100"
                         style="object-fit: cover; border: none; pointer-events: none;"
-                        allow="autoplay; encrypted-media"
+                        allow="autoplay; fullscreen; encrypted-media; accelerometer; gyroscope; picture-in-picture"
+                        allowfullscreen
                         loading="lazy"
                         title="Hero Background Video">
                 </iframe>
@@ -812,8 +813,7 @@
                 </video>
             </div>
 
-            <!-- Semi-transparent overlay for text readability -->
-            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(1px); z-index: 2;"></div>
+            <!-- Overlay removed for better video visibility -->
         </div>
 
         <!-- Plain CSS Background (when media is disabled) -->
@@ -834,10 +834,11 @@
         <div class="container position-relative" style="z-index: 2;">
             <div class="row align-items-center min-vh-100">
                 <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold hero-title mb-4"
-                        th:text="${featuredPlan != null ? featuredPlan.name : 'Epic Treasure Hunt Adventures Await!'}">
-                        Epic Treasure Hunt Adventures Await!
-                    </h1>
+                    <div class="hero-content-blur">
+                        <h1 class="display-4 fw-bold hero-title mb-4"
+                            th:text="${featuredPlan != null ? featuredPlan.name : 'Epic Treasure Hunt Adventures Await!'}">
+                            Epic Treasure Hunt Adventures Await!
+                        </h1>
                     <p class="lead hero-description mb-4"
                        th:text="${featuredPlan != null ? featuredPlan.description : 'Embark on thrilling treasure hunts with professional guides. Solve puzzles, discover hidden clues, and create unforgettable memories in our carefully crafted adventure experiences.'}">
                         Embark on thrilling treasure hunts with professional guides.
@@ -876,26 +877,29 @@
                         </div>
                     </div>
 
-                    <!-- View All Adventures Button -->
-                    <div class="text-center mt-4">
-                        <a href="#plans" class="btn btn-primary btn-lg">
-                            <i class="fas fa-compass me-2"></i>
-                            View All Adventures
-                        </a>
+                        <!-- View All Adventures Button -->
+                        <div class="text-center mt-4">
+                            <a href="#plans" class="btn btn-primary btn-lg">
+                                <i class="fas fa-compass me-2"></i>
+                                View All Adventures
+                            </a>
+                        </div>
                     </div>
                 </div>
                 <div class="col-lg-6">
-                    <div class="hero-video">
-                        <div class="ratio ratio-16x9">
-                            <iframe th:src="${heroPreviewVideoUrl != null ? heroPreviewVideoUrl : 'https://www.youtube.com/embed/dQw4w9WgXcQ'}"
-                                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-                                    title="Treasure Hunt Adventure Preview"
-                                    frameborder="0"
-                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                    allowfullscreen
-                                    class="rounded-3 shadow-lg"
-                                    loading="lazy">
-                            </iframe>
+                    <div class="hero-video-blur">
+                        <div class="hero-video">
+                            <div class="ratio ratio-16x9">
+                                <iframe th:src="${heroPreviewVideoUrl != null ? heroPreviewVideoUrl : 'https://www.youtube.com/embed/dQw4w9WgXcQ'}"
+                                        src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                                        title="Treasure Hunt Adventure Preview"
+                                        frameborder="0"
+                                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                        allowfullscreen
+                                        class="rounded-3 shadow-lg"
+                                        loading="lazy">
+                                </iframe>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1507,6 +1511,105 @@
                     console.error('❌ YouTube iframe failed to load:', e);
                     youtubeIframe.style.display = 'none';
                 });
+
+                // Mobile-specific YouTube video handling
+                function isMobileDevice() {
+                    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                }
+
+                if (isMobileDevice()) {
+                    console.log('📱 Mobile device detected - applying mobile video optimizations');
+
+                    // Add click-to-play functionality for mobile
+                    const playButton = document.createElement('div');
+                    playButton.innerHTML = '<i class="fas fa-play-circle" style="font-size: 4rem; color: rgba(255,255,255,0.8);"></i>';
+                    playButton.style.cssText = `
+                        position: absolute;
+                        top: 50%;
+                        left: 50%;
+                        transform: translate(-50%, -50%);
+                        z-index: 10;
+                        cursor: pointer;
+                        background: rgba(0,0,0,0.3);
+                        border-radius: 50%;
+                        padding: 20px;
+                        transition: all 0.3s ease;
+                    `;
+
+                    // Add play button to video container
+                    const videoContainer = document.getElementById('hero-video-container');
+                    if (videoContainer) {
+                        videoContainer.appendChild(playButton);
+
+                        // Handle play button click
+                        playButton.addEventListener('click', function() {
+                            console.log('🎬 Mobile play button clicked');
+                            playButton.style.display = 'none';
+
+                            // Try to trigger video play
+                            if (youtubeIframe) {
+                                // For YouTube, we'll reload with autoplay (may still not work on mobile)
+                                const currentSrc = youtubeIframe.src;
+                                if (!currentSrc.includes('autoplay=1')) {
+                                    youtubeIframe.src = currentSrc + (currentSrc.includes('?') ? '&' : '?') + 'autoplay=1';
+                                }
+                            }
+                        });
+
+                        // Hide play button after 5 seconds if video starts playing
+                        setTimeout(function() {
+                            if (playButton.style.display !== 'none') {
+                                playButton.style.opacity = '0.5';
+                            }
+                        }, 5000);
+                    }
+
+                    // Mobile fallback: If video doesn't start playing after 8 seconds, switch to plain background
+                    setTimeout(function() {
+                        console.log('📱 Checking mobile video playback status...');
+
+                        // Check if YouTube video is actually playing (this is limited due to iframe restrictions)
+                        // For mobile, we'll implement a fallback to plain background after timeout
+                        const heroVideoSection = document.querySelector('.hero-section');
+                        const videoContainer = document.getElementById('hero-video-container');
+
+                        if (heroVideoSection && videoContainer) {
+                            // Check if video appears to be stuck or not playing
+                            const shouldFallback = playButton && playButton.style.display !== 'none';
+
+                            if (shouldFallback) {
+                                console.log('📱 Mobile video fallback: Switching to plain background theme');
+
+                                // Hide video container
+                                videoContainer.style.display = 'none';
+
+                                // Apply the same background as when media is disabled
+                                const fallbackBg = document.createElement('div');
+                                fallbackBg.className = 'hero-plain-bg position-absolute top-0 start-0 w-100 h-100';
+                                fallbackBg.style.cssText = `
+                                    background: linear-gradient(135deg, #fefefe 0%, #faf9f7 25%, #f8f6f0 50%, #f5f3ed 75%, #f2f0ea 100%);
+                                    z-index: 1;
+                                `;
+
+                                // Add vintage paper texture overlay
+                                const textureOverlay = document.createElement('div');
+                                textureOverlay.className = 'position-absolute top-0 start-0 w-100 h-100';
+                                textureOverlay.style.cssText = `
+                                    background-image:
+                                        radial-gradient(circle at 20% 20%, rgba(139,69,19,0.02) 0%, transparent 40%),
+                                        radial-gradient(circle at 80% 60%, rgba(160,82,45,0.015) 0%, transparent 40%),
+                                        radial-gradient(circle at 40% 80%, rgba(210,180,140,0.01) 0%, transparent 40%),
+                                        linear-gradient(90deg, transparent 0%, rgba(139,69,19,0.005) 50%, transparent 100%);
+                                `;
+
+                                fallbackBg.appendChild(textureOverlay);
+                                heroVideoSection.appendChild(fallbackBg);
+
+                                console.log('✅ Mobile fallback background applied');
+                            }
+                        }
+                    }, 8000); // 8 second timeout for mobile fallback
+                }
             }
         });
 

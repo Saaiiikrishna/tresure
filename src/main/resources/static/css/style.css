@@ -472,11 +472,88 @@ footer hr {
     opacity: 0.3;
 }
 
+/* Hero Section Content Blur Backgrounds */
+.hero-content-blur {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 2.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 1rem 0;
+}
+
+.hero-video-blur {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    margin: 1rem 0;
+}
+
+/* Hero Section Text Styling - Better readability without overlay */
+.hero-section .hero-content {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+}
+
+.hero-section .display-4,
+.hero-section .display-5,
+.hero-section .lead {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+.hero-section .btn {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Mobile Video Play Button */
+.mobile-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    padding: 20px;
+    transition: all 0.3s ease;
+    color: white;
+    font-size: 4rem;
+}
+
+.mobile-play-button:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .hero-section {
         padding-top: 100px;
         text-align: center;
+    }
+
+    /* Mobile adjustments for blur backgrounds */
+    .hero-content-blur {
+        padding: 1.5rem;
+        margin: 0.5rem 0;
+        backdrop-filter: blur(8px);
+    }
+
+    .hero-video-blur {
+        padding: 1rem;
+        margin: 0.5rem 0;
+        backdrop-filter: blur(6px);
+    }
+
+    /* Mobile play button adjustments */
+    .mobile-play-button {
+        font-size: 3rem;
+        padding: 15px;
     }
     
     .display-4 {
