@@ -9,8 +9,8 @@ public class TeamMemberDTO {
     private String fullName;
 
     @NotNull(message = "Age is required")
-    @Min(value = 16, message = "Minimum age is 16")
-    @Max(value = 100, message = "Maximum age is 100")
+    @Min(value = 18, message = "Minimum age is 18")
+    @Max(value = 65, message = "Maximum age is 65")
     private Integer age;
 
     @NotBlank(message = "Gender is required")

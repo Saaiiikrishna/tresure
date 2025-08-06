@@ -175,57 +175,11 @@ public class UserRegistration {
     public void setDocuments(List<UploadedDocument> documents) { this.documents = documents; }
 
     // Helper methods
-    public String getRegistrationNumber() {
-        if (id == null) {
-            return "TH-PENDING";
-        }
-
-        // Use the new ApplicationIdService format
-        if (isTeamRegistration()) {
-            return generateApplicationId("TEAM");
-        } else {
-            return generateApplicationId("IND");
-        }
-    }
-
     /**
-     * Generate application ID using the new format
-     * @param type Registration type (IND or TEAM)
-     * @return Formatted application ID
+     * Get the persisted application ID or a placeholder if not yet generated.
      */
-    private String generateApplicationId(String type) {
-        if (id == null) {
-            return "TH-PENDING-NO-ID";
-        }
-
-        if (plan == null) {
-            return "TH-PENDING-NO-PLAN-" + id;
-        }
-
-        try {
-            // Check if plan ID is accessible
-            Long planId = plan.getId();
-            if (planId == null) {
-                return "TH-PENDING-NULL-PLAN-ID-" + id;
-            }
-
-            java.time.LocalDateTime now = java.time.LocalDateTime.now();
-            String yearMonth = now.format(java.time.format.DateTimeFormatter.ofPattern("yyMM"));
-
-            // New format: PPPPAA where PPPP=Plan ID, AA=sequence (simplified for entity method)
-            // For proper sequence generation, use ApplicationIdService in the service layer
-            String planPart = String.format("%04d", planId);
-            String sequencePart = String.format("%02d", id % 100); // Simple fallback
-            String combinedSequence = planPart + sequencePart;
-
-            return String.format("TH-%s-%s-%s", yearMonth, type, combinedSequence);
-        } catch (org.hibernate.LazyInitializationException e) {
-            // Specific handling for lazy loading issues
-            return String.format("TH-LAZY-%s-%06d", type, id);
-        } catch (Exception e) {
-            // Fallback to simple format for any other errors
-            return String.format("TH-ERROR-%s-%06d", type, id);
-        }
+    public String getRegistrationNumber() {
+        return applicationId != null ? applicationId : "TH-PENDING";
     }
 
     public boolean hasRequiredDocuments() {
@@ -236,7 +190,9 @@ public class UserRegistration {
         boolean hasMedical = documents.stream()
                 .anyMatch(doc -> doc.getDocumentType() == UploadedDocument.DocumentType.MEDICAL_CERTIFICATE);
 
-        return hasPhoto && hasId && hasMedical;
+        boolean medicalRequired = medicalConsentGiven == null || !medicalConsentGiven;
+
+        return hasPhoto && hasId && (!medicalRequired || hasMedical);
     }
 
     // Getters and setters for new fields
@@ -352,5 +308,9 @@ public class UserRegistration {
      */
     public String getApplicationId() {
         return this.applicationId;
+    }
+
+    public void setApplicationId(String applicationId) {
+        this.applicationId = applicationId;
     }
 }
