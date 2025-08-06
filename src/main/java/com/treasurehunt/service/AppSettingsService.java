@@ -106,6 +106,10 @@ public class AppSettingsService {
                 getEnvOrDefault("CONTACT_BACKGROUND_IMAGE_URL", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"),
                 "Contact section background image URL");
 
+            // Hero section blur intensity setting (0-10 scale)
+            String heroBlurIntensity = getEnvOrDefault("HERO_BLUR_INTENSITY", "3");
+            updateSetting("hero_blur_intensity", heroBlurIntensity, "Hero section background blur intensity (0=no blur, 10=maximum blur)");
+
             logger.info("Default settings initialized successfully from environment variables");
         } catch (Exception e) {
             logger.error("Error initializing default settings", e);
@@ -417,5 +421,33 @@ public class AppSettingsService {
         logger.info("Setting background media enabled to: {}", enabled);
         updateSetting("background_media_enabled", String.valueOf(enabled), "Enable/disable background media on hero section");
         logger.info("Background media enabled setting updated successfully");
+    }
+
+    /**
+     * Get hero section blur intensity (0-10 scale)
+     * @return blur intensity value (0=no blur, 10=maximum blur)
+     */
+    public int getHeroBlurIntensity() {
+        String value = getSettingValue("hero_blur_intensity", "3");
+        try {
+            int intensity = Integer.parseInt(value);
+            // Ensure value is within valid range
+            return Math.max(0, Math.min(10, intensity));
+        } catch (NumberFormatException e) {
+            logger.warn("Invalid blur intensity value: {}, using default: 3", value);
+            return 3;
+        }
+    }
+
+    /**
+     * Set hero section blur intensity
+     * @param intensity blur intensity (0-10 scale, 0=no blur, 10=maximum blur)
+     */
+    public void setHeroBlurIntensity(int intensity) {
+        // Ensure value is within valid range
+        intensity = Math.max(0, Math.min(10, intensity));
+        logger.info("Setting hero blur intensity to: {}", intensity);
+        updateSetting("hero_blur_intensity", String.valueOf(intensity), "Hero section background blur intensity (0=no blur, 10=maximum blur)");
+        logger.info("Hero blur intensity setting updated successfully");
     }
 }

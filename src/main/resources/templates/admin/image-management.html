@@ -207,6 +207,23 @@
                                         When disabled, the hero section will use a plain CSS background instead of media files.
                                     </small>
                                 </div>
+
+                                <!-- Hero Blur Intensity Slider -->
+                                <hr class="my-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h6 class="mb-1">Hero Section Blur Intensity</h6>
+                                        <small class="text-muted">Adjust background blur intensity for hero content sections (0 = no blur, 10 = maximum blur)</small>
+                                    </div>
+                                    <div class="d-flex align-items-center" style="min-width: 200px;">
+                                        <input type="range" class="form-range me-3" id="blurIntensitySlider"
+                                               min="0" max="10" step="1"
+                                               th:value="${heroBlurIntensity != null ? heroBlurIntensity : 3}"
+                                               oninput="updateBlurIntensity(this.value)">
+                                        <span class="badge bg-primary" id="blurIntensityValue"
+                                              th:text="${heroBlurIntensity != null ? heroBlurIntensity : 3}">3</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -860,6 +877,47 @@
                 // Revert toggle state
                 document.getElementById('backgroundMediaToggle').checked = !enabled;
             });
+        }
+
+        // Update blur intensity function
+        function updateBlurIntensity(intensity) {
+            // Update the display value
+            document.getElementById('blurIntensityValue').textContent = intensity;
+
+            // Debounce the API call to avoid too many requests
+            clearTimeout(window.blurUpdateTimeout);
+            window.blurUpdateTimeout = setTimeout(function() {
+                showLoading('Updating blur intensity...');
+
+                const blurHeaders = {
+                    'Content-Type': 'application/json'
+                };
+                if (csrfToken && csrfHeader) {
+                    blurHeaders[csrfHeader] = csrfToken;
+                }
+
+                fetch('/admin/images/update-blur-intensity', {
+                    method: 'POST',
+                    headers: blurHeaders,
+                    body: JSON.stringify({ intensity: parseInt(intensity) })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    hideLoading();
+                    if (data.success) {
+                        showAlert('Blur intensity updated to ' + intensity + ' successfully!', 'success');
+                    } else {
+                        showAlert('Error updating blur intensity: ' + data.message, 'danger');
+                        // Revert slider value
+                        document.getElementById('blurIntensitySlider').value = data.intensity || 3;
+                        document.getElementById('blurIntensityValue').textContent = data.intensity || 3;
+                    }
+                })
+                .catch(error => {
+                    hideLoading();
+                    showAlert('Error updating blur intensity: ' + error.message, 'danger');
+                });
+            }, 500); // 500ms debounce
         }
 
         // Initialize drag and drop functionality

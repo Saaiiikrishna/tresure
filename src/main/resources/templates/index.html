@@ -1659,5 +1659,35 @@
             body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
         });
     </script>
+
+    <!-- Dynamic Blur Intensity CSS -->
+    <style th:if="${heroBlurIntensity != null}">
+        :root {
+            --hero-blur-intensity: [[${heroBlurIntensity}]]px;
+        }
+
+        .hero-content-blur {
+            backdrop-filter: blur(var(--hero-blur-intensity)) !important;
+            -webkit-backdrop-filter: blur(var(--hero-blur-intensity)) !important;
+        }
+
+        .hero-video-blur {
+            backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.7)) !important;
+            -webkit-backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.7)) !important;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 768px) {
+            .hero-content-blur {
+                backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.6)) !important;
+                -webkit-backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.6)) !important;
+            }
+
+            .hero-video-blur {
+                backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.5)) !important;
+                -webkit-backdrop-filter: blur(calc(var(--hero-blur-intensity) * 0.5)) !important;
+            }
+        }
+    </style>
 </body>
 </html>

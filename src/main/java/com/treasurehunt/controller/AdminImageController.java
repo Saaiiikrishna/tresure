@@ -74,11 +74,15 @@ public class AdminImageController {
             // Get background media toggle setting
             boolean backgroundMediaEnabled = appSettingsService.getBackgroundMediaEnabled();
 
+            // Get hero blur intensity setting
+            int heroBlurIntensity = appSettingsService.getHeroBlurIntensity();
+
             model.addAttribute("currentImages", currentImages);
             model.addAttribute("imageCategories", UploadedImage.ImageCategory.values());
             model.addAttribute("storageStats", storageStats);
             model.addAttribute("recentCleanupLogs", recentLogs);
             model.addAttribute("backgroundMediaEnabled", backgroundMediaEnabled);
+            model.addAttribute("heroBlurIntensity", heroBlurIntensity);
 
         } catch (Exception e) {
             logger.error("Error loading image management page", e);
@@ -407,6 +411,50 @@ public class AdminImageController {
         } catch (IllegalArgumentException e) {
             return false;
         }
+    }
+
+    /**
+     * Update hero blur intensity setting
+     */
+    @PostMapping("/update-blur-intensity")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateBlurIntensity(@RequestBody Map<String, Integer> request) {
+        logger.info("Updating hero blur intensity setting");
+
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            Integer intensity = request.get("intensity");
+            if (intensity == null) {
+                response.put("success", false);
+                response.put("message", "Missing 'intensity' parameter");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Validate intensity range (0-10)
+            if (intensity < 0 || intensity > 10) {
+                response.put("success", false);
+                response.put("message", "Intensity must be between 0 and 10");
+                return ResponseEntity.badRequest().body(response);
+            }
+
+            // Update the setting
+            appSettingsService.setHeroBlurIntensity(intensity);
+
+            response.put("success", true);
+            response.put("intensity", intensity);
+            response.put("message", "Blur intensity updated to " + intensity + " successfully");
+
+            logger.info("Hero blur intensity setting updated to: {}", intensity);
+
+        } catch (Exception e) {
+            logger.error("Error updating hero blur intensity setting", e);
+            response.put("success", false);
+            response.put("message", "Error updating setting: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        return ResponseEntity.ok(response);
     }
 
     // Debug endpoint removed for production security

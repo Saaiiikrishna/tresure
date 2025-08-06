@@ -472,25 +472,31 @@ footer hr {
     opacity: 0.3;
 }
 
-/* Hero Section Content Blur Backgrounds */
+/* Hero Section Content Blur Backgrounds - Subtle blur for text readability */
 .hero-content-blur {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 2.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    margin: 1rem 0;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px); /* Safari/iOS support */
+    border-radius: 15px;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    margin: 0.5rem 0;
+    /* Fallback for browsers that don't support backdrop-filter */
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
 }
 
 .hero-video-blur {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
-    border-radius: 20px;
-    padding: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    margin: 1rem 0;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px); /* Safari/iOS support */
+    border-radius: 15px;
+    padding: 1.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    margin: 0.5rem 0;
+    /* Fallback for browsers that don't support backdrop-filter */
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
 }
 
 /* Hero Section Text Styling - Better readability without overlay */
@@ -537,17 +543,25 @@ footer hr {
         text-align: center;
     }
 
-    /* Mobile adjustments for blur backgrounds */
+    /* Mobile adjustments for blur backgrounds - Ensure compatibility */
     .hero-content-blur {
-        padding: 1.5rem;
-        margin: 0.5rem 0;
-        backdrop-filter: blur(8px);
+        padding: 1.2rem;
+        margin: 0.3rem 0;
+        backdrop-filter: blur(2px);
+        -webkit-backdrop-filter: blur(2px);
+        /* Enhanced fallback for mobile browsers */
+        background: rgba(255, 255, 255, 0.12);
+        background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
     }
 
     .hero-video-blur {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        backdrop-filter: blur(6px);
+        padding: 0.8rem;
+        margin: 0.3rem 0;
+        backdrop-filter: blur(1.5px);
+        -webkit-backdrop-filter: blur(1.5px);
+        /* Enhanced fallback for mobile browsers */
+        background: rgba(255, 255, 255, 0.1);
+        background-image: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.06) 100%);
     }
 
     /* Mobile play button adjustments */

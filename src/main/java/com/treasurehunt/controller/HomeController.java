@@ -112,6 +112,7 @@ public class HomeController {
             model.addAttribute("aboutSectionImageUrl", aboutSectionImageUrl);
             model.addAttribute("contactBackgroundImageUrl", contactBackgroundImageUrl);
             model.addAttribute("backgroundMediaEnabled", backgroundMediaEnabled);
+            model.addAttribute("heroBlurIntensity", appSettingsService.getHeroBlurIntensity());
             model.addAttribute("featuredPlan", featuredPlan);
 
             // Add footer data
