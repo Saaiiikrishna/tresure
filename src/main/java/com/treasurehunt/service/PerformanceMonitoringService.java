@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -43,9 +44,9 @@ public class PerformanceMonitoringService {
     private static final int THREAD_CRITICAL_THRESHOLD = 200; // 200 threads
 
     @Autowired
-    public PerformanceMonitoringService(DataSource dataSource, 
+    public PerformanceMonitoringService(DataSource dataSource,
                                        CacheManager cacheManager,
-                                       ThreadSafeEmailProcessor emailProcessor) {
+                                       @Lazy ThreadSafeEmailProcessor emailProcessor) {
         this.dataSource = dataSource;
         this.cacheManager = cacheManager;
         this.emailProcessor = emailProcessor;

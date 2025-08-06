@@ -4,6 +4,8 @@ import com.treasurehunt.service.PerformanceMonitoringService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import java.util.Optional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,11 +35,18 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
-    private final PerformanceMonitoringService performanceMonitoringService;
+    private final Optional<PerformanceMonitoringService> performanceMonitoringService;
 
-    @Autowired
-    public GlobalExceptionHandler(PerformanceMonitoringService performanceMonitoringService) {
-        this.performanceMonitoringService = performanceMonitoringService;
+    @Autowired(required = false)
+    public GlobalExceptionHandler(@Lazy Optional<PerformanceMonitoringService> performanceMonitoringService) {
+        this.performanceMonitoringService = performanceMonitoringService != null ? performanceMonitoringService : Optional.empty();
+    }
+
+    /**
+     * Helper method to safely increment error count if performance monitoring is available
+     */
+    private void safeIncrementErrorCount() {
+        performanceMonitoringService.ifPresent(PerformanceMonitoringService::incrementErrorCount);
     }
 
     /**
@@ -81,7 +90,7 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex, WebRequest request) {
         
         logger.warn("Validation error: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "VALIDATION_ERROR",
@@ -107,7 +116,7 @@ public class GlobalExceptionHandler {
             BindException ex, WebRequest request) {
         
         logger.warn("Bind error: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "BIND_ERROR",
@@ -133,7 +142,7 @@ public class GlobalExceptionHandler {
             ConstraintViolationException ex, WebRequest request) {
         
         logger.warn("Constraint violation: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "CONSTRAINT_VIOLATION",
@@ -158,7 +167,7 @@ public class GlobalExceptionHandler {
             EntityNotFoundException ex, WebRequest request) {
         
         logger.warn("Entity not found: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "ENTITY_NOT_FOUND",
@@ -178,7 +187,7 @@ public class GlobalExceptionHandler {
             SecurityException ex, WebRequest request) {
         
         logger.warn("Security violation: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "SECURITY_VIOLATION",
@@ -198,7 +207,7 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex, WebRequest request) {
         
         logger.warn("Access denied: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "ACCESS_DENIED",
@@ -218,7 +227,7 @@ public class GlobalExceptionHandler {
             DataIntegrityViolationException ex, WebRequest request) {
         
         logger.error("Data integrity violation", ex);
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "DATA_INTEGRITY_VIOLATION",
@@ -238,7 +247,7 @@ public class GlobalExceptionHandler {
             MaxUploadSizeExceededException ex, WebRequest request) {
         
         logger.warn("File upload size exceeded: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "FILE_SIZE_EXCEEDED",
@@ -260,7 +269,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex, WebRequest request) {
         
         logger.warn("Illegal argument: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "INVALID_ARGUMENT",
@@ -280,7 +289,7 @@ public class GlobalExceptionHandler {
             IllegalStateException ex, WebRequest request) {
         
         logger.error("Illegal state: {}", ex.getMessage());
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         ErrorResponse errorResponse = new ErrorResponse(
             "INVALID_STATE",
@@ -301,7 +310,7 @@ public class GlobalExceptionHandler {
 
         // Log full exception details for debugging (server-side only)
         logger.error("Runtime exception occurred: {}", ex.getMessage(), ex);
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         // Create sanitized error response (no sensitive information)
         ErrorResponse errorResponse = new ErrorResponse(
@@ -323,7 +332,7 @@ public class GlobalExceptionHandler {
 
         // Log full exception details for debugging (server-side only)
         logger.error("Unexpected exception occurred: {}", ex.getMessage(), ex);
-        performanceMonitoringService.incrementErrorCount();
+        safeIncrementErrorCount();
 
         // Create sanitized error response (no sensitive information)
         ErrorResponse errorResponse = new ErrorResponse(
