@@ -178,7 +178,7 @@ app:
 
   business:
     min-participant-age: ${MIN_PARTICIPANT_AGE:18}
-    max-team-size: ${MAX_TEAM_SIZE:6}
+    max-team-size: ${MAX_TEAM_SIZE:100000}
     min-team-size: ${MIN_TEAM_SIZE:2}
     registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
     allow-cancellation: ${ALLOW_CANCELLATION:true}

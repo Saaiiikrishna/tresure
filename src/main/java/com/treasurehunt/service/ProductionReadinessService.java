@@ -179,13 +179,50 @@ public class ProductionReadinessService {
             criticalIssues.add("File upload directory is not configured");
         }
         
-        // Check file size limits
-        Long maxFileSize = environment.getProperty("spring.servlet.multipart.max-file-size", Long.class);
-        if (maxFileSize == null || maxFileSize > 10 * 1024 * 1024) { // 10MB
-            warnings.add("File upload size limit is very high or not set");
+        // Check file size limits (handle DataSize format like "50MB")
+        String maxFileSizeStr = environment.getProperty("spring.servlet.multipart.max-file-size");
+        if (maxFileSizeStr == null || maxFileSizeStr.trim().isEmpty()) {
+            warnings.add("File upload size limit is not configured");
+        } else {
+            // Parse DataSize format (e.g., "50MB", "10KB", etc.)
+            try {
+                long maxFileSizeBytes = parseDataSize(maxFileSizeStr);
+                if (maxFileSizeBytes > 100 * 1024 * 1024) { // 100MB
+                    warnings.add("File upload size limit is very high: " + maxFileSizeStr);
+                }
+            } catch (Exception e) {
+                warnings.add("Invalid file upload size format: " + maxFileSizeStr);
+            }
         }
         
         readinessChecks.put("fileStorage", uploadDir != null && !uploadDir.trim().isEmpty());
+    }
+
+    /**
+     * Parse DataSize format (e.g., "50MB", "10KB", "1GB") to bytes
+     */
+    private long parseDataSize(String dataSize) {
+        if (dataSize == null || dataSize.trim().isEmpty()) {
+            return 0;
+        }
+
+        String size = dataSize.trim().toUpperCase();
+        long multiplier = 1;
+
+        if (size.endsWith("KB")) {
+            multiplier = 1024;
+            size = size.substring(0, size.length() - 2);
+        } else if (size.endsWith("MB")) {
+            multiplier = 1024 * 1024;
+            size = size.substring(0, size.length() - 2);
+        } else if (size.endsWith("GB")) {
+            multiplier = 1024 * 1024 * 1024;
+            size = size.substring(0, size.length() - 2);
+        } else if (size.endsWith("B")) {
+            size = size.substring(0, size.length() - 1);
+        }
+
+        return Long.parseLong(size.trim()) * multiplier;
     }
 
     /**
