@@ -37,12 +37,17 @@ public class AppSettingsService {
     private static final long CACHE_REFRESH_INTERVAL = 300000; // 5 minutes
 
     /**
-     * Load all settings into cache on startup and periodically refresh
+     * Load all settings into cache on startup and initialize defaults if needed
      */
     @PostConstruct
     public void loadAllSettingsIntoCache() {
         try {
             logger.info("Loading all settings into cache...");
+
+            // First, initialize default settings if needed
+            initializeDefaultSettings();
+
+            // Then load all settings into cache
             List<AppSettings> allSettings = appSettingsRepository.findAll();
 
             settingsCache.clear();
@@ -166,6 +171,7 @@ public class AppSettingsService {
      * @param key Setting key
      * @return Setting value or null if not found
      */
+    @Cacheable(value = "appSettings", key = "#key", unless = "#result == null")
     public String getSettingValue(String key) {
         try {
             if (key == null || key.trim().isEmpty()) {
@@ -226,6 +232,7 @@ public class AppSettingsService {
      * @param description Setting description
      * @return Updated AppSettings
      */
+    @CacheEvict(value = "appSettings", key = "#key")
     public AppSettings updateSetting(String key, String value, String description) {
         try {
             if (key == null || key.trim().isEmpty()) {
@@ -518,6 +525,7 @@ public class AppSettingsService {
     /**
      * Manually refresh the settings cache (useful for admin operations)
      */
+    @CacheEvict(value = "appSettings", allEntries = true)
     public void refreshCache() {
         logger.info("Manually refreshing settings cache");
         loadAllSettingsIntoCache();

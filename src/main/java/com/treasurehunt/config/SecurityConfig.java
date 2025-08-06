@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
 
                 // Static resources
-                .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
+                .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico", "/robots.txt").permitAll()
                 .requestMatchers("/secure/files/images/**").permitAll() // Public images through secure controller
 
                 // Public pages

@@ -1,0 +1,210 @@
+spring:
+  # H2 Database Configuration for Development
+  datasource:
+    url: jdbc:h2:mem:treasurehunt;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  # JPA Configuration
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        use_sql_comments: false
+        jdbc:
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
+
+  # H2 Console (for development only)
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+      settings:
+        web-allow-others: true
+  
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+  
+  # Mail Configuration - Development defaults
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:dev@example.com}
+    password: ${MAIL_PASSWORD:devpassword}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 10000
+          timeout: 10000
+          writetimeout: 10000
+          ssl:
+            trust: smtp.gmail.com
+  
+  # File Upload Configuration
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 60MB
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 5
+        queue-capacity: 100
+      thread-name-prefix: async-
+
+# Application Configuration
+app:
+  version: 1.0.0-dev
+  
+  # Security Configuration - Development defaults
+  security:
+    admin:
+      username: ${ADMIN_USERNAME:admin}
+      password: ${ADMIN_PASSWORD:admin123}
+  
+  # File Storage Configuration
+  file-storage:
+    upload-dir: uploads/documents
+    image-dir: uploads/images
+    temp-dir: uploads/temp
+    max-file-size: 52428800  # 50MB in bytes
+    max-image-size: 10485760  # 10MB in bytes
+    max-document-size: 52428800  # 50MB in bytes
+    max-photo-size: 5242880  # 5MB in bytes
+    max-video-size: 104857600  # 100MB in bytes
+    allowed-image-types: jpg,jpeg,png,gif,webp
+    allowed-document-types: pdf,doc,docx,txt
+    allowed-photo-types: jpg,jpeg,png
+  
+  # Resource Management Configuration
+  resource-management:
+    temp-file-max-age-hours: 24
+    cleanup-enabled: true
+    cleanup-interval-minutes: 60
+    log-retention-days: 7
+  
+  # Email Configuration
+  email:
+    from-address: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
+    support-address: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
+    enabled: false # Disable email in dev mode
+  
+  # Performance Configuration
+  performance:
+    monitoring-enabled: true
+    metrics-enabled: true
+    slow-query-threshold-ms: 1000
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    include-exception: true
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops,beans,mappings
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+      show-components: always
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: false
+
+# Logging Configuration
+logging:
+  level:
+    com.treasurehunt: DEBUG
+    org.springframework.cache: DEBUG
+    org.springframework.web: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/treasure-hunt-dev.log
+    max-size: 10MB
+    max-history: 5
+
+# Development Environment Variables (fallback values)
+# These will be overridden by actual environment variables if present
+COMPANY_NAME: "Treasure Hunt Adventures (DEV)"
+COMPANY_ADDRESS: "123 Dev Street, Test City, TC 12345"
+COMPANY_PHONE: "+1-555-DEV-TEST"
+COMPANY_EMAIL: "dev@treasurehunt.local"
+CONTACT_PHONE: "+1-555-DEV-TEST"
+CONTACT_EMAIL: "contact@treasurehunt.local"
+CONTACT_ADDRESS: "123 Dev Street, Test City, TC 12345"
+CONTACT_HOURS: "Mon-Fri: 9AM-5PM (DEV)"
+CONTACT_EMERGENCY: "+1-555-DEV-HELP"
+SOCIAL_FACEBOOK: "https://facebook.com/treasurehuntdev"
+SOCIAL_TWITTER: "https://twitter.com/treasurehuntdev"
+SOCIAL_INSTAGRAM: "https://instagram.com/treasurehuntdev"
+SOCIAL_LINKEDIN: "https://linkedin.com/company/treasurehuntdev"
+SOCIAL_YOUTUBE: "https://youtube.com/treasurehuntdev"
+HERO_BLUR_INTENSITY: "3"

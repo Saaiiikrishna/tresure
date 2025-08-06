@@ -655,6 +655,7 @@ public class AdminController {
             model.addAttribute("companyInfo", appSettingsService.getCompanyInfo());
             model.addAttribute("socialLinks", appSettingsService.getSocialMediaLinks());
             model.addAttribute("contactInfo", appSettingsService.getContactInfo());
+            model.addAttribute("heroBlurIntensity", appSettingsService.getHeroBlurIntensity());
 
             return "admin/settings";
 

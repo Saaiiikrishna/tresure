@@ -45,5 +45,10 @@ public class StaticResourceConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/favicon.ico")
                 .addResourceLocations("classpath:/static/")
                 .setCachePeriod(86400);
+
+        // Serve robots.txt
+        registry.addResourceHandler("/robots.txt")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(86400);
     }
 }

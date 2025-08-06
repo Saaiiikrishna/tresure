@@ -35,6 +35,11 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/")
                 .setCachePeriod(86400);
 
+        // Serve robots.txt
+        registry.addResourceHandler("/robots.txt")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(86400);
+
         // REMOVED: Direct file serving for security
         // Files are now served through secure controller with authorization checks
     }
