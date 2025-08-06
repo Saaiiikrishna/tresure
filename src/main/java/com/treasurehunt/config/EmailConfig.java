@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -85,7 +86,7 @@ public class EmailConfig {
      * Fallback email service when Jakarta Mail is not available
      */
     @Bean
-    @ConditionalOnClass(name = "jakarta.mail.internet.MimeMessage", value = {})
+    @ConditionalOnMissingClass("jakarta.mail.internet.MimeMessage")
     public JavaMailSender fallbackJavaMailSender() {
         logger.warn("⚠️ Jakarta Mail not available - using fallback email service");
         return new MockEmailService();

@@ -237,6 +237,14 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
+  # HTTPS/SSL Configuration for cloud deployment
+  forward-headers-strategy: framework
+  use-forward-headers: true
+  tomcat:
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+      protocol-header-https-value: https
   http2:
     enabled: ${HTTP2_ENABLED}
 
