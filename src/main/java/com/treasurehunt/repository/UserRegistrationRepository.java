@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Repository interface for UserRegistration entity
@@ -187,4 +188,38 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
      * @return Total count of registrations for the plan
      */
     long countByPlanId(Long planId);
+
+
+
+    /**
+     * Find registrations with team members for a specific plan
+     * Optimized query to prevent N+1 issues
+     * @param planId Plan ID
+     * @return List of registrations with team members loaded
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.plan " +
+           "WHERE r.plan.id = :planId " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByPlanIdWithTeamMembers(@Param("planId") Long planId);
+
+    /**
+     * Find registrations by status with team members eagerly loaded
+     * @param status Registration status
+     * @return List of registrations with team members
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.plan " +
+           "WHERE r.status = :status " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByStatusWithTeamMembers(@Param("status") UserRegistration.RegistrationStatus status);
+
+    /**
+     * Stream all registration IDs for memory-efficient processing
+     * @return Stream of registration IDs
+     */
+    @Query("SELECT r.id FROM UserRegistration r")
+    Stream<Long> streamAllRegistrationIds();
 }

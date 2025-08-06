@@ -45,12 +45,12 @@ spring:
     encoding: UTF-8
     mode: HTML
   
-  # Mail Configuration - DEVELOPMENT ONLY (Production uses environment variables)
+  # Mail Configuration - REQUIRES ENVIRONMENT VARIABLES
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME:development@example.com}
-    password: ${MAIL_PASSWORD:CHANGE_ME}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -58,20 +58,40 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:10000}
+          timeout: ${MAIL_TIMEOUT:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:10000}
           ssl:
-            trust: smtp.gmail.com
+            trust: ${MAIL_HOST:smtp.gmail.com}
   
   # File Upload Configuration
   servlet:
     multipart:
-      max-file-size: 50MB  # Increased to support video uploads
-      max-request-size: 60MB  # Increased to support video uploads
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:50MB}  # Configurable via environment
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:60MB}  # Configurable via environment
       enabled: true
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
+
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_POOL_SIZE:2}
+        max-size: ${ASYNC_MAX_POOL_SIZE:5}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:100}
+      thread-name-prefix: async-
 
 # Custom Application Properties
 app:
@@ -86,16 +106,37 @@ app:
     allowed-document-types: ${ALLOWED_DOCUMENT_TYPES:application/pdf,image/jpeg,image/jpg}
   
   email:
-    from: ${MAIL_FROM_ADDRESS:development@example.com}
-    support: ${MAIL_SUPPORT_ADDRESS:support@example.com}
+    from: ${MAIL_FROM_ADDRESS}
+    support: ${MAIL_SUPPORT_ADDRESS}
     company-name: ${COMPANY_NAME:Treasure Hunt Adventures}
     mock:
       enabled: false  # Disabled - Use real Gmail SMTP
 
   security:
     admin:
-      username: ${ADMIN_USERNAME:CHANGE_ME}
-      password: ${ADMIN_PASSWORD:CHANGE_ME}
+      username: ${ADMIN_USERNAME}
+      password: ${ADMIN_PASSWORD}
+      session-timeout-minutes: ${ADMIN_SESSION_TIMEOUT:30}
+    session:
+      max-concurrent-sessions: ${MAX_CONCURRENT_SESSIONS:1}
+      prevent-login: ${PREVENT_LOGIN_ON_MAX_SESSIONS:true}
+      timeout-minutes: ${SESSION_TIMEOUT:30}
+
+  business:
+    min-participant-age: ${MIN_PARTICIPANT_AGE:18}
+    max-team-size: ${MAX_TEAM_SIZE:6}
+    min-team-size: ${MIN_TEAM_SIZE:2}
+    registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
+    allow-cancellation: ${ALLOW_CANCELLATION:true}
+    cancellation-deadline-hours: ${CANCELLATION_DEADLINE_HOURS:48}
+
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    interval-seconds: ${MONITORING_INTERVAL:300}
+
+  cleanup:
+    temp-file-retention-hours: ${CLEANUP_TEMP_FILE_RETENTION_HOURS:24}
+    log-retention-days: ${CLEANUP_LOG_RETENTION_DAYS:30}
 
 # Logging Configuration
 logging:
@@ -124,6 +165,23 @@ server:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
     min-response-size: 1024
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      show-components: always
+    info:
+      enabled: true
+  info:
+    env:
+      enabled: true
 
 # Graceful Shutdown Configuration
 spring.lifecycle.timeout-per-shutdown-phase: 30s

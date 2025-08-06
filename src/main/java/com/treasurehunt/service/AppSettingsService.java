@@ -5,6 +5,8 @@ import com.treasurehunt.repository.AppSettingsRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -119,10 +121,11 @@ public class AppSettingsService {
     }
 
     /**
-     * Get setting value by key
+     * Get setting value by key with caching
      * @param key Setting key
      * @return Setting value or null if not found
      */
+    @Cacheable(value = "appSettings", key = "#key")
     public String getSettingValue(String key) {
         try {
             if (key == null || key.trim().isEmpty()) {
@@ -149,12 +152,13 @@ public class AppSettingsService {
     }
 
     /**
-     * Update or create setting
+     * Update or create setting with cache eviction
      * @param key Setting key
      * @param value Setting value
      * @param description Setting description
      * @return Updated AppSettings
      */
+    @CacheEvict(value = "appSettings", key = "#key")
     public AppSettings updateSetting(String key, String value, String description) {
         try {
             if (key == null || key.trim().isEmpty()) {

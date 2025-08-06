@@ -55,13 +55,13 @@ public class EmailQueueService {
     /**
      * Add email to queue
      */
-    public EmailQueue queueEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue queueEmail(String recipientEmail, String recipientName, String subject,
                                 String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing email to: {} with subject: {}", recipientEmail, subject);
-        
+        logger.debug("Queuing {} email to: {}", emailType, recipientEmail);
+
         EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, emailType);
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
@@ -70,12 +70,12 @@ public class EmailQueueService {
      */
     public EmailQueue queueRegistrationEmail(UserRegistration registration, String subject,
                                            String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing registration email for registration ID: {}", registration.getId());
+        logger.debug("Queuing {} email for registration ID: {}", emailType, registration.getId());
 
         // If body is null, generate it using EmailService template
         String emailBody = body;
         if (emailBody == null || emailBody.trim().isEmpty()) {
-            logger.info("Generating email body using EmailService template for registration ID: {}", registration.getId());
+            logger.debug("Generating email body using template for registration ID: {}", registration.getId());
             try {
                 emailBody = generateRegistrationEmailBody(registration);
             } catch (Exception e) {
@@ -95,78 +95,69 @@ public class EmailQueueService {
     /**
      * Queue emails for all team members
      */
-    public void queueTeamMemberEmails(UserRegistration registration, List<TeamMember> teamMembers, 
+    public void queueTeamMemberEmails(UserRegistration registration, List<TeamMember> teamMembers,
                                      String subject, String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing emails for {} team members", teamMembers.size());
-        
+        logger.debug("Queuing {} emails for {} team members", emailType, teamMembers.size());
+
         for (TeamMember member : teamMembers) {
-            EmailQueue email = new EmailQueue(member.getEmail(), member.getFullName(), 
+            EmailQueue email = new EmailQueue(member.getEmail(), member.getFullName(),
                                              subject, body, emailType);
             email.setRegistrationId(registration.getId());
             email.setScheduledDate(LocalDateTime.now());
             emailQueueRepository.save(email);
         }
+
+        logger.info("Queued {} team member emails for registration {}", teamMembers.size(), registration.getId());
     }
 
     /**
      * Add email to queue with campaign information
      */
-    public EmailQueue queueCampaignEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue queueCampaignEmail(String recipientEmail, String recipientName, String subject,
                                        String body, String campaignId, String campaignName) {
-        logger.info("Queuing campaign email for campaign: {}", campaignName);
-        
-        EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, 
+        logger.debug("Queuing campaign email for campaign: {}", campaignName);
+
+        EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body,
                                          EmailQueue.EmailType.CAMPAIGN_EMAIL);
         email.setCampaignId(campaignId);
         email.setCampaignName(campaignName);
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
     /**
      * Schedule email for future sending
      */
-    public EmailQueue scheduleEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue scheduleEmail(String recipientEmail, String recipientName, String subject,
                                   String body, EmailQueue.EmailType emailType, LocalDateTime scheduledDate) {
-        logger.info("Scheduling email to: {} for: {}", recipientEmail, scheduledDate);
-        
+        logger.debug("Scheduling {} email to: {} for: {}", emailType, recipientEmail, scheduledDate);
+
         EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, emailType);
         email.setScheduledDate(scheduledDate);
         email.setStatus(EmailQueue.EmailStatus.SCHEDULED);
-        
+
         return emailQueueRepository.save(email);
     }
 
     /**
-     * Process email queue - scheduled method that runs every minute
+     * Process email queue - DISABLED to prevent conflicts with ThreadSafeEmailProcessor
+     * Email processing is now handled by ThreadSafeEmailProcessor.processEmailQueue()
      */
-    @Scheduled(fixedRate = 60000) // Run every minute
-    @Async
-    public void processEmailQueue() {
-        logger.debug("Processing email queue...");
-        
-        List<EmailQueue> emailsToSend = emailQueueRepository.findEmailsReadyToSend(LocalDateTime.now());
-        
-        if (!emailsToSend.isEmpty()) {
-            logger.info("Found {} emails ready to send", emailsToSend.size());
-            
-            for (EmailQueue email : emailsToSend) {
-                try {
-                    sendEmail(email);
-                } catch (Exception e) {
-                    logger.error("Error processing email ID: {}", email.getId(), e);
-                }
-            }
-        }
+    // @Scheduled(fixedRate = 60000) // DISABLED - using ThreadSafeEmailProcessor instead
+    // @Async
+    public void processEmailQueueLegacy() {
+        logger.debug("Legacy email queue processing method - DISABLED");
+        // This method is disabled to prevent conflicts with ThreadSafeEmailProcessor
+        // All email processing is now handled by ThreadSafeEmailProcessor
     }
 
     /**
-     * Send individual email
+     * Send individual email - DEPRECATED, use ThreadSafeEmailProcessor instead
      */
-    @Async
+    @Transactional
     public void sendEmail(EmailQueue email) {
-        logger.info("Sending email ID: {} to: {}", email.getId(), email.getRecipientEmail());
+        logger.debug("Sending email ID: {} to: {} (via legacy method)", email.getId(), email.getRecipientEmail());
         
         try {
             // Update status to processing

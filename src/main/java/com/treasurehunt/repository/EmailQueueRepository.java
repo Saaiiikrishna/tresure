@@ -4,12 +4,14 @@ import com.treasurehunt.entity.EmailQueue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -26,6 +28,14 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
            "(e.status = 'PENDING' OR (e.status = 'SCHEDULED' AND e.scheduledDate <= :now)) " +
            "ORDER BY e.priority ASC, e.createdDate ASC")
     List<EmailQueue> findEmailsReadyToSend(@Param("now") LocalDateTime now);
+
+    /**
+     * Find emails ready to be sent with pagination
+     */
+    @Query("SELECT e FROM EmailQueue e WHERE " +
+           "(e.status = 'PENDING' OR (e.status = 'SCHEDULED' AND e.scheduledDate <= :now)) " +
+           "ORDER BY e.priority ASC, e.createdDate ASC")
+    List<EmailQueue> findEmailsReadyToSend(@Param("now") LocalDateTime now, Pageable pageable);
 
     /**
      * Find emails by status
@@ -77,6 +87,20 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
      * Count emails by campaign ID
      */
     long countByCampaignId(String campaignId);
+
+    /**
+     * Find emails ready to send with pessimistic locking
+     * Prevents concurrent processing of the same emails
+     * @param now Current timestamp
+     * @param pageable Pagination parameters
+     * @return List of emails ready to send
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM EmailQueue e WHERE " +
+           "e.status = 'PENDING' AND " +
+           "e.scheduledDate <= :now " +
+           "ORDER BY e.scheduledDate ASC, e.id ASC")
+    List<EmailQueue> findEmailsReadyToSendWithLock(@Param("now") LocalDateTime now, Pageable pageable);
 
     /**
      * Find emails created between dates

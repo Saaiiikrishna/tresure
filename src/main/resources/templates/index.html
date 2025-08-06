@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org" data-bs-theme="light">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -20,7 +20,7 @@
     <link href="/css/style.css" rel="stylesheet">
 
     <style>
-        /* CSS Variables for Dark Mode */
+        /* CSS Variables for Light/Dark Mode */
         :root {
             --bg-primary: #ffffff;
             --bg-secondary: #f8f9fa;
@@ -30,207 +30,461 @@
             --text-muted: #6c757d;
             --border-color: #dee2e6;
             --card-bg: #ffffff;
-            --navbar-bg: rgba(255, 255, 255, 0.95);
-            --hero-overlay: rgba(255, 255, 255, 0.45);
-            --contact-overlay: rgba(0, 0, 0, 0.7);
-            --btn-primary-bg: #0d6efd;
-            --btn-primary-border: #0d6efd;
+            --card-shadow: rgba(0, 0, 0, 0.1);
+            --dark-color: #212529;
         }
 
         [data-theme="dark"] {
-            --bg-primary: #121212;
-            --bg-secondary: #1e1e1e;
-            --bg-tertiary: #2d2d2d;
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #404040;
             --text-primary: #ffffff;
-            --text-secondary: #b3b3b3;
+            --text-secondary: #b0b0b0;
             --text-muted: #888888;
             --border-color: #404040;
-            --card-bg: #1e1e1e;
-            --navbar-bg: rgba(18, 18, 18, 0.95);
-            --hero-overlay: rgba(0, 0, 0, 0.75);
-            --contact-overlay: rgba(0, 0, 0, 0.85);
-            --btn-primary-bg: #0d6efd;
-            --btn-primary-border: #0d6efd;
+            --card-bg: #2d2d2d;
+            --card-shadow: rgba(0, 0, 0, 0.3);
+            --dark-color: #ffffff;
         }
 
-        /* Apply dark mode variables */
+        /* Dark Mode Toggle in Navbar */
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2rem;
+            padding: 0.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transform: scale(1.1);
+        }
+
+        /* Apply theme variables to body and main elements */
         body {
             background-color: var(--bg-primary);
             color: var(--text-primary);
             transition: background-color 0.3s ease, color 0.3s ease;
         }
 
+        /* Additional styles for home page */
         .hero-section {
             min-height: 100vh;
             display: flex;
             align-items: center;
+            background-color: var(--bg-primary);
         }
 
-        /* Dark mode toggle button */
-        .dark-mode-toggle {
-            background: none;
-            border: 1px solid var(--border-color);
+
+
+        /* Hero section text styling */
+        .hero-section h1, .hero-section .display-4 {
             color: var(--text-primary);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            text-shadow: 2px 2px 4px var(--card-shadow);
+        }
+
+        .hero-section p, .hero-section .lead {
+            color: var(--text-secondary);
+            text-shadow: 1px 1px 2px var(--card-shadow);
+        }
+
+        /* Plan cards styling with dark mode support */
+        .plan-card {
             transition: all 0.3s ease;
         }
 
-        .dark-mode-toggle:hover {
-            background-color: var(--bg-secondary);
-            transform: scale(1.1);
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px var(--card-shadow);
         }
 
-        /* Update navbar for dark mode */
-        .navbar {
-            background-color: var(--navbar-bg) !important;
-            backdrop-filter: blur(10px);
-        }
-
-        .navbar-brand, .navbar-nav .nav-link {
-            color: var(--text-primary) !important;
-        }
-
-        /* Update cards for dark mode */
+        /* Card backgrounds */
         .card {
             background-color: var(--card-bg);
             border-color: var(--border-color);
             color: var(--text-primary);
         }
 
-        /* Update sections for dark mode */
+        /* Form controls and inputs */
+        .form-control, .form-select {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: var(--card-bg);
+            border-color: #007bff;
+            color: var(--text-primary);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* Background sections */
         .bg-light {
             background-color: var(--bg-secondary) !important;
         }
 
-        /* Update text colors */
         .text-muted {
             color: var(--text-muted) !important;
         }
 
-        /* Update hero overlay */
-        .hero-section .position-absolute:last-child {
-            background: var(--hero-overlay) !important;
-        }
-
-        /* Hero text styling for better visibility */
-        .hero-title {
+        /* Fix date text visibility in dark mode */
+        .plan-item .info-value,
+        .plan-item .fw-semibold,
+        .plan-item .text-dark {
             color: var(--text-primary) !important;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
-        .hero-description {
-            color: var(--text-secondary) !important;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Dark mode hero text improvements */
-        [data-bs-theme="dark"] .hero-title {
-            color: #ffffff !important;
-            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
-        }
-
-        [data-bs-theme="dark"] .hero-description {
-            color: #e0e0e0 !important;
-            text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
-        }
-
-        /* Update contact overlay */
-        .contact-hero-overlay {
-            background: var(--contact-overlay) !important;
-        }
-
-        /* Update buttons */
-        .btn-primary {
-            background-color: var(--btn-primary-bg);
-            border-color: var(--btn-primary-border);
-        }
-
-        /* Hero section text styling */
-        .hero-section h1, .hero-section .display-4 {
-            color: var(--text-primary);
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        .hero-section p, .hero-section .lead {
-            color: var(--text-secondary);
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Plan cards styling */
-        .plan-card {
+        /* Modal dark mode styling */
+        .modal-content {
             background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .plan-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        [data-theme="dark"] .plan-card:hover {
-            box-shadow: 0 8px 25px rgba(255, 255, 255, 0.1);
-        }
-
-        .plan-card .card-title {
+            border-color: var(--border-color);
             color: var(--text-primary);
         }
 
-        .plan-card .card-text {
-            color: var(--text-secondary);
+        .modal-header {
+            background-color: var(--bg-secondary);
+            border-bottom-color: var(--border-color);
+            color: var(--text-primary);
         }
 
-        .plan-card .badge {
+        .modal-body {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+        }
+
+        /* Member form containers in dark mode */
+        .member-form {
+            background-color: var(--bg-secondary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary);
+        }
+
+        /* Form labels in dark mode */
+        .form-label {
+            color: var(--text-primary) !important;
+        }
+
+        /* Input group text styling */
+        .input-group-text {
             background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
             color: var(--text-primary);
         }
 
-        /* Plan card styling */
-        .plan-card .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .plan-card .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .plan-card .card-body {
-            background-color: var(--card-bg);
-            color: var(--text-primary);
-        }
-
-        .plan-card .card-text {
-            color: var(--text-secondary) !important;
-        }
-
-        .plan-card .text-muted {
+        /* Form text and character count */
+        .form-text {
             color: var(--text-muted) !important;
         }
 
-        /* Plan card pricing */
-        .plan-card .price {
+        /* Alert styling in dark mode */
+        .alert-info {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
             color: var(--text-primary);
-            font-weight: bold;
         }
 
-        .plan-card .price-currency {
+        .alert-primary {
+            background-color: var(--bg-tertiary);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        /* Progress indicator badge */
+        .badge.bg-secondary {
+            background-color: var(--bg-tertiary) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Placeholder text styling */
+        .form-control::placeholder,
+        .form-select::placeholder {
             color: var(--text-muted);
+            opacity: 0.7;
         }
 
-        .plan-card .original-price {
-            color: var(--text-muted);
-            text-decoration: line-through;
-            font-size: 0.9em;
+        /* Select dropdown options in dark mode */
+        .form-select option {
+            background-color: var(--card-bg);
+            color: var(--text-primary);
         }
 
+        /* Textarea styling */
+        textarea.form-control {
+            background-color: var(--card-bg);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+
+        textarea.form-control:focus {
+            background-color: var(--card-bg);
+            border-color: #007bff;
+            color: var(--text-primary);
+        }
+
+        /* Enhanced form input styling for dark mode */
+        .modal .form-control {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal .form-control:focus {
+            background-color: var(--card-bg) !important;
+            border-color: #007bff !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        .modal .form-select {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal .form-select:focus {
+            background-color: var(--card-bg) !important;
+            border-color: #007bff !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        /* Placeholder text for modal inputs */
+        .modal .form-control::placeholder {
+            color: var(--text-muted) !important;
+            opacity: 0.6 !important;
+        }
+
+        /* Input group styling in modals */
+        .modal .input-group-text {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Alert boxes in modals */
+        .modal .alert {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal .alert-info {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+            border-color: rgba(13, 110, 253, 0.3) !important;
+            color: #0d6efd !important;
+        }
+
+        .modal .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-color: rgba(255, 193, 7, 0.3) !important;
+            color: #ffc107 !important;
+        }
+
+        /* Specific styling for plan info alert */
+        .modal .alert h5,
+        .modal .alert .alert-heading {
+            color: inherit !important;
+        }
+
+        .modal .alert p,
+        .modal .alert .mb-0 {
+            color: inherit !important;
+        }
+
+        /* Dark mode specific alert overrides */
+        [data-theme="dark"] .modal .alert-info {
+            background-color: rgba(13, 110, 253, 0.15) !important;
+            border-color: rgba(13, 110, 253, 0.4) !important;
+            color: #6ea8fe !important;
+        }
+
+        [data-theme="dark"] .modal .alert-warning {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+            border-color: rgba(255, 193, 7, 0.4) !important;
+            color: #ffda6a !important;
+        }
+
+        /* Team name input styling */
+        .modal input[placeholder*="team name"] {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal-footer {
+            background-color: var(--bg-secondary);
+            border-top-color: var(--border-color);
+        }
+
+        .modal-title {
+            color: var(--text-primary);
+        }
+
+        .btn-close {
+            filter: var(--bs-btn-close-filter, invert(1) grayscale(100%) brightness(200%));
+        }
+
+        [data-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+
+        /* Step indicator styling */
+        .modal .nav-pills .nav-link {
+            background-color: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .modal .nav-pills .nav-link.active {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* Progress indicator text */
+        .modal .text-muted {
+            color: var(--text-muted) !important;
+        }
+
+        /* Small text and help text */
+        .modal small,
+        .modal .small {
+            color: var(--text-muted) !important;
+        }
+
+        /* Specific styling for team name input */
+        .modal #teamName {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal #teamName:focus {
+            background-color: var(--card-bg) !important;
+            border-color: #007bff !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Form text styling */
+        .modal .form-text {
+            color: var(--text-muted) !important;
+        }
+
+        /* All input elements in modal */
+        .modal input[type="text"],
+        .modal input[type="email"],
+        .modal input[type="tel"],
+        .modal input[type="number"],
+        .modal select,
+        .modal textarea {
+            background-color: var(--card-bg) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .modal input[type="text"]:focus,
+        .modal input[type="email"]:focus,
+        .modal input[type="tel"]:focus,
+        .modal input[type="number"]:focus,
+        .modal select:focus,
+        .modal textarea:focus {
+            background-color: var(--card-bg) !important;
+            border-color: #007bff !important;
+            color: var(--text-primary) !important;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25) !important;
+        }
+
+        /* Ensure all placeholders are visible */
+        .modal input::placeholder,
+        .modal textarea::placeholder {
+            color: var(--text-muted) !important;
+            opacity: 0.7 !important;
+        }
+
+        /* Force override for all modal alerts */
+        .modal-body .alert,
+        .modal-content .alert {
+            background-color: var(--bg-tertiary) !important;
+            border-color: var(--border-color) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Specific alert type styling in modals */
+        .modal-body .alert-info,
+        .modal-content .alert-info {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+            border-color: rgba(13, 110, 253, 0.3) !important;
+            color: #0d6efd !important;
+        }
+
+        .modal-body .alert-primary,
+        .modal-content .alert-primary {
+            background-color: rgba(13, 110, 253, 0.1) !important;
+            border-color: rgba(13, 110, 253, 0.3) !important;
+            color: #0d6efd !important;
+        }
+
+        .modal-body .alert-warning,
+        .modal-content .alert-warning {
+            background-color: rgba(255, 193, 7, 0.1) !important;
+            border-color: rgba(255, 193, 7, 0.3) !important;
+            color: #ffc107 !important;
+        }
+
+        /* Dark mode overrides for modal alerts */
+        [data-theme="dark"] .modal-body .alert-info,
+        [data-theme="dark"] .modal-content .alert-info,
+        [data-theme="dark"] .modal-body .alert-primary,
+        [data-theme="dark"] .modal-content .alert-primary {
+            background-color: rgba(13, 110, 253, 0.15) !important;
+            border-color: rgba(13, 110, 253, 0.4) !important;
+            color: #6ea8fe !important;
+        }
+
+        [data-theme="dark"] .modal-body .alert-warning,
+        [data-theme="dark"] .modal-content .alert-warning {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+            border-color: rgba(255, 193, 7, 0.4) !important;
+            color: #ffda6a !important;
+        }
+
+        /* Alert content styling */
+        .modal .alert h5,
+        .modal .alert h6,
+        .modal .alert .alert-heading,
+        .modal .alert p,
+        .modal .alert ul,
+        .modal .alert li,
+        .modal .alert strong {
+            color: inherit !important;
+        }
+
+        /* Icon styling in alerts */
+        .modal .alert i {
+            color: inherit !important;
+        }
+
+        /* Navbar brand and links */
+        .navbar-brand,
+        .navbar-nav .nav-link {
+            color: rgba(255, 255, 255, 0.9) !important;
+        }
+
+        .navbar-nav .nav-link:hover {
+            color: #ffffff !important;
+        }
+
+        /* Plan card pricing - using beige theme colors */
         .plan-card .discounted-price {
             color: #28a745;
             font-weight: bold;
@@ -244,188 +498,9 @@
             border-radius: 0.375rem;
         }
 
-        .plan-card .deadline-info {
-            background-color: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 0.375rem;
-            padding: 0.5rem;
-            margin-bottom: 1rem;
-        }
 
-        /* Dark mode complete redesign - Professional gradient theme */
-        [data-bs-theme="dark"] .plan-card .card {
-            background: linear-gradient(145deg, #1a1f2e 0%, #16213e 100%);
-            border: 1px solid #2d3748;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-        }
 
-        [data-bs-theme="dark"] .plan-card .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-            border-color: #4299e1;
-        }
 
-        [data-bs-theme="dark"] .plan-card .card-header {
-            background: linear-gradient(135deg, #2b6cb0 0%, #3182ce 100%) !important;
-            border-bottom: 1px solid #2d3748;
-            color: #ffffff !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .card-body {
-            background: transparent;
-            color: #e2e8f0;
-        }
-
-        [data-bs-theme="dark"] .plan-card .card-text {
-            color: #cbd5e0 !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .text-muted {
-            color: #a0aec0 !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .text-primary {
-            color: #63b3ed !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .text-success {
-            color: #68d391 !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .text-warning {
-            color: #fbd38d !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .deadline-info {
-            background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-            border: 1px solid #4a5568;
-            color: #e2e8f0;
-        }
-
-        [data-bs-theme="dark"] .plan-card .btn-primary {
-            background: linear-gradient(135deg, #3182ce 0%, #2b6cb0 100%);
-            border-color: #3182ce;
-            color: #ffffff;
-        }
-
-        [data-bs-theme="dark"] .plan-card .btn-primary:hover {
-            background: linear-gradient(135deg, #2c5282 0%, #2a4365 100%);
-            border-color: #2c5282;
-            transform: translateY(-2px);
-        }
-
-        [data-bs-theme="dark"] .plan-card .btn-outline-secondary {
-            border-color: #4a5568;
-            color: #a0aec0;
-            background: transparent;
-        }
-
-        [data-bs-theme="dark"] .plan-card .btn-outline-secondary:hover {
-            background: #4a5568;
-            border-color: #4a5568;
-            color: #ffffff;
-        }
-
-        [data-bs-theme="dark"] .plan-card .discounted-price {
-            color: #68d391 !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .original-price {
-            color: #a0aec0 !important;
-        }
-
-        [data-bs-theme="dark"] .plan-card .discount-badge {
-            background: linear-gradient(135deg, #e53e3e 0%, #c53030 100%);
-            color: #ffffff;
-        }
-
-        /* Contact section styling */
-        .contact-section {
-            background-color: var(--bg-secondary);
-        }
-
-        .contact-section h2 {
-            color: var(--text-primary);
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-
-        .contact-section p {
-            color: var(--text-secondary);
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Contact form styling */
-        .contact-form .form-control {
-            background-color: var(--card-bg);
-            border-color: var(--border-color);
-            color: var(--text-primary);
-        }
-
-        .contact-form .form-control:focus {
-            background-color: var(--card-bg);
-            border-color: var(--btn-primary-bg);
-            color: var(--text-primary);
-            box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-        }
-
-        .contact-form .form-label {
-            color: var(--text-primary);
-        }
-
-        /* About section styling */
-        .about-section {
-            background-color: var(--bg-secondary);
-        }
-
-        .about-section h2 {
-            color: var(--text-primary);
-        }
-
-        .about-section p {
-            color: var(--text-secondary);
-        }
-
-        /* Feature cards styling */
-        .feature-card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            transition: all 0.3s ease;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        [data-theme="dark"] .feature-card:hover {
-            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.05);
-        }
-
-        .feature-card .card-title {
-            color: var(--text-primary);
-        }
-
-        .feature-card .card-text {
-            color: var(--text-secondary);
-        }
-
-        /* Footer styling */
-        .footer {
-            background-color: var(--bg-tertiary);
-            border-top: 1px solid var(--border-color);
-        }
-
-        .footer h5 {
-            color: var(--text-primary);
-        }
-
-        .footer p, .footer a {
-            color: var(--text-secondary);
-        }
-
-        .footer a:hover {
-            color: var(--text-primary);
-        }
 
         /* Difficulty badge styling */
         .difficulty-badge {
@@ -456,69 +531,201 @@
             border: 1px solid #bd2130;
         }
 
-        /* Old dark mode rules removed - now using [data-bs-theme="dark"] */
-
-
-
-
-
-
-
-        [data-theme="dark"] .plan-details .text-primary {
-            color: #6ea8fe !important;
+        /* Enhanced Plan Card Styling */
+        .plan-item {
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.1);
         }
 
-        /* Fix schedule display */
-        [data-theme="dark"] .schedule-display {
-            background-color: transparent !important;
-            color: #e0e0e0 !important;
+        .plan-item:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
         }
 
-        [data-theme="dark"] .schedule-date {
-            color: #ffffff !important;
+        .plan-item .card-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border-bottom: none;
+            padding: 1rem;
         }
 
-        [data-theme="dark"] .schedule-time {
-            color: #a0a0a0 !important;
+
+
+        /* Card Body Styling with dark mode support */
+        .plan-item .card-body {
+            background: linear-gradient(135deg, var(--card-bg) 0%, var(--bg-secondary) 100%);
         }
 
-        /* Fix price section */
-        [data-theme="dark"] .plan-card .text-primary {
-            color: #6ea8fe !important;
+        /* Key Information Section */
+        .key-info-section .info-item {
+            transition: all 0.2s ease;
+            border: 1px solid transparent;
         }
 
-        [data-theme="dark"] .plan-card h4.text-primary {
-            color: #6ea8fe !important;
+        .key-info-section .info-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border-color: rgba(0,123,255,0.2);
         }
 
-        [data-theme="dark"] .btn-primary {
-            background-color: #0d6efd !important;
-            border-color: #0d6efd !important;
-            color: #ffffff !important;
+        .key-info-section .info-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.8);
+            border-radius: 50%;
+            flex-shrink: 0;
         }
 
-        [data-theme="dark"] .btn-outline-primary {
-            color: #6ea8fe !important;
-            border-color: #6ea8fe !important;
+        .key-info-section .info-label {
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.75rem;
         }
 
-        [data-theme="dark"] .btn-outline-primary:hover {
-            background-color: #0d6efd !important;
-            border-color: #0d6efd !important;
-            color: #ffffff !important;
+        /* Compact Registration Status with Breathing Dots */
+        .registration-status .compact-status-line {
+            transition: all 0.2s ease;
         }
 
-        /* Dark mode specific hero background */
-        [data-theme="dark"] .hero-plain-bg {
-            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 25%, #1e1e1e 50%, #252525 75%, #1a1a1a 100%) !important;
+        .breathing-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            vertical-align: middle;
+            position: relative;
         }
 
-        [data-theme="dark"] .hero-plain-bg > div {
-            background-image:
-                radial-gradient(circle at 20% 20%, rgba(255,255,255,0.02) 0%, transparent 40%),
-                radial-gradient(circle at 80% 60%, rgba(255,255,255,0.015) 0%, transparent 40%),
-                radial-gradient(circle at 40% 80%, rgba(255,255,255,0.01) 0%, transparent 40%) !important;
+        .breathing-dot::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: inherit;
         }
+
+        .breathing-dot-green {
+            background-color: #28a745;
+            animation: breathe-green 2s ease-in-out infinite;
+        }
+
+        .breathing-dot-red {
+            background-color: #dc3545;
+            animation: breathe-red 2s ease-in-out infinite;
+        }
+
+        @keyframes breathe-green {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.2);
+                box-shadow: 0 0 0 3px rgba(40, 167, 69, 0);
+            }
+        }
+
+        @keyframes breathe-red {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+            50% {
+                opacity: 0.8;
+                transform: scale(1.2);
+                box-shadow: 0 0 0 3px rgba(220, 53, 69, 0);
+            }
+        }
+
+        /* Compact Pricing Section */
+        .pricing-section .compact-pricing {
+            transition: all 0.2s ease;
+        }
+
+        .pricing-section .compact-pricing:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 10px rgba(0,123,255,0.15);
+        }
+
+        .pricing-line {
+            line-height: 1.4;
+        }
+
+        /* Compact Action Buttons */
+        .action-buttons .register-btn {
+            transition: all 0.3s ease;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons .register-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+        }
+
+        .action-buttons .register-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            background-color: #6c757d;
+            border-color: #6c757d;
+        }
+
+        .action-buttons .preview-btn {
+            transition: all 0.3s ease;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .action-buttons .preview-btn:hover {
+            background-color: #007bff;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(0,123,255,0.25);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .key-info-section .info-icon {
+                width: 35px;
+                height: 35px;
+            }
+
+            .breathing-dot {
+                width: 6px;
+                height: 6px;
+            }
+
+            .compact-status-line small {
+                font-size: 0.75rem;
+            }
+
+            .pricing-line .h5 {
+                font-size: 1.1rem;
+            }
+
+            .action-buttons .register-btn {
+                font-size: 0.85rem;
+                padding: 0.4rem 0.8rem;
+            }
+
+            .action-buttons .preview-btn {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -546,9 +753,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="#contact">Contact</a>
                     </li>
-                    <li class="nav-item ms-2">
-                        <button class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
-                            <i class="fas fa-moon" id="dark-mode-icon"></i>
+                    <li class="nav-item">
+                        <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                            <i class="fas fa-moon" id="themeIcon"></i>
                         </button>
                     </li>
                 </ul>
@@ -726,94 +933,160 @@
                 <div th:each="plan : ${plans}" class="col-lg-4 col-md-6 plan-card" th:data-difficulty="${plan.difficultyLevel}">
                     <div class="card h-100 shadow-sm border-0 plan-item">
                         <div class="card-header bg-primary text-white">
-                            <h5 class="card-title mb-0" th:text="${plan.name}">Plan Name</h5>
-                            <span class="badge difficulty-badge" 
-                                  th:classappend="${plan.difficultyLevel.name().toLowerCase()}"
-                                  th:text="${plan.difficultyLevel}">Difficulty</span>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h5 class="card-title mb-1" th:text="${plan.name}">Plan Name</h5>
+                                    <small class="opacity-75">
+                                        <i class="fas fa-users me-1"></i>
+                                        <span th:text="${plan.teamDescription}">Individual players</span>
+                                    </small>
+                                </div>
+                                <span class="badge difficulty-badge ms-2"
+                                      th:classappend="${plan.difficultyLevel.name().toLowerCase()}"
+                                      th:text="${plan.difficultyLevel}">Difficulty</span>
+                            </div>
                         </div>
-                        <div class="card-body d-flex flex-column">
-                            <p class="card-text text-muted mb-3" 
-                               th:text="${plan.getTruncatedDescription(150)}">Plan description...</p>
-                            
-                            <!-- Registration Deadline Info -->
-                            <div class="deadline-info text-center" th:if="${plan.registrationDeadline != null}">
-                                <small class="text-muted">
-                                    <i class="fas fa-calendar-alt me-1"></i>
-                                    Registrations remain <strong th:class="${plan.registrationDeadlinePassed ? 'text-danger' : 'text-success'}"
-                                                                th:text="${plan.registrationDeadlinePassed ? 'closed' : 'open'}">open</strong> till:
-                                    <strong th:text="${plan.formattedRegistrationDeadline}">25th Dec</strong>
-                                </small>
-                            </div>
 
-                            <div class="plan-details mb-3">
-                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start mb-2">
-                                    <span class="flex-shrink-0 mb-1 mb-sm-0"><i class="fas fa-clock text-primary me-1"></i> Schedule:</span>
-                                    <div class="text-start text-sm-end schedule-display">
-                                        <div class="schedule-date fw-bold" th:text="${plan.formattedDateRange}">23rd May</div>
-                                        <div class="schedule-time text-muted small" th:text="${plan.formattedTimeRange}">09:00 AM - 06:00 PM (3 hours)</div>
-                                    </div>
-                                </div>
-                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
-                                    <span class="mb-1 mb-sm-0"><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
-                                    <span class="fw-bold" th:text="${plan.availableSlots - plan.registrationCount}">Available spots</span>
-                                </div>
-                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
-                                    <span class="mb-1 mb-sm-0"><i class="fas fa-users-cog text-primary me-1"></i> Team Format:</span>
-                                    <span th:text="${plan.teamDescription}">Team format</span>
-                                </div>
-                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
-                                    <span class="mb-1 mb-sm-0"><i class="fas fa-trophy text-warning me-1"></i> Prize Money:</span>
-                                    <span class="fw-bold text-success">₹ <span th:text="${#numbers.formatDecimal(plan.prizeMoney, 1, 0)}">5000</span>/-</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-auto">
-                                <!-- Pricing Section with Discount Support -->
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <div class="pricing-container">
-                                        <!-- Show discount pricing if enabled -->
-                                        <div th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
-                                            <div class="d-flex align-items-center gap-2 flex-wrap">
-                                                <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">1000</span>/-</span>
-                                                <h4 class="discounted-price mb-0">
-                                                    ₹ <span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">900</span>/-
-                                                </h4>
-                                                <span class="discount-badge" th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)} + '% OFF'">10% OFF</span>
+                        <div class="card-body d-flex flex-column p-4">
+                            <!-- Description -->
+                            <p class="card-text text-muted mb-4 lh-base"
+                               th:text="${plan.getTruncatedDescription(140)}">Plan description...</p>
+
+                            <!-- Key Information Section -->
+                            <div class="key-info-section mb-4">
+                                <div class="row g-3">
+                                    <!-- Event Date & Time -->
+                                    <div class="col-12">
+                                        <div class="info-item d-flex align-items-center p-2 bg-light rounded">
+                                            <div class="info-icon me-3">
+                                                <i class="fas fa-calendar-check text-primary fs-5"></i>
+                                            </div>
+                                            <div class="info-content flex-grow-1">
+                                                <div class="info-label small text-muted mb-1">Event Date & Time</div>
+                                                <div class="info-value fw-semibold text-dark" th:text="${plan.formattedDate}">23rd May 2024</div>
+                                                <div class="info-subtext small text-muted" th:text="${plan.formattedTimeRange}">09:00 AM - 01:00 PM</div>
                                             </div>
                                         </div>
-                                        <!-- Show regular pricing if no discount -->
-                                        <div th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
-                                            <h4 class="text-primary mb-0">
-                                                ₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>/-
-                                            </h4>
+                                    </div>
+
+                                    <!-- Duration & Slots -->
+                                    <div class="col-6">
+                                        <div class="info-item d-flex align-items-center p-2 bg-light rounded h-100">
+                                            <div class="info-icon me-2">
+                                                <i class="fas fa-clock text-warning"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <div class="info-label small text-muted">Duration</div>
+                                                <div class="info-value fw-semibold" th:text="${plan.durationHours + ' hours'}">4 hours</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <small class="text-muted">per person</small>
+
+                                    <!-- Available Slots -->
+                                    <div class="col-6">
+                                        <div class="info-item d-flex align-items-center p-2 bg-light rounded h-100">
+                                            <div class="info-icon me-2">
+                                                <i class="fas fa-users"
+                                                   th:classappend="${plan.availableSlots - plan.registrationCount >= 10 ? ' text-success' :
+                                                             (plan.availableSlots - plan.registrationCount >= 5 ? ' text-warning' : ' text-danger')}"></i>
+                                            </div>
+                                            <div class="info-content">
+                                                <div class="info-label small text-muted">Available</div>
+                                                <div class="info-value fw-semibold"
+                                                     th:class="${plan.availableSlots - plan.registrationCount >= 10 ? 'text-success' :
+                                                               (plan.availableSlots - plan.registrationCount >= 5 ? 'text-warning' : 'text-danger')}"
+                                                     th:text="${plan.availableSlots - plan.registrationCount} + ' slots'">12 slots</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Prize Money (if available) -->
+                                    <div class="col-12" th:if="${plan.prizeMoney != null and plan.prizeMoney.compareTo(T(java.math.BigDecimal).ZERO) > 0}">
+                                        <div class="info-item d-flex align-items-center p-2 bg-warning bg-opacity-10 rounded border border-warning border-opacity-25">
+                                            <div class="info-icon me-3">
+                                                <i class="fas fa-trophy text-warning fs-5"></i>
+                                            </div>
+                                            <div class="info-content flex-grow-1">
+                                                <div class="info-label small text-muted mb-1">Prize Money</div>
+                                                <div class="info-value fw-bold text-warning fs-5">₹<span th:text="${#numbers.formatInteger(plan.prizeMoney, 0, 'COMMA')}">5,000</span></div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                
-                                <div class="d-grid gap-2">
-                                    <button type="button"
-                                            class="btn btn-primary register-btn"
-                                            th:data-plan-id="${plan.id}"
-                                            th:data-plan-name="${plan.name}"
-                                            th:data-plan-price="${plan.discountedPrice}"
-                                            th:data-original-price="${plan.priceInr}"
-                                            th:data-discount-enabled="${plan.discountEnabled}"
-                                            th:data-discount-percentage="${plan.discountPercentage}"
-                                            th:data-team-size="${plan.teamSize}"
-                                            th:data-team-type="${plan.teamType}"
-                                            th:disabled="${!plan.available or plan.registrationDeadlinePassed}">
-                                        <i class="fas fa-user-plus me-2" th:unless="${!plan.available or plan.registrationDeadlinePassed}"></i>
-                                        <i class="fas fa-times me-2" th:if="${!plan.available or plan.registrationDeadlinePassed}"></i>
-                                        <span th:if="${plan.available and !plan.registrationDeadlinePassed}">Register Now</span>
-                                        <span th:if="${!plan.available and !plan.registrationDeadlinePassed}">Fully Booked</span>
-                                        <span th:if="${plan.registrationDeadlinePassed}">Registration Closed</span>
-                                    </button>
-                                    <button type="button" class="btn btn-outline-secondary btn-sm preview-btn"
-                                            th:data-plan-id="${plan.id}">
-                                        <i class="fas fa-play me-1"></i>
-                                        Watch Preview
-                                    </button>
+                            </div>
+
+                            <!-- Compact Registration Status -->
+                            <div class="registration-status mb-3" th:if="${plan.registrationDeadline != null}">
+                                <div class="compact-status-line p-2 rounded border border-light bg-light text-center">
+                                    <small class="text-muted">
+                                        <span class="breathing-dot me-2"
+                                              th:classappend="${plan.registrationDeadlinePassed ? ' breathing-dot-red' : ' breathing-dot-green'}"></span>
+                                        Registrations are
+                                        <span class="fw-bold fst-italic" th:class="${plan.registrationDeadlinePassed ? 'text-danger fw-bold fst-italic' : 'text-success fw-bold fst-italic'}"
+                                              th:text="${plan.registrationDeadlinePassed ? 'CLOSED' : 'OPEN'}">OPEN</span>
+                                        till <strong th:text="${plan.formattedRegistrationDeadline}">3rd July</strong>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <div class="mt-auto">
+                                <!-- Compact Pricing Section -->
+                                <div class="pricing-section mb-3">
+                                    <div class="compact-pricing text-center p-2 bg-light rounded border">
+                                        <!-- Pricing with discount -->
+                                        <div th:if="${plan.discountEnabled}" class="pricing-line">
+                                            <span class="h5 text-primary fw-bold">₹<span th:text="${#numbers.formatInteger(plan.discountedPrice, 0, 'COMMA')}">999</span>/-</span>
+                                            <span class="text-muted text-decoration-line-through ms-2 small">₹<span th:text="${#numbers.formatInteger(plan.priceInr, 0, 'COMMA')}">1998</span></span>
+                                            <span class="badge bg-success ms-2 small"><span th:text="${plan.discountPercentage}">50</span>% OFF</span>
+                                            <small class="text-muted"> per person</small>
+                                        </div>
+
+                                        <!-- Pricing without discount -->
+                                        <div th:unless="${plan.discountEnabled}" class="pricing-line">
+                                            <span class="h5 text-primary fw-bold">₹<span th:text="${#numbers.formatInteger(plan.discountedPrice, 0, 'COMMA')}">999</span>/-</span>
+                                            <small class="text-muted"> per person</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Compact Action Buttons -->
+                                <div class="action-buttons">
+                                    <div class="d-grid gap-2">
+                                        <!-- Primary Registration Button -->
+                                        <button type="button"
+                                                class="btn btn-primary register-btn py-2"
+                                                th:data-plan-id="${plan.id}"
+                                                th:data-plan-name="${plan.name}"
+                                                th:data-plan-price="${plan.discountedPrice}"
+                                                th:data-original-price="${plan.priceInr}"
+                                                th:data-discount-enabled="${plan.discountEnabled}"
+                                                th:data-discount-percentage="${plan.discountPercentage}"
+                                                th:data-team-size="${plan.teamSize}"
+                                                th:data-team-type="${plan.teamType}"
+                                                th:disabled="${!plan.available or plan.registrationDeadlinePassed}">
+
+                                            <!-- Available Registration -->
+                                            <span th:if="${plan.available and !plan.registrationDeadlinePassed}">
+                                                <i class="fas fa-user-plus me-1"></i>Register Now
+                                            </span>
+
+                                            <!-- Fully Booked -->
+                                            <span th:if="${!plan.available and !plan.registrationDeadlinePassed}">
+                                                <i class="fas fa-users-slash me-1"></i>Fully Booked
+                                            </span>
+
+                                            <!-- Registration Closed -->
+                                            <span th:if="${plan.registrationDeadlinePassed}">
+                                                <i class="fas fa-calendar-times me-1"></i>Registration Closed
+                                            </span>
+                                        </button>
+
+                                        <!-- Secondary Preview Button -->
+                                        <button type="button" class="btn btn-outline-primary btn-sm preview-btn py-1"
+                                                th:data-plan-id="${plan.id}">
+                                            <i class="fas fa-play me-1"></i>Watch Video
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -928,7 +1201,7 @@
                                     <i class="fas fa-envelope text-primary fs-2"></i>
                                 </div>
                                 <h5 class="fw-bold">Email Us</h5>
-                                <p class="text-muted mb-0" th:text="${contactInfo.email}">info@treasurehuntadventures.com</p>
+                                <p class="text-muted mb-0" th:text="${contactInfo.email}">tresurhunting@gmail.com</p>
                                 <small class="text-muted">24/7 Support</small>
                             </div>
                             <div class="col-md-4 text-center">
@@ -1237,41 +1510,50 @@
             }
         });
 
+
+    </script>
+
+    <!-- Dark Mode Toggle Script -->
+    <script>
         // Dark Mode Functionality
-        function toggleDarkMode() {
-            const html = document.documentElement;
-            const icon = document.getElementById('dark-mode-icon');
-            const currentTheme = html.getAttribute('data-bs-theme');
+        const themeToggle = document.getElementById('themeToggle');
+        const themeIcon = document.getElementById('themeIcon');
+        const body = document.body;
+
+        // Check for saved theme preference or default to light mode
+        const currentTheme = localStorage.getItem('theme') || 'light';
+
+        // Apply the saved theme on page load
+        if (currentTheme === 'dark') {
+            body.setAttribute('data-theme', 'dark');
+            themeIcon.className = 'fas fa-sun';
+            themeToggle.title = 'Switch to Light Mode';
+        } else {
+            themeToggle.title = 'Switch to Dark Mode';
+        }
+
+        // Theme toggle functionality
+        themeToggle.addEventListener('click', function() {
+            const currentTheme = body.getAttribute('data-theme');
 
             if (currentTheme === 'dark') {
-                html.setAttribute('data-bs-theme', 'light');
-                icon.className = 'fas fa-moon';
+                // Switch to light mode
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                themeToggle.title = 'Switch to Dark Mode';
                 localStorage.setItem('theme', 'light');
             } else {
-                html.setAttribute('data-bs-theme', 'dark');
-                icon.className = 'fas fa-sun';
+                // Switch to dark mode
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                themeToggle.title = 'Switch to Light Mode';
                 localStorage.setItem('theme', 'dark');
             }
-        }
+        });
 
-        // Initialize dark mode from localStorage
-        function initializeDarkMode() {
-            const savedTheme = localStorage.getItem('theme');
-            const html = document.documentElement;
-            const icon = document.getElementById('dark-mode-icon');
-
-            if (savedTheme === 'dark') {
-                html.setAttribute('data-bs-theme', 'dark');
-                icon.className = 'fas fa-sun';
-            } else {
-                html.setAttribute('data-bs-theme', 'light');
-                icon.className = 'fas fa-moon';
-            }
-        }
-
-        // Initialize dark mode on page load
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeDarkMode();
+        // Add smooth transition after page load
+        window.addEventListener('load', function() {
+            body.style.transition = 'background-color 0.3s ease, color 0.3s ease';
         });
     </script>
 </body>

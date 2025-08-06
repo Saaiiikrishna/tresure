@@ -406,6 +406,34 @@ public class EmailService {
     }
 
     /**
+     * Send email with basic parameters (used by ThreadSafeEmailProcessor)
+     * @param to Recipient email
+     * @param subject Email subject
+     * @param body Email body
+     * @param from Sender email
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendEmail(String to, String subject, String body, String from) {
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true); // true indicates HTML content
+            helper.setFrom(from != null ? from : fromEmail);
+
+            mailSender.send(message);
+            logger.info("Successfully sent email to: {}", to);
+            return true;
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send email to: {}", to, e);
+            return false;
+        }
+    }
+
+    /**
      * Cleanup method for application shutdown
      */
     @javax.annotation.PreDestroy

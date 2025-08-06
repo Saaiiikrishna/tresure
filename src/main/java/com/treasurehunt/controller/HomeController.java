@@ -12,8 +12,12 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +41,28 @@ public class HomeController {
         this.appSettingsService = appSettingsService;
     }
 
+
+
     /**
-     * Display main landing page with available plans
+     * Clear session and redirect to home
+     */
+    @GetMapping("/clear-session")
+    public String clearSession(HttpServletRequest request, HttpServletResponse response) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        // Clear cookies
+        Cookie cookie = new Cookie("JSESSIONID", null);
+        cookie.setMaxAge(0);
+        cookie.setPath("/");
+        response.addCookie(cookie);
+
+        return "redirect:/";
+    }
+
+    /**
+     * Display main landing page with available plans (ORIGINAL DESIGN)
      * @param model Thymeleaf model
      * @param response HTTP response for cache control
      * @return Template name
@@ -70,10 +94,8 @@ public class HomeController {
             logger.info("Background Media Enabled: {}", backgroundMediaEnabled);
             logger.info("=== END IMAGE URLS ===");
 
-            // If no featured plan, use the first available plan as fallback
-            if (featuredPlan == null && !availablePlans.isEmpty()) {
-                featuredPlan = availablePlans.get(0);
-            }
+            // Note: getFeaturedPlan() now always returns a plan (never null)
+            // so no fallback logic is needed here
 
             model.addAttribute("plans", availablePlans);
             model.addAttribute("totalPlans", availablePlans.size());
@@ -111,50 +133,9 @@ public class HomeController {
         }
     }
 
-    /**
-     * Test page for JavaScript debugging
-     * @return Template name
-     */
-    @GetMapping("/test")
-    public String test() {
-        logger.info("Displaying test page");
-        return "test";
-    }
+    // Debug endpoints removed for production security
 
-    /**
-     * Test admin functionality page
-     * @return Template name
-     */
-    @GetMapping("/test-admin")
-    public String testAdmin() {
-        logger.info("Displaying test admin page");
-        return "test-admin";
-    }
-
-    /**
-     * Debug endpoint to serve JavaScript file directly
-     */
-    @GetMapping(value = "/debug/js", produces = "application/javascript; charset=utf-8")
-    @ResponseBody
-    public ResponseEntity<String> debugJs() {
-        try {
-            // Read the JavaScript file directly
-            ClassPathResource resource = new ClassPathResource("static/js/app.js");
-            String content = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-
-            logger.info("Serving JavaScript file, content length: {}", content.length());
-
-            return ResponseEntity.ok()
-                    .header("Content-Type", "application/javascript; charset=utf-8")
-                    .header("Cache-Control", "no-cache")
-                    .body(content);
-        } catch (Exception e) {
-            logger.error("Error reading JavaScript file", e);
-            return ResponseEntity.status(500)
-                    .header("Content-Type", "text/plain")
-                    .body("Error: " + e.getMessage());
-        }
-    }
+    // Debug JavaScript endpoint removed for production security
 
     /**
      * REST API endpoint to get all available plans
@@ -299,24 +280,7 @@ public class HomeController {
         return "terms";
     }
 
-    /**
-     * Health check endpoint
-     * @return Health status
-     */
-    @GetMapping("/api/health")
-    @ResponseBody
-    public ResponseEntity<String> healthCheck() {
-        try {
-            // Simple health check - verify we can access the database
-            long planCount = planService.getActivePlanCount();
-            logger.debug("Health check passed - {} active plans", planCount);
-            return ResponseEntity.ok("OK");
 
-        } catch (Exception e) {
-            logger.error("Health check failed", e);
-            return ResponseEntity.internalServerError().body("ERROR");
-        }
-    }
 
     /**
      * Actuator health check endpoint (backup)

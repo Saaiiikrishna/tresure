@@ -2,6 +2,7 @@ package com.treasurehunt.repository;
 
 import com.treasurehunt.entity.UploadedImage;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Repository interface for UploadedImage entity
@@ -122,6 +124,7 @@ public interface UploadedImageRepository extends JpaRepository<UploadedImage, Lo
      * @param id Image ID
      * @return Number of affected rows
      */
+    @Modifying
     @Query("UPDATE UploadedImage ui SET ui.isActive = false WHERE ui.id = :id")
     int softDeleteById(@Param("id") Long id);
 
@@ -130,8 +133,18 @@ public interface UploadedImageRepository extends JpaRepository<UploadedImage, Lo
      * @param id Image ID
      * @return Number of affected rows
      */
+    @Modifying
     @Query("UPDATE UploadedImage ui SET ui.isActive = true WHERE ui.id = :id")
     int restoreById(@Param("id") Long id);
+
+    /**
+     * Atomically deactivate all images in a category
+     * @param category Image category
+     * @return Number of images deactivated
+     */
+    @Modifying
+    @Query("UPDATE UploadedImage ui SET ui.isActive = false WHERE ui.imageCategory = :category AND ui.isActive = true")
+    int deactivateImagesByCategory(@Param("category") String category);
 
     /**
      * Find inactive images older than specified date
@@ -146,4 +159,11 @@ public interface UploadedImageRepository extends JpaRepository<UploadedImage, Lo
      * @return Number of active images
      */
     long countByIsActiveTrue();
+
+    /**
+     * Stream all file paths for memory-efficient processing
+     * @return Stream of file paths
+     */
+    @Query("SELECT i.filePath FROM UploadedImage i WHERE i.filePath IS NOT NULL")
+    Stream<String> streamAllFilePaths();
 }

@@ -45,8 +45,8 @@ public class TreasureHuntApplication {
             // Set environment variables from .env file
             dotenv.entries().forEach(entry -> {
                 System.setProperty(entry.getKey(), entry.getValue());
-                System.out.println("🔧 Loaded env var: " + entry.getKey() + " = " +
-                                 (entry.getKey().contains("PASSWORD") ? "***HIDDEN***" : entry.getValue()));
+                // Only log the key name for security - never log values
+                System.out.println("🔧 Loaded env var: " + entry.getKey() + " = ***SECURED***");
             });
 
             System.out.println("✅ Environment variables loaded from .env file");

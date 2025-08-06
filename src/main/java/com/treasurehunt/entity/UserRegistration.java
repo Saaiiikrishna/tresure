@@ -3,6 +3,7 @@ package com.treasurehunt.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -14,7 +15,14 @@ import java.util.List;
  * Maps to user_registrations table in PostgreSQL database
  */
 @Entity
-@Table(name = "user_registrations")
+@Table(name = "user_registrations",
+       indexes = {
+           @Index(name = "idx_registration_email", columnList = "email"),
+           @Index(name = "idx_registration_status", columnList = "status"),
+           @Index(name = "idx_registration_plan_id", columnList = "plan_id"),
+           @Index(name = "idx_registration_date", columnList = "registration_date"),
+           @Index(name = "idx_registration_application_id", columnList = "application_id", unique = true)
+       })
 public class UserRegistration {
 
     @Id
@@ -80,11 +88,18 @@ public class UserRegistration {
     @Column(name = "status", nullable = false, length = 20)
     private RegistrationStatus status = RegistrationStatus.PENDING;
 
+    @Column(name = "application_id", unique = true, length = 50)
+    private String applicationId;
+
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UploadedDocument> documents = new ArrayList<>();
 
-    @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "registration",
+               cascade = CascadeType.ALL,
+               fetch = FetchType.LAZY,
+               orphanRemoval = true) // Remove team members when registration is deleted
+    @BatchSize(size = 10) // Optimize batch loading for team members
     @JsonIgnore
     private List<TeamMember> teamMembers = new ArrayList<>();
 
@@ -263,5 +278,79 @@ public class UserRegistration {
                 .filter(TeamMember::isTeamLeader)
                 .findFirst()
                 .orElse(null);
+    }
+
+    // ===== BIDIRECTIONAL RELATIONSHIP HELPER METHODS =====
+
+    /**
+     * Add a team member to this registration (bidirectional helper)
+     * @param teamMember Team member to add
+     */
+    public void addTeamMember(TeamMember teamMember) {
+        if (teamMember != null) {
+            teamMembers.add(teamMember);
+            teamMember.setRegistration(this);
+        }
+    }
+
+    /**
+     * Remove a team member from this registration (bidirectional helper)
+     * @param teamMember Team member to remove
+     */
+    public void removeTeamMember(TeamMember teamMember) {
+        if (teamMember != null) {
+            teamMembers.remove(teamMember);
+            teamMember.setRegistration(null);
+        }
+    }
+
+    /**
+     * Add a document to this registration (bidirectional helper)
+     * @param document Document to add
+     */
+    public void addDocument(UploadedDocument document) {
+        if (document != null) {
+            documents.add(document);
+            document.setRegistration(this);
+        }
+    }
+
+    /**
+     * Remove a document from this registration (bidirectional helper)
+     * @param document Document to remove
+     */
+    public void removeDocument(UploadedDocument document) {
+        if (document != null) {
+            documents.remove(document);
+            document.setRegistration(null);
+        }
+    }
+
+    /**
+     * Check if all required documents are uploaded
+     * @return true if all required documents are present
+     */
+    public boolean hasAllRequiredDocuments() {
+        return hasRequiredDocuments();
+    }
+
+    /**
+     * Get team member by position
+     * @param position Member position (1 = leader, 2+ = members)
+     * @return Team member at position, or null if not found
+     */
+    public TeamMember getTeamMemberByPosition(int position) {
+        return teamMembers.stream()
+                .filter(member -> member.getMemberPosition() != null && member.getMemberPosition() == position)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Get application ID (alias for applicationId field)
+     * @return Application ID
+     */
+    public String getApplicationId() {
+        return this.applicationId;
     }
 }

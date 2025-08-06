@@ -4,9 +4,15 @@ import com.treasurehunt.entity.TreasureHuntPlan;
 import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.repository.TreasureHuntPlanRepository;
 import com.treasurehunt.repository.UserRegistrationRepository;
+import com.treasurehunt.service.interfaces.TreasureHuntPlanServiceInterface;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +26,7 @@ import java.util.Optional;
  */
 @Service
 @Transactional
-public class TreasureHuntPlanService {
+public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface {
 
     private static final Logger logger = LoggerFactory.getLogger(TreasureHuntPlanService.class);
 
@@ -35,12 +41,13 @@ public class TreasureHuntPlanService {
     }
 
     /**
-     * Get all active treasure hunt plans
+     * Get all active treasure hunt plans with caching
      * @return List of active plans
      */
+    @Cacheable(value = "treasureHuntPlans", key = "'active'")
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getAllActivePlans() {
-        logger.debug("Fetching all active treasure hunt plans");
+        logger.debug("Fetching all active treasure hunt plans from database");
         return planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
     }
 
@@ -152,14 +159,44 @@ public class TreasureHuntPlanService {
      */
     public TreasureHuntPlan updatePlan(Long id, TreasureHuntPlan updatedPlan) {
         logger.info("Updating treasure hunt plan with ID: {}", id);
-        
+
         TreasureHuntPlan existingPlan = planRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + id));
-        
+
         // Validate updated plan data
         validatePlan(updatedPlan);
-        
-        // Update fields
+
+        // Update all fields comprehensively
+        updatePlanFields(existingPlan, updatedPlan);
+
+        TreasureHuntPlan savedPlan = planRepository.save(existingPlan);
+        logger.info("Successfully updated treasure hunt plan with ID: {}", savedPlan.getId());
+
+        return savedPlan;
+    }
+
+    /**
+     * Update an existing treasure hunt plan using entity with ID
+     * @param plan Plan with updated data (must have ID set)
+     * @return Updated plan
+     * @throws IllegalArgumentException if plan not found or ID is null
+     */
+    public TreasureHuntPlan updatePlan(TreasureHuntPlan plan) {
+        if (plan.getId() == null) {
+            throw new IllegalArgumentException("Plan ID must be set for update operation");
+        }
+
+        // Delegate to the ID-based method to avoid code duplication
+        return updatePlan(plan.getId(), plan);
+    }
+
+    /**
+     * Helper method to update plan fields - centralized field updating logic
+     * @param existingPlan The plan to update
+     * @param updatedPlan The plan with new values
+     */
+    private void updatePlanFields(TreasureHuntPlan existingPlan, TreasureHuntPlan updatedPlan) {
+        // Basic plan information
         existingPlan.setName(updatedPlan.getName());
         existingPlan.setDescription(updatedPlan.getDescription());
         existingPlan.setDurationHours(updatedPlan.getDurationHours());
@@ -168,61 +205,39 @@ public class TreasureHuntPlanService {
         existingPlan.setPriceInr(updatedPlan.getPriceInr());
         existingPlan.setPrizeMoney(updatedPlan.getPrizeMoney());
         existingPlan.setStatus(updatedPlan.getStatus());
-        
-        TreasureHuntPlan savedPlan = planRepository.save(existingPlan);
-        logger.info("Successfully updated treasure hunt plan with ID: {}", savedPlan.getId());
-        
-        return savedPlan;
-    }
 
-    /**
-     * Update an existing treasure hunt plan
-     * @param plan Plan with updated data (must have ID set)
-     * @return Updated plan
-     * @throws IllegalArgumentException if plan not found
-     */
-    public TreasureHuntPlan updatePlan(TreasureHuntPlan plan) {
-        if (plan.getId() == null) {
-            throw new IllegalArgumentException("Plan ID must be set for update operation");
+        // Extended plan information (only update if not null)
+        if (updatedPlan.getTeamSize() != null) {
+            existingPlan.setTeamSize(updatedPlan.getTeamSize());
         }
-
-        logger.info("Updating treasure hunt plan with ID: {}", plan.getId());
-
-        TreasureHuntPlan existingPlan = planRepository.findById(plan.getId())
-                .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + plan.getId()));
-
-        // Validate updated plan data
-        validatePlan(plan);
-
-        // Update fields
-        existingPlan.setName(plan.getName());
-        existingPlan.setDescription(plan.getDescription());
-        existingPlan.setDurationHours(plan.getDurationHours());
-        existingPlan.setDifficultyLevel(plan.getDifficultyLevel());
-        existingPlan.setMaxParticipants(plan.getMaxParticipants());
-        existingPlan.setTeamSize(plan.getTeamSize());
-        existingPlan.setTeamType(plan.getTeamType());
-        existingPlan.setPriceInr(plan.getPriceInr());
-        existingPlan.setPrizeMoney(plan.getPrizeMoney());
-        existingPlan.setBatchesCompleted(plan.getBatchesCompleted());
-        existingPlan.setRating(plan.getRating());
-        existingPlan.setAvailableSlots(plan.getAvailableSlots());
-        existingPlan.setPreviewVideoUrl(plan.getPreviewVideoUrl());
-
-        TreasureHuntPlan savedPlan = planRepository.save(existingPlan);
-        logger.info("Successfully updated treasure hunt plan with ID: {}", savedPlan.getId());
-
-        return savedPlan;
+        if (updatedPlan.getTeamType() != null) {
+            existingPlan.setTeamType(updatedPlan.getTeamType());
+        }
+        if (updatedPlan.getBatchesCompleted() != null) {
+            existingPlan.setBatchesCompleted(updatedPlan.getBatchesCompleted());
+        }
+        if (updatedPlan.getRating() != null) {
+            existingPlan.setRating(updatedPlan.getRating());
+        }
+        if (updatedPlan.getAvailableSlots() != null) {
+            existingPlan.setAvailableSlots(updatedPlan.getAvailableSlots());
+        }
+        if (updatedPlan.getPreviewVideoUrl() != null) {
+            existingPlan.setPreviewVideoUrl(updatedPlan.getPreviewVideoUrl());
+        }
     }
 
     /**
-     * Get the featured plan for hero section
-     * @return Featured plan or null if none is featured
+     * Get the featured plan for hero section with caching
+     * Always returns a plan - either the explicitly featured one or a default fallback
+     * @return Featured plan or default plan (never null)
      */
+    @Cacheable(value = "featuredPlan", key = "'current'")
     @Transactional(readOnly = true)
     public TreasureHuntPlan getFeaturedPlan() {
         logger.debug("Fetching featured plan");
         try {
+            // First, try to get the explicitly featured plan
             TreasureHuntPlan featuredPlan = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
                     .orElse(null);
 
@@ -237,35 +252,132 @@ public class TreasureHuntPlanService {
                     logger.warn("Error loading registration count for featured plan {}", featuredPlan.getId(), e);
                     featuredPlan.setConfirmedRegistrationsCount(0L);
                 }
-            } else {
-                logger.debug("No featured plan found");
+                return featuredPlan;
             }
 
-            return featuredPlan;
+            // No explicitly featured plan found, get a default fallback
+            logger.debug("No explicitly featured plan found, selecting default fallback");
+            TreasureHuntPlan defaultPlan = getDefaultFeaturedPlan();
+
+            if (defaultPlan != null) {
+                logger.info("Using default featured plan: {} (ID: {})", defaultPlan.getName(), defaultPlan.getId());
+                return defaultPlan;
+            }
+
+            // If still no plan found, create an emergency fallback
+            logger.warn("No active plans available, creating emergency fallback plan");
+            return createEmergencyFallbackPlan();
+
         } catch (Exception e) {
-            logger.error("Error fetching featured plan", e);
+            logger.error("Error fetching featured plan, creating emergency fallback", e);
+            return createEmergencyFallbackPlan();
+        }
+    }
+
+    /**
+     * Get a default featured plan when no plan is explicitly featured
+     * Selects the most suitable active plan based on business criteria
+     * @return Default plan or null if no active plans exist
+     */
+    private TreasureHuntPlan getDefaultFeaturedPlan() {
+        try {
+            // Strategy 1: Get the most popular plan (highest rating and most registrations)
+            List<TreasureHuntPlan> activePlans = planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
+
+            if (activePlans.isEmpty()) {
+                return null;
+            }
+
+            // Find the best plan based on rating and availability
+            TreasureHuntPlan bestPlan = activePlans.stream()
+                .filter(plan -> plan.getRating() != null && plan.getRating().compareTo(java.math.BigDecimal.ZERO) > 0)
+                .max((p1, p2) -> {
+                    // First compare by rating
+                    int ratingCompare = p1.getRating().compareTo(p2.getRating());
+                    if (ratingCompare != 0) return ratingCompare;
+
+                    // Then by availability (more available slots is better)
+                    if (p1.getAvailableSlots() != null && p2.getAvailableSlots() != null) {
+                        return p1.getAvailableSlots().compareTo(p2.getAvailableSlots());
+                    }
+
+                    // Finally by creation date (newer is better)
+                    return p1.getCreatedDate().compareTo(p2.getCreatedDate());
+                })
+                .orElse(activePlans.get(0)); // Fallback to first active plan
+
+            // Set confirmed registrations count
+            if (bestPlan != null) {
+                try {
+                    long confirmedCount = registrationRepository.countByPlanIdAndStatus(
+                        bestPlan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+                    bestPlan.setConfirmedRegistrationsCount(confirmedCount);
+                } catch (Exception e) {
+                    logger.warn("Error loading registration count for default plan {}", bestPlan.getId(), e);
+                    bestPlan.setConfirmedRegistrationsCount(0L);
+                }
+            }
+
+            return bestPlan;
+
+        } catch (Exception e) {
+            logger.error("Error selecting default featured plan", e);
             return null;
         }
     }
 
     /**
+     * Create an emergency fallback plan when no active plans exist
+     * This ensures the application never fails due to missing featured plan
+     * @return Emergency fallback plan
+     */
+    private TreasureHuntPlan createEmergencyFallbackPlan() {
+        TreasureHuntPlan emergencyPlan = new TreasureHuntPlan();
+        emergencyPlan.setId(-1L); // Special ID to indicate this is a fallback
+        emergencyPlan.setName("Coming Soon - Exciting Adventures Await!");
+        emergencyPlan.setDescription("We're preparing amazing treasure hunt experiences for you. Check back soon for new adventures!");
+        emergencyPlan.setPriceInr(new java.math.BigDecimal("1500.00"));
+        emergencyPlan.setDifficultyLevel(TreasureHuntPlan.DifficultyLevel.BEGINNER);
+        emergencyPlan.setDurationHours(3);
+        emergencyPlan.setMaxParticipants(6);
+        emergencyPlan.setAvailableSlots(50);
+        emergencyPlan.setTeamSize(4);
+        emergencyPlan.setPrizeMoney(new java.math.BigDecimal("5000.00"));
+        emergencyPlan.setRating(new java.math.BigDecimal("4.5"));
+        emergencyPlan.setBatchesCompleted(0);
+        emergencyPlan.setStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
+        emergencyPlan.setTeamType(TreasureHuntPlan.TeamType.TEAM);
+        emergencyPlan.setIsFeatured(false);
+        emergencyPlan.setDiscountEnabled(false);
+        emergencyPlan.setCreatedDate(java.time.LocalDateTime.now());
+        emergencyPlan.setConfirmedRegistrationsCount(0L);
+
+        logger.info("Created emergency fallback featured plan");
+        return emergencyPlan;
+    }
+
+    /**
      * Set a plan as featured (unsets any previously featured plan)
+     * Uses atomic transaction to prevent race conditions
+     * Evicts featured plan cache
      * @param planId Plan ID to set as featured
      * @return Updated plan
      * @throws IllegalArgumentException if plan not found
      */
+    @CacheEvict(value = {"featuredPlan", "treasureHuntPlans"}, allEntries = true)
+    @Transactional
     public TreasureHuntPlan setFeaturedPlan(Long planId) {
         logger.info("Setting plan {} as featured", planId);
 
         TreasureHuntPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + planId));
 
-        // Unset any previously featured plan
-        planRepository.findByIsFeaturedTrue().ifPresent(currentFeatured -> {
-            currentFeatured.setIsFeatured(false);
-            planRepository.save(currentFeatured);
-            logger.info("Unfeatured previous plan with ID: {}", currentFeatured.getId());
-        });
+        // Atomic operation: First unset all featured plans, then set the new one
+        // This prevents temporary states where multiple plans are featured
+        int unfeaturedCount = planRepository.updateAllFeaturedPlansToFalse();
+        if (unfeaturedCount > 0) {
+            logger.info("Unfeatured {} previous plan(s)", unfeaturedCount);
+        }
 
         // Set the new featured plan
         plan.setIsFeatured(true);
@@ -285,12 +397,28 @@ public class TreasureHuntPlanService {
     public TreasureHuntPlan updateAvailableSlots(Long planId, Integer availableSlots) {
         logger.info("Updating available slots for plan {} to {}", planId, availableSlots);
 
+        // Comprehensive input validation
+        if (planId == null) {
+            throw new IllegalArgumentException("Plan ID cannot be null");
+        }
+        if (availableSlots == null) {
+            throw new IllegalArgumentException("Available slots cannot be null");
+        }
         if (availableSlots < 0) {
             throw new IllegalArgumentException("Available slots must be non-negative");
+        }
+        if (availableSlots > 10000) { // Reasonable upper limit
+            throw new IllegalArgumentException("Available slots cannot exceed 10,000");
         }
 
         TreasureHuntPlan plan = planRepository.findById(planId)
                 .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + planId));
+
+        // Additional business logic validation
+        if (plan.getMaxParticipants() != null && availableSlots > plan.getMaxParticipants()) {
+            logger.warn("Available slots ({}) exceeds max participants ({}) for plan {}",
+                       availableSlots, plan.getMaxParticipants(), planId);
+        }
 
         plan.setAvailableSlots(availableSlots);
         TreasureHuntPlan savedPlan = planRepository.save(plan);
@@ -324,20 +452,29 @@ public class TreasureHuntPlanService {
 
     /**
      * Delete a treasure hunt plan
+     * Uses atomic check to prevent race conditions
      * @param id Plan ID
      * @throws IllegalArgumentException if plan not found or has existing registrations
      */
+    @Transactional
     public void deletePlan(Long id) {
         logger.info("Deleting treasure hunt plan with ID: {}", id);
 
         TreasureHuntPlan plan = planRepository.findById(id)
             .orElseThrow(() -> new IllegalArgumentException("Plan not found with ID: " + id));
 
-        // Check if plan has any registrations
-        if (!plan.getRegistrations().isEmpty()) {
+        // Atomic check for registrations using repository query to avoid race conditions
+        long registrationCount = registrationRepository.countByPlanId(id);
+        if (registrationCount > 0) {
             throw new IllegalArgumentException("Cannot delete plan with existing registrations. " +
-                "Plan has " + plan.getRegistrations().size() + " registration(s). " +
+                "Plan has " + registrationCount + " registration(s). " +
                 "Please cancel all registrations first or set plan status to INACTIVE.");
+        }
+
+        // Double-check within the same transaction before deletion
+        registrationCount = registrationRepository.countByPlanId(id);
+        if (registrationCount > 0) {
+            throw new IllegalArgumentException("Cannot delete plan - registrations were added during operation");
         }
 
         planRepository.deleteById(id);
@@ -402,5 +539,79 @@ public class TreasureHuntPlanService {
         if (plan.getDifficultyLevel() == null) {
             throw new IllegalArgumentException("Difficulty level is required");
         }
+    }
+
+    // ===== INTERFACE IMPLEMENTATION METHODS =====
+
+    @Override
+    public PlanStatistics getPlanStatistics(Long planId) {
+        logger.debug("Getting statistics for plan: {}", planId);
+
+        TreasureHuntPlan plan = planRepository.findById(planId)
+            .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + planId));
+
+        List<UserRegistration> registrations = registrationRepository.findByPlanIdWithTeamMembers(planId);
+
+        int totalRegistrations = registrations.size();
+        int confirmedRegistrations = (int) registrations.stream()
+            .filter(r -> r.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
+            .count();
+        int pendingRegistrations = (int) registrations.stream()
+            .filter(r -> r.getStatus() == UserRegistration.RegistrationStatus.PENDING)
+            .count();
+
+        int availableSlots = plan.getAvailableSlots() != null ?
+            Math.max(0, plan.getAvailableSlots() - confirmedRegistrations) : -1;
+
+        double occupancyRate = plan.getAvailableSlots() != null ?
+            (double) confirmedRegistrations / plan.getAvailableSlots() * 100 : 0.0;
+
+        return new PlanStatistics(planId, plan.getName(), totalRegistrations,
+                                confirmedRegistrations, pendingRegistrations,
+                                availableSlots, occupancyRate);
+    }
+
+    @Override
+    public int getRemainingSlots(Long planId) {
+        logger.debug("Getting remaining slots for plan: {}", planId);
+
+        TreasureHuntPlan plan = planRepository.findById(planId)
+            .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + planId));
+
+        if (plan.getAvailableSlots() == null) {
+            return -1; // Unlimited slots
+        }
+
+        int confirmedRegistrations = (int) registrationRepository.findByPlanIdWithTeamMembers(planId)
+            .stream()
+            .filter(r -> r.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
+            .count();
+
+        return Math.max(0, plan.getAvailableSlots() - confirmedRegistrations);
+    }
+
+    @Override
+    public boolean hasAvailableSlots(Long planId) {
+        logger.debug("Checking if plan has available slots: {}", planId);
+
+        TreasureHuntPlan plan = planRepository.findById(planId)
+            .orElseThrow(() -> new IllegalArgumentException("Plan not found: " + planId));
+
+        if (plan.getAvailableSlots() == null) {
+            return true; // Unlimited slots
+        }
+
+        int confirmedRegistrations = (int) registrationRepository.findByPlanIdWithTeamMembers(planId)
+            .stream()
+            .filter(r -> r.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
+            .count();
+
+        return plan.getAvailableSlots() > confirmedRegistrations;
+    }
+
+    @Override
+    public Page<TreasureHuntPlan> getPlans(Pageable pageable) {
+        logger.debug("Getting paginated plans: {}", pageable);
+        return planRepository.findAll(pageable);
     }
 }

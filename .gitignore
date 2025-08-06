@@ -1,13 +1,58 @@
+# Environment files (contain sensitive data)
 .env
 .env.template
+.env.local
+.env.production
+
+# Build artifacts
 .mvn/
 target/
+*.jar
+*.war
+
+# IDE configuration
 .idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# Node.js (if any frontend build tools are used)
 node_modules/
 
+# Logs (runtime generated)
 logs/
+*.log
 
-# Archive folder containing old migration files and other archived content
+# Development-only folders
+docs/
+scripts/
 archive/
 
-docs/
+# User uploads (runtime generated content)
+uploads/
+temp/
+
+# Development-only configuration files
+src/main/java/com/treasurehunt/config/DataInitializer.java
+src/main/resources/application-dev.properties
+src/main/resources/application-test.properties
+src/main/resources/data-dev.sql
+
+# Test backup folders
+src/test_backup/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+
+# Maven wrapper (optional - uncomment if you want to exclude)
+# .mvn/
+# mvnw
+# mvnw.cmd

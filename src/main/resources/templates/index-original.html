@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasure Hunt Adventures - Epic Adventures Await!</title>
+    <meta name="description" content="Join exciting treasure hunt adventures with professional guides. Choose from beginner to advanced difficulty levels.">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/favicon.svg">
+    <meta name="theme-color" content="#1a1a2e">
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/css/style.css" rel="stylesheet">
+
+    <style>
+        /* Additional styles for home page - using the beautiful beige theme from style.css */
+        .hero-section {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+
+
+
+        /* Hero section text styling - using beige theme colors */
+        .hero-section h1, .hero-section .display-4 {
+            color: var(--dark-color);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .hero-section p, .hero-section .lead {
+            color: var(--text-muted);
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Plan cards styling - using beige theme */
+        .plan-card {
+            transition: all 0.3s ease;
+        }
+
+        .plan-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Plan card pricing - using beige theme colors */
+        .plan-card .discounted-price {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .plan-card .discount-badge {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.75em;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+        }
+
+
+
+
+
+        /* Difficulty badge styling */
+        .difficulty-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 0.5rem;
+        }
+
+        .difficulty-badge.beginner {
+            background-color: #28a745;
+            color: white;
+            border: 1px solid #1e7e34;
+        }
+
+        .difficulty-badge.intermediate {
+            background-color: #ffc107;
+            color: #212529;
+            border: 1px solid #d39e00;
+        }
+
+        .difficulty-badge.advanced {
+            background-color: #dc3545;
+            color: white;
+            border: 1px solid #bd2130;
+        }
+
+
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="fas fa-map-marked-alt me-2"></i>
+                Treasure Hunt Adventures
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#home">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#plans">Plans</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">About</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#contact">Contact</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero-section position-relative overflow-hidden">
+        <!-- Background Media (conditionally shown) -->
+        <div th:if="${backgroundMediaEnabled != null and backgroundMediaEnabled}"
+             class="hero-video-bg position-absolute top-0 start-0 w-100 h-100">
+            <!-- Fallback background image -->
+            <div class="hero-fallback-bg position-absolute top-0 start-0 w-100 h-100"
+                 th:style="'background-image: url(' + ${heroFallbackImageUrl} + ');
+                           background-size: cover;
+                           background-position: center;
+                           background-repeat: no-repeat;'">
+            </div>
+
+            <!-- Video element (for direct video files) or YouTube iframe -->
+            <div id="hero-video-container" class="w-100 h-100" style="position: relative; z-index: 1;">
+                <!-- YouTube iframe (if YouTube URL) -->
+                <iframe th:if="${heroVideoUrl != null and (heroVideoUrl.contains('youtube.com') or heroVideoUrl.contains('youtu.be'))}"
+                        id="hero-youtube-iframe"
+                        th:src="${heroVideoUrl.contains('embed') ?
+                                 (heroVideoUrl.contains('?') ? heroVideoUrl + '&autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] :
+                                  heroVideoUrl + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1)) :
+                                 (heroVideoUrl.contains('youtube.com/watch?v=') ?
+                                  'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.indexOf('v=') + 2).split('\\&')[0] :
+                                 (heroVideoUrl.contains('youtu.be/') ?
+                                  'https://www.youtube.com/embed/' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] + '?autoplay=1&mute=1&loop=1&controls=0&showinfo=0&rel=0&iv_load_policy=3&modestbranding=1&playsinline=1&playlist=' + heroVideoUrl.substring(heroVideoUrl.lastIndexOf('/') + 1).split('\\?')[0] :
+                                  heroVideoUrl))}"
+                        class="w-100 h-100"
+                        style="object-fit: cover; border: none; pointer-events: none;"
+                        allow="autoplay; encrypted-media"
+                        loading="lazy"
+                        title="Hero Background Video">
+                </iframe>
+
+                <!-- Regular video element (for direct video files) -->
+                <video th:unless="${heroVideoUrl != null and (heroVideoUrl.contains('youtube.com') or heroVideoUrl.contains('youtu.be'))}"
+                       id="hero-video" autoplay muted loop playsinline class="w-100 h-100"
+                       style="object-fit: cover;"
+                       onloadstart="console.log('Video loading started')"
+                       oncanplay="console.log('Video can play'); document.getElementById('hero-video').style.opacity = '1';"
+                       onerror="console.error('Video failed to load'); document.getElementById('hero-video').style.display = 'none';"
+                       onloadeddata="console.log('Video data loaded')">
+                    <source th:if="${heroVideoUrl != null and !heroVideoUrl.isEmpty()}" th:src="${heroVideoUrl}" type="video/mp4">
+                    <!-- Fallback video sources -->
+                    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+                    <source src="https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+
+            <!-- Semi-transparent overlay for text readability -->
+            <div class="position-absolute top-0 start-0 w-100 h-100" style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(1px); z-index: 2;"></div>
+        </div>
+
+        <!-- Plain CSS Background (when media is disabled) -->
+        <div th:unless="${backgroundMediaEnabled != null and backgroundMediaEnabled}"
+             class="hero-plain-bg position-absolute top-0 start-0 w-100 h-100"
+             style="background: linear-gradient(135deg, #fefefe 0%, #faf9f7 25%, #f8f6f0 50%, #f5f3ed 75%, #f2f0ea 100%); z-index: 1;">
+            <!-- Vintage paper texture overlay -->
+            <div class="position-absolute top-0 start-0 w-100 h-100"
+                 style="background-image:
+                        radial-gradient(circle at 20% 20%, rgba(139,69,19,0.02) 0%, transparent 40%),
+                        radial-gradient(circle at 80% 60%, rgba(160,82,45,0.015) 0%, transparent 40%),
+                        radial-gradient(circle at 40% 80%, rgba(210,180,140,0.01) 0%, transparent 40%),
+                        linear-gradient(90deg, transparent 0%, rgba(139,69,19,0.005) 50%, transparent 100%);
+                        z-index: 2;">
+            </div>
+        </div>
+
+        <div class="container position-relative" style="z-index: 2;">
+            <div class="row align-items-center min-vh-100">
+                <div class="col-lg-6">
+                    <h1 class="display-4 fw-bold hero-title mb-4"
+                        th:text="${featuredPlan != null ? featuredPlan.name : 'Epic Treasure Hunt Adventures Await!'}">
+                        Epic Treasure Hunt Adventures Await!
+                    </h1>
+                    <p class="lead hero-description mb-4"
+                       th:text="${featuredPlan != null ? featuredPlan.description : 'Embark on thrilling treasure hunts with professional guides. Solve puzzles, discover hidden clues, and create unforgettable memories in our carefully crafted adventure experiences.'}">
+                        Embark on thrilling treasure hunts with professional guides.
+                        Solve puzzles, discover hidden clues, and create unforgettable memories
+                        in our carefully crafted adventure experiences.
+                    </p>
+
+                    <!-- Dynamic stats for featured plan -->
+                    <div class="row text-center" th:if="${featuredPlan != null}">
+                        <div class="col-4">
+                            <h3 class="fw-bold text-primary" th:text="${featuredPlan.batchesCompleted}">45</h3>
+                            <small class="text-muted">Batches Completed</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-success">₹<span th:text="${#numbers.formatDecimal(featuredPlan.prizeMoney, 1, 0)}">5000</span></h3>
+                            <small class="text-muted">Prize Money</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-warning" th:text="${featuredPlan.rating}">4.8</h3>
+                            <small class="text-muted">Rating</small>
+                        </div>
+                    </div>
+                    <!-- Fallback stats when no featured plan -->
+                    <div class="row text-center" th:if="${featuredPlan == null}">
+                        <div class="col-4">
+                            <h3 class="fw-bold text-primary">50+</h3>
+                            <small class="text-muted">Batches Completed</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-success">₹25,000</h3>
+                            <small class="text-muted">Max Prize Money</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="fw-bold text-warning">4.9</h3>
+                            <small class="text-muted">Average Rating</small>
+                        </div>
+                    </div>
+
+                    <!-- View All Adventures Button -->
+                    <div class="text-center mt-4">
+                        <a href="#plans" class="btn btn-primary btn-lg">
+                            <i class="fas fa-compass me-2"></i>
+                            View All Adventures
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="hero-video">
+                        <div class="ratio ratio-16x9">
+                            <iframe th:src="${heroPreviewVideoUrl != null ? heroPreviewVideoUrl : 'https://www.youtube.com/embed/dQw4w9WgXcQ'}"
+                                    src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                                    title="Treasure Hunt Adventure Preview"
+                                    frameborder="0"
+                                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                    allowfullscreen
+                                    class="rounded-3 shadow-lg"
+                                    loading="lazy">
+                            </iframe>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Plans Section -->
+    <section id="plans" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold">Choose Your Adventure</h2>
+                <p class="lead text-muted">Select from our exciting treasure hunt plans designed for all skill levels</p>
+            </div>
+
+            <!-- Filter Buttons -->
+            <div class="text-center mb-4">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary active" data-filter="all">All Plans</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="BEGINNER">Beginner</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="INTERMEDIATE">Intermediate</button>
+                    <button type="button" class="btn btn-outline-primary" data-filter="ADVANCED">Advanced</button>
+                </div>
+            </div>
+
+            <!-- Plans Grid -->
+            <div class="row g-4" id="plansContainer">
+                <div th:if="${plans.empty}" class="col-12 text-center">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No treasure hunt plans are currently available. Please check back later!
+                    </div>
+                </div>
+                
+                <div th:each="plan : ${plans}" class="col-lg-4 col-md-6 plan-card" th:data-difficulty="${plan.difficultyLevel}">
+                    <div class="card h-100 shadow-sm border-0 plan-item">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0" th:text="${plan.name}">Plan Name</h5>
+                            <span class="badge difficulty-badge" 
+                                  th:classappend="${plan.difficultyLevel.name().toLowerCase()}"
+                                  th:text="${plan.difficultyLevel}">Difficulty</span>
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <p class="card-text text-muted mb-3" 
+                               th:text="${plan.getTruncatedDescription(150)}">Plan description...</p>
+                            
+                            <!-- Registration Deadline Info -->
+                            <div class="deadline-info text-center" th:if="${plan.registrationDeadline != null}">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Registrations remain <strong th:class="${plan.registrationDeadlinePassed ? 'text-danger' : 'text-success'}"
+                                                                th:text="${plan.registrationDeadlinePassed ? 'closed' : 'open'}">open</strong> till:
+                                    <strong th:text="${plan.formattedRegistrationDeadline}">25th Dec</strong>
+                                </small>
+                            </div>
+
+                            <div class="plan-details mb-3">
+                                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start mb-2">
+                                    <span class="flex-shrink-0 mb-1 mb-sm-0"><i class="fas fa-clock text-primary me-1"></i> Schedule:</span>
+                                    <div class="text-start text-sm-end schedule-display">
+                                        <div class="schedule-date fw-bold" th:text="${plan.formattedDateRange}">23rd May</div>
+                                        <div class="schedule-time text-muted small" th:text="${plan.formattedTimeRange}">09:00 AM - 06:00 PM (3 hours)</div>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-user-check text-primary me-1"></i> Available Spots:</span>
+                                    <span class="fw-bold" th:text="${plan.availableSlots - plan.registrationCount}">Available spots</span>
+                                </div>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-users-cog text-primary me-1"></i> Team Format:</span>
+                                    <span th:text="${plan.teamDescription}">Team format</span>
+                                </div>
+                                <div class="d-flex flex-column flex-sm-row justify-content-between mb-2">
+                                    <span class="mb-1 mb-sm-0"><i class="fas fa-trophy text-warning me-1"></i> Prize Money:</span>
+                                    <span class="fw-bold text-success">₹ <span th:text="${#numbers.formatDecimal(plan.prizeMoney, 1, 0)}">5000</span>/-</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <!-- Pricing Section with Discount Support -->
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <div class="pricing-container">
+                                        <!-- Show discount pricing if enabled -->
+                                        <div th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                                <span class="original-price">₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">1000</span>/-</span>
+                                                <h4 class="discounted-price mb-0">
+                                                    ₹ <span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">900</span>/-
+                                                </h4>
+                                                <span class="discount-badge" th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)} + '% OFF'">10% OFF</span>
+                                            </div>
+                                        </div>
+                                        <!-- Show regular pricing if no discount -->
+                                        <div th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                                            <h4 class="text-primary mb-0">
+                                                ₹ <span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">0</span>/-
+                                            </h4>
+                                        </div>
+                                    </div>
+                                    <small class="text-muted">per person</small>
+                                </div>
+                                
+                                <div class="d-grid gap-2">
+                                    <button type="button"
+                                            class="btn btn-primary register-btn"
+                                            th:data-plan-id="${plan.id}"
+                                            th:data-plan-name="${plan.name}"
+                                            th:data-plan-price="${plan.discountedPrice}"
+                                            th:data-original-price="${plan.priceInr}"
+                                            th:data-discount-enabled="${plan.discountEnabled}"
+                                            th:data-discount-percentage="${plan.discountPercentage}"
+                                            th:data-team-size="${plan.teamSize}"
+                                            th:data-team-type="${plan.teamType}"
+                                            th:disabled="${!plan.available or plan.registrationDeadlinePassed}">
+                                        <i class="fas fa-user-plus me-2" th:unless="${!plan.available or plan.registrationDeadlinePassed}"></i>
+                                        <i class="fas fa-times me-2" th:if="${!plan.available or plan.registrationDeadlinePassed}"></i>
+                                        <span th:if="${plan.available and !plan.registrationDeadlinePassed}">Register Now</span>
+                                        <span th:if="${!plan.available and !plan.registrationDeadlinePassed}">Fully Booked</span>
+                                        <span th:if="${plan.registrationDeadlinePassed}">Registration Closed</span>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm preview-btn"
+                                            th:data-plan-id="${plan.id}">
+                                        <i class="fas fa-play me-1"></i>
+                                        Watch Preview
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About Section -->
+    <section id="about" class="py-5 bg-light">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-6">
+                    <h2 class="display-5 fw-bold mb-4">Why Choose Our Adventures?</h2>
+                    <div class="row g-4">
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-shield-alt text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Safety First</h5>
+                                    <p class="text-muted">Professional guides and comprehensive safety protocols ensure your adventure is both thrilling and secure.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-puzzle-piece text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Unique Challenges</h5>
+                                    <p class="text-muted">Each treasure hunt features original puzzles and clues designed to challenge and entertain participants of all skill levels.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-medal text-primary fs-3"></i>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h5>Memorable Experiences</h5>
+                                    <p class="text-muted">Create lasting memories with friends and family through our immersive adventure experiences.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="position-relative">
+                        <img th:src="${aboutSectionImageUrl}"
+                             alt="Team of adventurers working together on a treasure hunt expedition, showcasing teamwork and outdoor exploration"
+                             class="img-fluid rounded-3 shadow-lg"
+                             loading="lazy">
+                        <!-- Optional overlay with stats -->
+                        <div class="position-absolute bottom-0 start-0 end-0 bg-dark bg-opacity-75 text-white p-3 rounded-bottom-3">
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="fw-bold">500+</div>
+                                    <small>Adventures</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold">98%</div>
+                                    <small>Satisfaction</small>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold">5★</div>
+                                    <small>Rating</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact Section -->
+    <section id="contact" class="py-5 position-relative">
+        <!-- Hero Image Background -->
+        <div class="contact-hero-bg position-absolute top-0 start-0 w-100 h-100">
+            <img
+                th:src="${contactBackgroundImageUrl}"
+                alt="Adventure team exploring with treasure map and compass - professional treasure hunting expedition"
+                class="contact-hero-image w-100 h-100 object-fit-cover"
+                loading="lazy">
+            <div class="contact-hero-overlay position-absolute top-0 start-0 w-100 h-100"></div>
+        </div>
+
+        <div class="container position-relative">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-white">Get In Touch</h2>
+                <p class="lead text-white-50">Have questions? We're here to help you start your adventure!</p>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="contact-info-card bg-white rounded-4 shadow-lg p-4 p-md-5">
+                        <div class="row g-4">
+                            <div class="col-md-4 text-center">
+                                <div class="contact-icon-wrapper mb-3">
+                                    <i class="fas fa-phone text-primary fs-2"></i>
+                                </div>
+                                <h5 class="fw-bold">Call Us</h5>
+                                <p class="text-muted mb-0" th:text="${contactInfo.phone}">+1 (555) 123-4567</p>
+                                <small class="text-muted">Mon-Fri, 9AM-6PM</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="contact-icon-wrapper mb-3">
+                                    <i class="fas fa-envelope text-primary fs-2"></i>
+                                </div>
+                                <h5 class="fw-bold">Email Us</h5>
+                                <p class="text-muted mb-0" th:text="${contactInfo.email}">info@treasurehuntadventures.com</p>
+                                <small class="text-muted">24/7 Support</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="contact-icon-wrapper mb-3">
+                                    <i class="fas fa-map-marker-alt text-primary fs-2"></i>
+                                </div>
+                                <h5 class="fw-bold">Visit Us</h5>
+                                <p class="text-muted mb-0" th:text="${contactInfo.address}">123 Adventure St, City, State 12345</p>
+                                <small class="text-muted">Adventure HQ</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Enhanced Footer -->
+    <footer class="bg-dark text-white py-5">
+        <div class="container">
+            <div class="row g-4">
+                <!-- Company Information -->
+                <div class="col-lg-4 col-md-6">
+                    <h5 class="fw-bold mb-3 text-white" th:text="${companyInfo.name}">Treasure Hunt Adventures</h5>
+                    <p class="text-light mb-3">Crafting most Memorable and Unforgettable Experiences</p>
+                    <div class="contact-info">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-map-marker-alt text-primary me-2"></i>
+                            <small class="text-light" th:text="${companyInfo.address}">123 Adventure Street, Explorer City, EC 12345</small>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-phone text-primary me-2"></i>
+                            <small class="text-light" th:text="${companyInfo.phone}">+1 (555) 123-4567</small>
+                        </div>
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="fas fa-envelope text-primary me-2"></i>
+                            <small class="text-light" th:text="${companyInfo.email}">info@treasurehuntadventures.com</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white">Quick Links</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#home" class="text-light text-decoration-none footer-link">Home</a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#plans" class="text-light text-decoration-none footer-link">Plans</a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#about" class="text-light text-decoration-none footer-link">About</a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#contact" class="text-light text-decoration-none footer-link">Contact</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Legal Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white">Legal</h6>
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a th:href="${footerLinks.about}" href="/about" class="text-light text-decoration-none footer-link">About Us</a>
+                        </li>
+                        <li class="mb-2">
+                            <a th:href="${footerLinks.contact}" href="/contact" class="text-light text-decoration-none footer-link">Contact</a>
+                        </li>
+                        <li class="mb-2">
+                            <a th:href="${footerLinks.privacy}" href="/privacy" class="text-light text-decoration-none footer-link">Privacy Policy</a>
+                        </li>
+                        <li class="mb-2">
+                            <a th:href="${footerLinks.terms}" href="/terms" class="text-light text-decoration-none footer-link">Terms of Service</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Social Media -->
+                <div class="col-lg-4 col-md-6">
+                    <h6 class="fw-bold mb-3 text-white">Follow Us</h6>
+                    <p class="text-light mb-3">Stay connected for the latest adventures and updates!</p>
+                    <div class="social-links">
+                        <a th:if="${socialLinks.facebook != null and !socialLinks.facebook.isEmpty()}"
+                           th:href="${socialLinks.facebook}"
+                           href="#"
+                           class="btn btn-outline-light btn-sm me-2 mb-2"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                        <a th:if="${socialLinks.twitter != null and !socialLinks.twitter.isEmpty()}"
+                           th:href="${socialLinks.twitter}"
+                           href="#"
+                           class="btn btn-outline-light btn-sm me-2 mb-2"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="fab fa-twitter"></i>
+                        </a>
+                        <a th:if="${socialLinks.instagram != null and !socialLinks.instagram.isEmpty()}"
+                           th:href="${socialLinks.instagram}"
+                           href="#"
+                           class="btn btn-outline-light btn-sm me-2 mb-2"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                        <a th:if="${socialLinks.linkedin != null and !socialLinks.linkedin.isEmpty()}"
+                           th:href="${socialLinks.linkedin}"
+                           href="#"
+                           class="btn btn-outline-light btn-sm me-2 mb-2"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                        <a th:if="${socialLinks.youtube != null and !socialLinks.youtube.isEmpty()}"
+                           th:href="${socialLinks.youtube}"
+                           href="#"
+                           class="btn btn-outline-light btn-sm me-2 mb-2"
+                           target="_blank"
+                           rel="noopener noreferrer">
+                            <i class="fab fa-youtube"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4 border-secondary">
+
+            <div class="row align-items-center">
+                <div class="col-md-4">
+                    <small class="text-light">
+                        &copy; 2025 <span th:text="${companyInfo.name}">Treasure Hunt Adventures</span>. All rights reserved.
+                    </small>
+                </div>
+                <div class="col-md-4 text-center">
+                    <small class="text-light opacity-75">
+                        MySillyDreams
+                    </small>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <small class="text-light">
+                        Made with <i class="fas fa-heart text-danger"></i> for adventure seekers
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Video Modal -->
+    <div class="modal fade" id="videoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Treasure Hunt Preview</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="ratio ratio-16x9">
+                        <iframe id="previewVideo" src="" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registration Modal -->
+    <div class="modal fade" id="registrationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Register for Adventure</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Registration form will be loaded here -->
+                    <div id="registrationFormContainer">
+                        <!-- Form content will be dynamically loaded -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>
+                        Registration Successful!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div id="successModalContent">
+                        <!-- Success content will be dynamically loaded -->
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <div class="text-muted small">
+                        <i class="fas fa-envelope me-1"></i>
+                        You will receive confirmation at: <strong th:text="${contactInfo.email}">treasurehuntadventures@gmail.com</strong>
+                    </div>
+                    <button type="button" class="btn btn-success" data-bs-dismiss="modal" onclick="closeSuccessModal()">
+                        <i class="fas fa-times me-2"></i>Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/js/app.js"></script>
+
+    <!-- Hero Video Handling -->
+    <script th:if="${backgroundMediaEnabled != null and backgroundMediaEnabled}">
+        document.addEventListener('DOMContentLoaded', function() {
+            const video = document.getElementById('hero-video');
+            const youtubeIframe = document.getElementById('hero-youtube-iframe');
+
+            // Handle regular video element
+            if (video) {
+                // Set initial opacity to 0 for smooth transition
+                video.style.opacity = '0';
+                video.style.transition = 'opacity 1.5s ease-in-out';
+
+                let videoLoaded = false;
+                let loadTimeout;
+
+                // Set a timeout to fallback to image if video doesn't load within 10 seconds
+                loadTimeout = setTimeout(function() {
+                    if (!videoLoaded) {
+                        console.warn('⏰ Video loading timeout - falling back to background image');
+                        video.style.display = 'none';
+                    }
+                }, 10000);
+
+                // Handle video load success
+                video.addEventListener('canplay', function() {
+                    console.log('✅ Hero video loaded successfully');
+                    videoLoaded = true;
+                    clearTimeout(loadTimeout);
+                    video.style.opacity = '1';
+                });
+
+                // Handle video data loaded
+                video.addEventListener('loadeddata', function() {
+                    console.log('📹 Video data loaded');
+                    videoLoaded = true;
+                    clearTimeout(loadTimeout);
+                });
+
+                // Handle video load error
+                video.addEventListener('error', function(e) {
+                    console.error('❌ Hero video failed to load:', e);
+                    clearTimeout(loadTimeout);
+                    video.style.display = 'none';
+                    console.log('🖼️ Falling back to background image');
+                });
+
+                // Handle video stalled
+                video.addEventListener('stalled', function() {
+                    console.warn('⚠️ Video loading stalled');
+                });
+
+                // Attempt to play video (some browsers require user interaction)
+                video.play().catch(function(error) {
+                    console.warn('⚠️ Video autoplay blocked by browser:', error);
+                    // Video will still be visible, just not autoplaying
+                    if (videoLoaded) {
+                        video.style.opacity = '1';
+                    }
+                });
+
+                // Log video readiness
+                if (video.readyState >= 3) {
+                    console.log('✅ Hero video is ready to play');
+                    video.style.opacity = '1';
+                }
+            }
+
+            // Handle YouTube iframe
+            if (youtubeIframe) {
+                console.log('🎬 YouTube background video iframe detected');
+
+                // Set initial opacity for smooth transition
+                youtubeIframe.style.opacity = '0';
+                youtubeIframe.style.transition = 'opacity 2s ease-in-out';
+
+                // Show iframe after a short delay to allow loading
+                setTimeout(function() {
+                    youtubeIframe.style.opacity = '1';
+                    console.log('✅ YouTube background video iframe loaded');
+                }, 2000);
+
+                // Handle iframe load error
+                youtubeIframe.addEventListener('error', function(e) {
+                    console.error('❌ YouTube iframe failed to load:', e);
+                    youtubeIframe.style.display = 'none';
+                });
+            }
+        });
+
+
+    </script>
+</body>
+</html>

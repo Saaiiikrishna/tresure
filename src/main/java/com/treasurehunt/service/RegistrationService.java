@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -38,7 +39,9 @@ public class RegistrationService {
     private final FileStorageService fileStorageService;
     private final EmailService emailService;
     private final EmailQueueService emailQueueService;
+    private final EmailNotificationService emailNotificationService;
     private final ApplicationIdService applicationIdService;
+    private final InputSanitizationService inputSanitizationService;
 
     @Value("${app.email.support}")
     private String supportEmail;
@@ -50,14 +53,18 @@ public class RegistrationService {
                               FileStorageService fileStorageService,
                               EmailService emailService,
                               EmailQueueService emailQueueService,
-                              ApplicationIdService applicationIdService) {
+                              EmailNotificationService emailNotificationService,
+                              ApplicationIdService applicationIdService,
+                              InputSanitizationService inputSanitizationService) {
         this.registrationRepository = registrationRepository;
         this.teamMemberRepository = teamMemberRepository;
         this.planService = planService;
         this.fileStorageService = fileStorageService;
         this.emailService = emailService;
         this.emailQueueService = emailQueueService;
+        this.emailNotificationService = emailNotificationService;
         this.applicationIdService = applicationIdService;
+        this.inputSanitizationService = inputSanitizationService;
     }
 
     /**
@@ -123,25 +130,18 @@ public class RegistrationService {
             // Rollback: delete registration if file processing fails
             logger.error("Failed to process files for registration ID {}, rolling back: {}",
                         savedRegistration.getId(), e.getMessage());
-            try {
-                registrationRepository.delete(savedRegistration);
-                logger.info("Successfully rolled back registration ID: {}", savedRegistration.getId());
-            } catch (Exception rollbackException) {
-                logger.error("Failed to rollback registration ID {}: {}",
-                           savedRegistration.getId(), rollbackException.getMessage());
-            }
+
+            // Perform rollback in separate transaction to ensure it completes
+            performRegistrationRollback(savedRegistration);
             throw new RuntimeException("Registration failed due to file processing error", e);
+
         } catch (Exception e) {
             // Rollback: delete registration for any other unexpected errors
             logger.error("Unexpected error during registration creation for ID {}, rolling back: {}",
                         savedRegistration.getId(), e.getMessage());
-            try {
-                registrationRepository.delete(savedRegistration);
-                logger.info("Successfully rolled back registration ID: {}", savedRegistration.getId());
-            } catch (Exception rollbackException) {
-                logger.error("Failed to rollback registration ID {}: {}",
-                           savedRegistration.getId(), rollbackException.getMessage());
-            }
+
+            // Perform rollback in separate transaction to ensure it completes
+            performRegistrationRollback(savedRegistration);
             throw new RuntimeException("Registration failed due to unexpected error", e);
         }
     }
@@ -494,106 +494,165 @@ public class RegistrationService {
 
     /**
      * Send confirmation emails to all team members or individual participant
+     * Uses proper transaction boundaries to avoid lazy loading issues
      * @param registration Registration to send confirmations for
      */
-    @Async
     public void sendConfirmationEmails(UserRegistration registration) {
-        logger.info("Sending approval emails for registration ID: {}", registration.getId());
+        logger.info("Sending confirmation emails for registration ID: {}", registration.getId());
 
         try {
-            // Fetch the registration with team members to avoid lazy loading issues
-            UserRegistration fullRegistration = registrationRepository.findById(registration.getId())
-                .orElseThrow(() -> new RuntimeException("Registration not found"));
+            // Prepare email data within transaction
+            EmailNotificationService.EmailData emailData =
+                emailNotificationService.prepareConfirmationEmailData(registration.getId());
 
-            // Use the approval email queue system when admin confirms registration
-            queueApplicationApprovalEmails(fullRegistration);
-            logger.info("Queued approval emails for registration ID: {}", registration.getId());
+            // Send emails asynchronously without transaction
+            emailNotificationService.sendConfirmationEmailsAsync(emailData);
+
+            logger.info("Initiated confirmation emails for registration ID: {}", registration.getId());
 
         } catch (Exception e) {
-            logger.error("Error sending approval emails for registration ID: {}", registration.getId(), e);
+            logger.error("Error initiating confirmation emails for registration ID: {}", registration.getId(), e);
         }
     }
 
     /**
      * Send cancellation email to team leader or individual participant
+     * Uses proper transaction boundaries to avoid lazy loading issues
      * @param registration Registration to send cancellation for
      */
-    @Async
-    @Transactional
     public void sendCancellationEmail(UserRegistration registration) {
         logger.info("Sending cancellation email for registration ID: {}", registration.getId());
 
         try {
-            // Fetch the registration with plan to avoid lazy loading issues
-            UserRegistration fullRegistration = registrationRepository.findById(registration.getId())
-                .orElseThrow(() -> new RuntimeException("Registration not found"));
+            // Prepare email data within transaction
+            EmailNotificationService.EmailData emailData =
+                emailNotificationService.prepareCancellationEmailData(registration.getId());
 
-            // Force load the plan to avoid lazy initialization
-            fullRegistration.getPlan().getName(); // This triggers the lazy loading
+            // Send email asynchronously without transaction
+            emailNotificationService.sendCancellationEmailAsync(emailData);
 
-            if (fullRegistration.isTeamRegistration()) {
-                // For team registrations, queue cancellation email for team leader
-                List<TeamMember> teamMembers = teamMemberRepository.findByRegistrationOrderByMemberPosition(fullRegistration);
+            logger.info("Initiated cancellation email for registration ID: {}", registration.getId());
 
-                TeamMember teamLeader = teamMembers.stream()
-                    .filter(TeamMember::isTeamLeader)
-                    .findFirst()
-                    .orElse(null);
-
-                if (teamLeader != null) {
-                    logger.info("Sending team cancellation email to team leader: {}", teamLeader.getEmail());
-                    queueTeamCancellationEmail(fullRegistration, teamLeader);
-                } else {
-                    logger.warn("No team leader found for team registration ID: {}", fullRegistration.getId());
-                }
-            } else {
-                // Queue cancellation email for individual participant
-                logger.info("Queuing individual cancellation email to: {}", fullRegistration.getEmail());
-                queueIndividualCancellationEmail(fullRegistration);
-            }
-
-            logger.info("Successfully queued cancellation email for registration ID: {}", fullRegistration.getId());
         } catch (Exception e) {
-            logger.error("Error queuing cancellation email for registration ID: {}", registration.getId(), e);
+            logger.error("Error initiating cancellation email for registration ID: {}", registration.getId(), e);
         }
     }
 
     /**
-     * Validate registration data
-     * @param registration Registration to validate
+     * Validate and sanitize registration data
+     * @param registration Registration to validate and sanitize
      * @throws IllegalArgumentException if validation fails
      */
     private void validateRegistration(UserRegistration registration) {
-        if (registration.getFullName() == null || registration.getFullName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Full name is required");
+        // Sanitize and validate full name
+        String sanitizedFullName = inputSanitizationService.sanitizeName(registration.getFullName());
+        if (sanitizedFullName == null) {
+            throw new IllegalArgumentException("Full name is required and must contain only valid characters");
         }
+        registration.setFullName(sanitizedFullName);
 
+        // Validate age
         if (registration.getAge() == null || registration.getAge() < 18 || registration.getAge() > 65) {
             throw new IllegalArgumentException("Age must be between 18 and 65");
         }
 
-        if (registration.getEmail() == null || registration.getEmail().trim().isEmpty()) {
-            throw new IllegalArgumentException("Email is required");
+        // Sanitize and validate email
+        String sanitizedEmail = inputSanitizationService.sanitizeEmail(registration.getEmail());
+        if (sanitizedEmail == null) {
+            throw new IllegalArgumentException("Valid email address is required");
+        }
+        registration.setEmail(sanitizedEmail);
+
+        // Sanitize and validate phone number
+        String sanitizedPhone = inputSanitizationService.sanitizePhone(registration.getPhoneNumber());
+        if (sanitizedPhone == null) {
+            throw new IllegalArgumentException("Valid phone number is required");
+        }
+        registration.setPhoneNumber(sanitizedPhone);
+
+        // Sanitize and validate emergency contact name
+        String sanitizedEmergencyName = inputSanitizationService.sanitizeName(registration.getEmergencyContactName());
+        if (sanitizedEmergencyName == null) {
+            throw new IllegalArgumentException("Emergency contact name is required and must contain only valid characters");
+        }
+        registration.setEmergencyContactName(sanitizedEmergencyName);
+
+        // Sanitize and validate emergency contact phone
+        String sanitizedEmergencyPhone = inputSanitizationService.sanitizePhone(registration.getEmergencyContactPhone());
+        if (sanitizedEmergencyPhone == null) {
+            throw new IllegalArgumentException("Valid emergency contact phone number is required");
+        }
+        registration.setEmergencyContactPhone(sanitizedEmergencyPhone);
+
+        // Sanitize optional fields
+        if (registration.getBio() != null) {
+            registration.setBio(inputSanitizationService.sanitizeText(registration.getBio()));
+        }
+        if (registration.getTeamName() != null) {
+            String sanitizedTeamName = inputSanitizationService.sanitizeName(registration.getTeamName());
+            if (sanitizedTeamName == null) {
+                throw new IllegalArgumentException("Team name must contain only valid characters");
+            }
+            registration.setTeamName(sanitizedTeamName);
         }
 
-        if (registration.getPhoneNumber() == null || registration.getPhoneNumber().trim().isEmpty()) {
-            throw new IllegalArgumentException("Phone number is required");
-        }
-
-        if (registration.getEmergencyContactName() == null || registration.getEmergencyContactName().trim().isEmpty()) {
-            throw new IllegalArgumentException("Emergency contact name is required");
-        }
-
-        if (registration.getEmergencyContactPhone() == null || registration.getEmergencyContactPhone().trim().isEmpty()) {
-            throw new IllegalArgumentException("Emergency contact phone is required");
-        }
-
+        // Validate required consents
         if (registration.getMedicalConsentGiven() == null || !registration.getMedicalConsentGiven()) {
             throw new IllegalArgumentException("Medical consent must be given");
         }
 
+        // Validate plan selection
         if (registration.getPlan() == null || registration.getPlan().getId() == null) {
             throw new IllegalArgumentException("Plan selection is required");
+        }
+
+        // Validate and sanitize team members if present
+        if (registration.getTeamMembers() != null && !registration.getTeamMembers().isEmpty()) {
+            validateAndSanitizeTeamMembers(registration.getTeamMembers());
+        }
+    }
+
+    /**
+     * Validate and sanitize team members
+     * @param teamMembers List of team members to validate
+     * @throws IllegalArgumentException if validation fails
+     */
+    private void validateAndSanitizeTeamMembers(List<TeamMember> teamMembers) {
+        for (TeamMember member : teamMembers) {
+            // Sanitize and validate name
+            String sanitizedName = inputSanitizationService.sanitizeName(member.getFullName());
+            if (sanitizedName == null) {
+                throw new IllegalArgumentException("Team member name is required and must contain only valid characters");
+            }
+            member.setFullName(sanitizedName);
+
+            // Validate age
+            if (member.getAge() == null || member.getAge() < 18 || member.getAge() > 65) {
+                throw new IllegalArgumentException("Team member age must be between 18 and 65");
+            }
+
+            // Sanitize and validate email if provided
+            if (member.getEmail() != null && !member.getEmail().trim().isEmpty()) {
+                String sanitizedEmail = inputSanitizationService.sanitizeEmail(member.getEmail());
+                if (sanitizedEmail == null) {
+                    throw new IllegalArgumentException("Team member email must be valid if provided");
+                }
+                member.setEmail(sanitizedEmail);
+            }
+
+            // Sanitize and validate phone if provided
+            if (member.getPhoneNumber() != null && !member.getPhoneNumber().trim().isEmpty()) {
+                String sanitizedPhone = inputSanitizationService.sanitizePhone(member.getPhoneNumber());
+                if (sanitizedPhone == null) {
+                    throw new IllegalArgumentException("Team member phone number must be valid if provided");
+                }
+                member.setPhoneNumber(sanitizedPhone);
+            }
+
+            // Sanitize optional fields
+            if (member.getBio() != null) {
+                member.setBio(inputSanitizationService.sanitizeText(member.getBio()));
+            }
         }
     }
 
@@ -1126,6 +1185,36 @@ public class RegistrationService {
             logger.warn("Failed to generate application ID using service, falling back to entity method", e);
             // Fallback to entity's own method
             return registration.getRegistrationNumber();
+        }
+    }
+
+    /**
+     * Perform registration rollback in separate transaction
+     * This ensures rollback completes even if main transaction fails
+     * @param registration Registration to rollback
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void performRegistrationRollback(UserRegistration registration) {
+        try {
+            // First, try to delete any uploaded files
+            try {
+                fileStorageService.deleteAllFilesForRegistration(registration);
+                logger.debug("Deleted files for registration rollback: {}", registration.getId());
+            } catch (Exception fileException) {
+                logger.warn("Could not delete files during rollback for registration {}: {}",
+                           registration.getId(), fileException.getMessage());
+                // Continue with registration deletion even if file deletion fails
+            }
+
+            // Delete the registration record
+            registrationRepository.delete(registration);
+            logger.info("Successfully rolled back registration ID: {}", registration.getId());
+
+        } catch (Exception rollbackException) {
+            logger.error("CRITICAL: Failed to rollback registration ID {}: {}",
+                        registration.getId(), rollbackException.getMessage());
+            // Re-throw to ensure the caller knows rollback failed
+            throw new RuntimeException("Rollback failed for registration " + registration.getId(), rollbackException);
         }
     }
 

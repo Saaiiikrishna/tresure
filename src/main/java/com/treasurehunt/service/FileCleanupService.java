@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -161,11 +162,13 @@ public class FileCleanupService {
                 return new CleanupResult(0, 0);
             }
             
-            // Get all registration IDs from database
-            Set<String> validRegistrationIds = registrationRepository.findAll()
-                .stream()
-                .map(reg -> reg.getId().toString())
-                .collect(Collectors.toSet());
+            // Get all registration IDs from database using memory-efficient streaming
+            Set<String> validRegistrationIds;
+            try (Stream<Long> idStream = registrationRepository.streamAllRegistrationIds()) {
+                validRegistrationIds = idStream
+                    .map(String::valueOf)
+                    .collect(Collectors.toSet());
+            }
             
             // Walk through upload directory
             Files.walkFileTree(uploadPath, new SimpleFileVisitor<Path>() {

@@ -99,6 +99,26 @@ spring:
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
 
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_POOL_SIZE:2}
+        max-size: ${ASYNC_MAX_POOL_SIZE:5}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:100}
+      thread-name-prefix: async-
+
   # Security Configuration
   security:
     require-ssl: ${REQUIRE_SSL}
@@ -107,6 +127,8 @@ spring:
 app:
   file-storage:
     upload-dir: ${FILE_UPLOAD_DIR}
+    image-dir: ${IMAGE_UPLOAD_DIR:uploads/images}
+    temp-dir: ${TEMP_UPLOAD_DIR:uploads/temp}
     max-photo-size: ${MAX_PHOTO_SIZE}
     max-document-size: ${MAX_DOCUMENT_SIZE}
     max-image-size: ${MAX_IMAGE_SIZE}
@@ -115,16 +137,69 @@ app:
     allowed-document-types: ${ALLOWED_DOCUMENT_TYPES}
 
   email:
-    from: ${MAIL_FROM_ADDRESS}
-    support: ${MAIL_SUPPORT_ADDRESS}
+    from-address: ${MAIL_FROM_ADDRESS}
+    support-address: ${MAIL_SUPPORT_ADDRESS}
     company-name: ${COMPANY_NAME}
-    mock:
-      enabled: false
+    mock-enabled: false
+    retry-attempts: ${EMAIL_RETRY_ATTEMPTS:3}
+    retry-delay-ms: ${EMAIL_RETRY_DELAY:5000}
 
   security:
     admin:
       username: ${ADMIN_USERNAME}
       password: ${ADMIN_PASSWORD}
+      session-timeout-minutes: ${ADMIN_SESSION_TIMEOUT:30}
+    session:
+      max-concurrent-sessions: ${MAX_CONCURRENT_SESSIONS:1}
+      prevent-login: ${PREVENT_LOGIN_ON_MAX_SESSIONS:true}
+      timeout-minutes: ${SESSION_TIMEOUT:30}
+    file-security:
+      virus-scan-enabled: ${VIRUS_SCAN_ENABLED:false}
+      max-scan-size-bytes: ${MAX_SCAN_SIZE:10485760}
+      quarantine-enabled: ${QUARANTINE_ENABLED:false}
+      quarantine-dir: ${QUARANTINE_DIR:quarantine}
+
+  performance:
+    cache:
+      enabled: ${CACHE_ENABLED:true}
+      treasure-hunt-plans-ttl-seconds: ${PLANS_CACHE_TTL:300}
+      featured-plan-ttl-seconds: ${FEATURED_PLAN_CACHE_TTL:600}
+      app-settings-ttl-seconds: ${APP_SETTINGS_CACHE_TTL:1800}
+    database:
+      max-pool-size: ${DB_POOL_MAX_SIZE}
+      min-idle: ${DB_POOL_MIN_IDLE}
+      connection-timeout-ms: ${DB_CONNECTION_TIMEOUT}
+      idle-timeout-ms: ${DB_IDLE_TIMEOUT}
+    async:
+      email-core-pool-size: ${EMAIL_CORE_POOL_SIZE:2}
+      email-max-pool-size: ${EMAIL_MAX_POOL_SIZE:4}
+      email-queue-capacity: ${EMAIL_QUEUE_CAPACITY:100}
+      email-keep-alive-seconds: ${EMAIL_KEEP_ALIVE:60}
+
+  business:
+    min-participant-age: ${MIN_PARTICIPANT_AGE:18}
+    max-team-size: ${MAX_TEAM_SIZE:6}
+    min-team-size: ${MIN_TEAM_SIZE:2}
+    registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
+    allow-cancellation: ${ALLOW_CANCELLATION:true}
+    cancellation-deadline-hours: ${CANCELLATION_DEADLINE_HOURS:48}
+
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    interval-seconds: ${MONITORING_INTERVAL:300}
+    memory-warning-threshold: ${MEMORY_WARNING_THRESHOLD:80}
+    memory-critical-threshold: ${MEMORY_CRITICAL_THRESHOLD:90}
+    thread-warning-threshold: ${THREAD_WARNING_THRESHOLD:100}
+    thread-critical-threshold: ${THREAD_CRITICAL_THRESHOLD:200}
+
+  cleanup:
+    temp-file-retention-hours: ${CLEANUP_TEMP_FILE_RETENTION_HOURS:24}
+    log-retention-days: ${CLEANUP_LOG_RETENTION_DAYS:30}
+
+  # Application Information
+  name: ${APP_NAME:Treasure Hunt Application}
+  version: ${APP_VERSION:1.0.0}
+  description: ${APP_DESCRIPTION:A comprehensive treasure hunt registration and management system}
 
 # Logging Configuration - Production appropriate
 logging:
@@ -167,6 +242,8 @@ server:
 
 # Actuator Configuration - Secured for production monitoring
 management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
   endpoints:
     web:
       exposure:

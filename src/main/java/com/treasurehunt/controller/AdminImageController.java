@@ -409,44 +409,5 @@ public class AdminImageController {
         }
     }
 
-    /**
-     * Test endpoint to verify image URL data flow
-     */
-    @GetMapping("/test-urls")
-    @ResponseBody
-    public ResponseEntity<Map<String, Object>> testImageUrls() {
-        Map<String, Object> response = new HashMap<>();
-
-        try {
-            // Get all image URLs that should be displayed on the home page
-            String heroVideoUrl = appSettingsService.getHeroBackgroundVideoUrl();
-            String heroFallbackImageUrl = appSettingsService.getHeroFallbackImageUrl();
-            String aboutSectionImageUrl = appSettingsService.getAboutSectionImageUrl();
-            String contactBackgroundImageUrl = appSettingsService.getContactBackgroundImageUrl();
-            boolean backgroundMediaEnabled = appSettingsService.getBackgroundMediaEnabled();
-
-            response.put("success", true);
-            response.put("heroVideoUrl", heroVideoUrl);
-            response.put("heroFallbackImageUrl", heroFallbackImageUrl);
-            response.put("aboutSectionImageUrl", aboutSectionImageUrl);
-            response.put("contactBackgroundImageUrl", contactBackgroundImageUrl);
-            response.put("backgroundMediaEnabled", backgroundMediaEnabled);
-
-            logger.info("=== TEST URLS ENDPOINT ===");
-            logger.info("Hero Video URL: {}", heroVideoUrl);
-            logger.info("Hero Fallback Image URL: {}", heroFallbackImageUrl);
-            logger.info("About Section Image URL: {}", aboutSectionImageUrl);
-            logger.info("Contact Background Image URL: {}", contactBackgroundImageUrl);
-            logger.info("Background Media Enabled: {}", backgroundMediaEnabled);
-            logger.info("=== END TEST URLS ===");
-
-        } catch (Exception e) {
-            logger.error("Error in test URLs endpoint", e);
-            response.put("success", false);
-            response.put("error", e.getMessage());
-            return ResponseEntity.badRequest().body(response);
-        }
-
-        return ResponseEntity.ok(response);
-    }
+    // Debug endpoint removed for production security
 }

@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 /**
  * Repository interface for UploadedDocument entity
@@ -125,4 +126,11 @@ public interface UploadedDocumentRepository extends JpaRepository<UploadedDocume
      * @param registration User registration
      */
     void deleteByRegistration(UserRegistration registration);
+
+    /**
+     * Stream all file paths for memory-efficient processing
+     * @return Stream of file paths
+     */
+    @Query("SELECT d.filePath FROM UploadedDocument d WHERE d.filePath IS NOT NULL")
+    Stream<String> streamAllFilePaths();
 }

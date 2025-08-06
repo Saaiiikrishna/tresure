@@ -295,13 +295,15 @@ public class ImageManagementService {
         return category + "_" + timestamp + "_" + uuid + extension;
     }
 
+    /**
+     * Deactivate previous images in the same category atomically
+     * Uses batch update to prevent race conditions
+     * @param category Image category
+     */
     private void deactivatePreviousImages(String category) {
-        List<UploadedImage> previousImages = imageRepository.findByImageCategoryAndIsActiveTrueOrderByUploadDateDesc(category);
-        for (UploadedImage image : previousImages) {
-            image.setIsActive(false);
-            imageRepository.save(image);
-        }
-        logger.info("Deactivated {} previous images in category: {}", previousImages.size(), category);
+        // Use atomic batch update to prevent race conditions
+        int deactivatedCount = imageRepository.deactivateImagesByCategory(category);
+        logger.info("Deactivated {} previous images in category: {}", deactivatedCount, category);
     }
 
     private void updateAppSettingForCategory(String category, String imageUrl) {

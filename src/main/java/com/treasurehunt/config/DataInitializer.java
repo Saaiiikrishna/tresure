@@ -158,45 +158,65 @@ public class DataInitializer implements CommandLineRunner {
         beginnerPlan.setStartTime(startTime);
         beginnerPlan.setEndDate(eventDate);
         beginnerPlan.setEndTime(startTime.plusHours(3)); // 3 hour duration
+        beginnerPlan.setRegistrationDeadline(eventDate.minusDays(2)); // Registration closes 2 days before event
+        // Add early bird discount for beginner plan
+        beginnerPlan.setDiscountEnabled(true);
+        beginnerPlan.setDiscountPercentage(new BigDecimal("15.00")); // 15% early bird discount
 
         beginnerPlan2.setEventDate(eventDate.plusDays(1));
         beginnerPlan2.setStartTime(startTime);
         beginnerPlan2.setEndDate(eventDate.plusDays(1));
         beginnerPlan2.setEndTime(startTime.plusHours(2)); // 2 hour duration
+        beginnerPlan2.setRegistrationDeadline(eventDate.minusDays(1)); // Registration closes 1 day before event
 
         intermediatePlan.setEventDate(eventDate.plusDays(2));
         intermediatePlan.setStartTime(startTime);
         intermediatePlan.setEndDate(eventDate.plusDays(2));
         intermediatePlan.setEndTime(startTime.plusHours(4)); // 4 hour duration
+        intermediatePlan.setRegistrationDeadline(eventDate); // Registration closes on the day of first event
 
         intermediatePlan2.setEventDate(eventDate.plusDays(3));
         intermediatePlan2.setStartTime(startTime);
         intermediatePlan2.setEndDate(eventDate.plusDays(3));
         intermediatePlan2.setEndTime(startTime.plusHours(5)); // 5 hour duration
+        intermediatePlan2.setRegistrationDeadline(eventDate.plusDays(1)); // Registration closes 2 days before event
+        // Add discount for intermediate plan 2
+        intermediatePlan2.setDiscountEnabled(true);
+        intermediatePlan2.setDiscountPercentage(new BigDecimal("10.00")); // 10% discount
 
         advancedPlan.setEventDate(eventDate.plusDays(4));
         advancedPlan.setStartTime(startTime);
         advancedPlan.setEndDate(eventDate.plusDays(4));
         advancedPlan.setEndTime(startTime.plusHours(8)); // 8 hour duration
+        advancedPlan.setRegistrationDeadline(eventDate.plusDays(2)); // Registration closes 2 days before event
 
         advancedPlan2.setEventDate(eventDate.plusDays(5));
         advancedPlan2.setStartTime(startTime);
         advancedPlan2.setEndDate(eventDate.plusDays(5));
         advancedPlan2.setEndTime(startTime.plusHours(6)); // 6 hour duration
+        advancedPlan2.setRegistrationDeadline(eventDate.plusDays(3)); // Registration closes 2 days before event
 
 
 
         // Save all plans
         try {
-            planService.createPlan(beginnerPlan);
+            TreasureHuntPlan savedBeginnerPlan = planService.createPlan(beginnerPlan);
             planService.createPlan(beginnerPlan2);
             planService.createPlan(intermediatePlan);
             planService.createPlan(intermediatePlan2);
             planService.createPlan(advancedPlan);
             planService.createPlan(advancedPlan2);
-            
+
             logger.info("Created {} sample treasure hunt plans", 6);
-            
+
+            // Set the first beginner plan as featured to ensure we always have a featured plan
+            try {
+                planService.setFeaturedPlan(savedBeginnerPlan.getId());
+                logger.info("Set plan '{}' as the default featured plan", savedBeginnerPlan.getName());
+            } catch (Exception e) {
+                logger.warn("Could not set default featured plan, but this is not critical", e);
+            }
+
         } catch (Exception e) {
             logger.error("Error creating sample plans", e);
         }

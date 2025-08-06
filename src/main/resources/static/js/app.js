@@ -564,7 +564,7 @@ function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) 
 
     return `
         ${showMemberTitle ? memberTitle : ''}
-        <div class="member-form border rounded p-3 mb-4" data-member="${memberNumber}" style="background-color: #f8f9fa;">
+        <div class="member-form border rounded p-3 mb-4" data-member="${memberNumber}">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="fullName_${memberNumber}" class="form-label">Full Name *</label>

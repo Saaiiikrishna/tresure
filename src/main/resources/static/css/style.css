@@ -659,9 +659,20 @@ footer hr {
     border: 1px solid #e9ecef;
 }
 
+/* Dark mode support for member forms - will be overridden by index.html styles */
+[data-theme="dark"] .member-form {
+    background-color: #2d2d2d;
+    border-color: #404040;
+    color: #ffffff;
+}
+
 .member-form:hover {
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     border-color: var(--primary-color);
+}
+
+[data-theme="dark"] .member-form:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
 .member-form .badge {
@@ -685,6 +696,47 @@ footer hr {
     background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
     border: none;
     color: #6a1b9a;
+}
+
+/* Dark mode alert styling */
+[data-theme="dark"] .alert-info {
+    background: rgba(13, 110, 253, 0.15) !important;
+    border: 1px solid rgba(13, 110, 253, 0.4) !important;
+    color: #6ea8fe !important;
+}
+
+[data-theme="dark"] .alert-primary {
+    background: rgba(13, 110, 253, 0.15) !important;
+    border: 1px solid rgba(13, 110, 253, 0.4) !important;
+    color: #6ea8fe !important;
+}
+
+[data-theme="dark"] .alert-warning {
+    background: rgba(255, 193, 7, 0.15) !important;
+    border: 1px solid rgba(255, 193, 7, 0.4) !important;
+    color: #ffda6a !important;
+}
+
+/* Modal specific alert overrides */
+[data-theme="dark"] .modal .alert-info,
+[data-theme="dark"] .modal .alert-primary {
+    background-color: rgba(13, 110, 253, 0.15) !important;
+    border-color: rgba(13, 110, 253, 0.4) !important;
+    color: #6ea8fe !important;
+}
+
+[data-theme="dark"] .modal .alert-warning {
+    background-color: rgba(255, 193, 7, 0.15) !important;
+    border-color: rgba(255, 193, 7, 0.4) !important;
+    color: #ffda6a !important;
+}
+
+/* Alert text elements */
+[data-theme="dark"] .modal .alert h5,
+[data-theme="dark"] .modal .alert .alert-heading,
+[data-theme="dark"] .modal .alert p,
+[data-theme="dark"] .modal .alert .mb-0 {
+    color: inherit !important;
 }
 
 /* Form validation styling */

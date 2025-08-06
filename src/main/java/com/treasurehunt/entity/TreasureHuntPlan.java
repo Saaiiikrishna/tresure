@@ -3,6 +3,7 @@ package com.treasurehunt.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -18,7 +19,14 @@ import java.util.List;
  * Maps to treasure_hunt_plans table in PostgreSQL database
  */
 @Entity
-@Table(name = "treasure_hunt_plans")
+@Table(name = "treasure_hunt_plans",
+       indexes = {
+           @Index(name = "idx_plan_status", columnList = "status"),
+           @Index(name = "idx_plan_featured", columnList = "is_featured"),
+           @Index(name = "idx_plan_difficulty", columnList = "difficulty_level"),
+           @Index(name = "idx_plan_price", columnList = "price_inr"),
+           @Index(name = "idx_plan_created_date", columnList = "created_date")
+       })
 public class TreasureHuntPlan {
 
     @Id
@@ -128,7 +136,11 @@ public class TreasureHuntPlan {
     @Column(name = "discount_percentage", precision = 5, scale = 2)
     private BigDecimal discountPercentage = BigDecimal.ZERO;
 
-    @OneToMany(mappedBy = "plan", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "plan",
+               cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH},
+               fetch = FetchType.LAZY,
+               orphanRemoval = false) // Don't remove registrations when plan is deleted
+    @BatchSize(size = 20) // Optimize batch loading
     @JsonIgnore
     private List<UserRegistration> registrations = new ArrayList<>();
 
@@ -573,5 +585,53 @@ public class TreasureHuntPlan {
         monthName = monthName.substring(0, 1).toUpperCase() + monthName.substring(1);
 
         return String.format("%s %s", dayWithSuffix, monthName);
+    }
+
+    // ===== BIDIRECTIONAL RELATIONSHIP HELPER METHODS =====
+
+    /**
+     * Add a registration to this plan (bidirectional helper)
+     * @param registration Registration to add
+     */
+    public void addRegistration(UserRegistration registration) {
+        if (registration != null) {
+            registrations.add(registration);
+            registration.setPlan(this);
+        }
+    }
+
+    /**
+     * Remove a registration from this plan (bidirectional helper)
+     * @param registration Registration to remove
+     */
+    public void removeRegistration(UserRegistration registration) {
+        if (registration != null) {
+            registrations.remove(registration);
+            registration.setPlan(null);
+        }
+    }
+
+
+
+    /**
+     * Check if plan has available slots
+     * @return true if slots are available
+     */
+    public boolean hasAvailableSlots() {
+        if (availableSlots == null) {
+            return true; // Unlimited slots
+        }
+        return getConfirmedRegistrationsCount() < availableSlots;
+    }
+
+    /**
+     * Get remaining slots
+     * @return Number of remaining slots, or -1 if unlimited
+     */
+    public int getRemainingSlots() {
+        if (availableSlots == null) {
+            return -1; // Unlimited
+        }
+        return Math.max(0, availableSlots.intValue() - getConfirmedRegistrationsCount().intValue());
     }
 }

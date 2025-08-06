@@ -2,6 +2,7 @@ package com.treasurehunt.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -16,6 +17,7 @@ import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +41,18 @@ public class ProductionResourceCleanupService {
     @Value("${app.cleanup.log-retention-days:30}")
     private int logRetentionDays;
 
+    private final FileCleanupService fileCleanupService;
+
     private final ExecutorService cleanupExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "production-cleanup");
         t.setDaemon(true);
         return t;
     });
+
+    @Autowired
+    public ProductionResourceCleanupService(FileCleanupService fileCleanupService) {
+        this.fileCleanupService = fileCleanupService;
+    }
 
     /**
      * Cleanup temporary files daily at 2 AM
@@ -85,21 +94,37 @@ public class ProductionResourceCleanupService {
 
     /**
      * Cleanup orphaned upload files monthly on 1st day at 4 AM
+     * Uses proper error handling and resource management
      */
     @Scheduled(cron = "0 0 4 1 * ?")
     public void cleanupOrphanedUploads() {
         logger.info("🧹 Starting scheduled orphaned upload cleanup");
-        
-        cleanupExecutor.submit(() -> {
+
+        CompletableFuture<Void> cleanupTask = CompletableFuture.runAsync(() -> {
             try {
                 Path uploadsDir = Paths.get(uploadDir);
                 if (Files.exists(uploadsDir)) {
-                    // This would require database integration to check for orphaned files
-                    // For now, just log the action
-                    logger.info("📁 Orphaned upload cleanup check completed");
+                    // Delegate to FileCleanupService for proper implementation
+                    if (fileCleanupService != null) {
+                        FileCleanupService.CleanupResult result = fileCleanupService.cleanupOrphanedFiles();
+                        logger.info("📁 Orphaned upload cleanup completed: {} files cleaned, {} bytes freed",
+                                   result.getFilesDeleted(), result.getSpaceFreed());
+                    } else {
+                        logger.warn("FileCleanupService not available for orphaned file cleanup");
+                    }
                 }
             } catch (Exception e) {
                 logger.error("❌ Error during orphaned upload cleanup", e);
+                throw new RuntimeException("Orphaned upload cleanup failed", e);
+            }
+        }, cleanupExecutor);
+
+        // Handle completion and errors
+        cleanupTask.whenComplete((result, throwable) -> {
+            if (throwable != null) {
+                logger.error("❌ Orphaned upload cleanup task failed", throwable);
+            } else {
+                logger.info("✅ Orphaned upload cleanup task completed successfully");
             }
         });
     }

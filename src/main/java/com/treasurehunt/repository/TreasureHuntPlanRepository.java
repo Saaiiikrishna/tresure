@@ -2,6 +2,7 @@ package com.treasurehunt.repository;
 
 import com.treasurehunt.entity.TreasureHuntPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -98,4 +99,12 @@ public interface TreasureHuntPlanRepository extends JpaRepository<TreasureHuntPl
      * @return List of plans with the specified status
      */
     List<TreasureHuntPlan> findByStatus(TreasureHuntPlan.PlanStatus status);
+
+    /**
+     * Atomically unset all featured plans
+     * @return Number of plans that were unfeatured
+     */
+    @Modifying
+    @Query("UPDATE TreasureHuntPlan p SET p.isFeatured = false WHERE p.isFeatured = true")
+    int updateAllFeaturedPlansToFalse();
 }

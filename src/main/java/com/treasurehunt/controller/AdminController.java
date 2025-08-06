@@ -3,6 +3,8 @@ package com.treasurehunt.controller;
 import com.treasurehunt.entity.TreasureHuntPlan;
 import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.entity.UploadedDocument;
+import com.treasurehunt.exception.ResourceNotFoundException;
+import com.treasurehunt.exception.ValidationException;
 import com.treasurehunt.service.AppSettingsService;
 import com.treasurehunt.service.RegistrationService;
 import com.treasurehunt.service.TreasureHuntPlanService;

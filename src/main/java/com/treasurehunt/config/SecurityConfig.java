@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -39,28 +40,33 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .authorizeHttpRequests(authz -> authz
-                // Public endpoints
-                .requestMatchers("/", "/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
+                // Public endpoints - Home and API
+                .requestMatchers("/", "/home", "/index").permitAll()
+                .requestMatchers("/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
+
+                // Static resources
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico").permitAll()
-                .requestMatchers("/uploads/**").permitAll() // Allow access to uploaded files
+                .requestMatchers("/secure/files/images/**").permitAll() // Public images through secure controller
+
+                // Public pages
                 .requestMatchers("/about", "/contact", "/privacy", "/terms").permitAll()
-                .requestMatchers("/error").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/info").permitAll() // Allow health checks
-                // Debug and test endpoints - DISABLED in production for security
-                // .requestMatchers("/debug/**").permitAll() // Debug endpoints - REMOVED for production
-                // .requestMatchers("/test", "/test-admin").permitAll() // Test pages - REMOVED for production
-                
+                .requestMatchers("/error", "/error/**").permitAll()
+
+                // Health checks
+                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+
                 // Admin endpoints - require authentication
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/admin/images/**").hasRole("ADMIN")
-                
-                // All other requests require authentication
-                .anyRequest().authenticated()
+                .requestMatchers("/secure/files/documents/**").hasRole("ADMIN") // Secure document access
+
+                // All other requests are public by default (changed from authenticated)
+                .anyRequest().permitAll()
             )
             .formLogin(form -> form
                 .loginPage("/admin/login")
                 .loginProcessingUrl("/admin/login")
-                .defaultSuccessUrl("/admin", true)
+                .defaultSuccessUrl("/admin", false) // Changed to false to allow redirect to original URL
                 .failureUrl("/admin/login?error=true")
                 .usernameParameter("username")
                 .passwordParameter("password")
@@ -68,14 +74,16 @@ public class SecurityConfig {
             )
             .logout(logout -> logout
                 .logoutUrl("/admin/logout")
-                .logoutSuccessUrl("/admin/login?logout=true")
+                .logoutSuccessUrl("/")
                 .invalidateHttpSession(true)
                 .deleteCookies("JSESSIONID")
+                .clearAuthentication(true)
                 .permitAll()
             )
             .sessionManagement(session -> session
-                .maximumSessions(1)
-                .maxSessionsPreventsLogin(false)
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
+                .invalidSessionUrl("/")
+                .sessionFixation().migrateSession()
             )
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers("/api/**", "/admin/email-templates/**") // Disable CSRF for API and email template endpoints
