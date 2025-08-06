@@ -6,15 +6,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.treasurehunt.repository.UserRegistrationRepository;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Service for generating unique application IDs for treasure hunt registrations
- * Provides thread-safe, robust ID generation with meaningful format
- * New format: TH-YYMM-TYPE-PPPPAA where PPPP=Plan ID, AA=Application sequence for that plan
+ * Service for generating unique application IDs for treasure hunt registrations.
+ * The generated IDs follow the format TH-TYPE-PPPPSS where:
+ *  - TYPE is IND or TEAM
+ *  - PPPP is the 4 digit plan id
+ *  - SS   is a 2 digit sequence number for that plan
  */
 @Service
 public class ApplicationIdService {
@@ -27,15 +27,12 @@ public class ApplicationIdService {
     // Thread-safe counters for each plan (Plan ID -> Sequence Counter)
     private final ConcurrentHashMap<Long, AtomicLong> planSequenceCounters = new ConcurrentHashMap<>();
     
-    // Date formatter for year-month component
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyMM");
-    
     // Base prefix for all treasure hunt registrations
     private static final String BASE_PREFIX = "TH";
     
     /**
      * Generate a unique application ID for individual registration
-     * Format: TH-2408-IND-000101 (Plan 1, 1st application)
+     * Format: TH-IND-000101 (Plan 1, 1st application)
      *
      * @param planId Plan ID
      * @return Formatted application ID
@@ -46,7 +43,7 @@ public class ApplicationIdService {
 
     /**
      * Generate a unique application ID for team registration
-     * Format: TH-2408-TEAM-000101 (Plan 1, 1st application)
+     * Format: TH-TEAM-000101 (Plan 1, 1st application)
      *
      * @param planId Plan ID
      * @return Formatted application ID
@@ -57,7 +54,7 @@ public class ApplicationIdService {
     
     /**
      * Generate a unique application ID with custom type
-     * Format: TH-YYMM-TYPE-PPPPAA where PPPP=Plan ID (4 digits), AA=Application sequence (2 digits)
+     * Format: TH-TYPE-PPPPSS where PPPP=Plan ID (4 digits) and SS=sequence (2 digits)
      *
      * @param planId Plan ID
      * @param type Registration type (IND, TEAM, etc.)
@@ -73,26 +70,19 @@ public class ApplicationIdService {
         }
 
         try {
-            // Get current date for year-month component
-            String yearMonth = LocalDateTime.now().format(DATE_FORMATTER);
-
             // Get next sequence number for this plan (thread-safe)
             AtomicLong planCounter = planSequenceCounters.computeIfAbsent(planId, k -> {
-                // Initialize counter based on existing registrations for this plan
                 long existingCount = getExistingRegistrationCountForPlan(planId);
                 return new AtomicLong(existingCount + 1);
             });
 
             long sequenceNumber = planCounter.getAndIncrement();
 
-            // Format: PPPP (4-digit plan ID) + AA (2-digit sequence)
             String planPart = String.format("%04d", planId);
             String sequencePart = String.format("%02d", sequenceNumber);
-            String combinedSequence = planPart + sequencePart;
 
-            // Construct the application ID
-            String applicationId = String.format("%s-%s-%s-%s",
-                BASE_PREFIX, yearMonth, type.toUpperCase(), combinedSequence);
+            String applicationId = String.format("%s-%s-%s%s",
+                BASE_PREFIX, type.toUpperCase(), planPart, sequencePart);
 
             logger.debug("Generated application ID: {} for plan ID: {}, sequence: {}",
                 applicationId, planId, sequenceNumber);
@@ -101,7 +91,6 @@ public class ApplicationIdService {
 
         } catch (Exception e) {
             logger.error("Error generating application ID for plan ID: {}", planId, e);
-            // Fallback to simple format if there's any error
             long fallbackSequence = System.currentTimeMillis() % 100; // Last 2 digits of timestamp
             String planPart = String.format("%04d", planId);
             String sequencePart = String.format("%02d", fallbackSequence);
@@ -137,15 +126,10 @@ public class ApplicationIdService {
         }
         
         try {
-            String yearMonth = LocalDateTime.now().format(DATE_FORMATTER);
             String sequence = String.format("%06d", campaignId);
-            
-            String trackingId = String.format("CAMP-%s-%s", yearMonth, sequence);
-            
+            String trackingId = String.format("CAMP-%s", sequence);
             logger.debug("Generated campaign tracking ID: {} for campaign ID: {}", trackingId, campaignId);
-            
             return trackingId;
-            
         } catch (Exception e) {
             logger.error("Error generating campaign tracking ID for campaign ID: {}", campaignId, e);
             return String.format("CAMP-%06d", campaignId);
@@ -165,15 +149,10 @@ public class ApplicationIdService {
         }
         
         try {
-            String yearMonth = LocalDateTime.now().format(DATE_FORMATTER);
             String sequence = String.format("%06d", documentId);
-            
-            String referenceId = String.format("DOC-%s-%s", yearMonth, sequence);
-            
+            String referenceId = String.format("DOC-%s", sequence);
             logger.debug("Generated document reference ID: {} for document ID: {}", referenceId, documentId);
-            
             return referenceId;
-            
         } catch (Exception e) {
             logger.error("Error generating document reference ID for document ID: {}", documentId, e);
             return String.format("DOC-%06d", documentId);
@@ -192,10 +171,10 @@ public class ApplicationIdService {
         }
         
         try {
-            // Expected format: TH-YYMM-TYPE-NNNNNN
+            // Expected format: TH-TYPE-PPPPSS
             String[] parts = applicationId.split("\\-");
-            if (parts.length >= 4) {
-                String sequencePart = parts[parts.length - 1]; // Last part is the sequence
+            if (parts.length == 3) {
+                String sequencePart = parts[2];
                 return Long.parseLong(sequencePart);
             }
         } catch (NumberFormatException e) {
@@ -216,8 +195,8 @@ public class ApplicationIdService {
             return false;
         }
         
-        // Basic format validation: TH-YYMM-TYPE-NNNNNN
-        return applicationId.matches("^TH-\\d{4}-(IND|TEAM)-\\d{6}$");
+        // Basic format validation: TH-TYPE-PPPPSS
+        return applicationId.matches("^TH-(IND|TEAM)-\\d{6}$");
     }
     
     /**

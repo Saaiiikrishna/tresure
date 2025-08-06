@@ -7,6 +7,9 @@
 window.currentStep = 1;
 window.selectedPlan = null;
 
+let formListenersInitialized = false;
+let progressListenersInitialized = false;
+
 // Robust step navigation functions
 window.showStepRobust = function(step) {
     // Hide all steps
@@ -1281,6 +1284,9 @@ const updateTeamProgress = debounce(function() {
  * Attach event listeners for progress tracking
  */
 function attachProgressEventListeners() {
+    if (progressListenersInitialized) return;
+    progressListenersInitialized = true;
+
     const form = document.getElementById('registrationForm');
     if (!form) {
         console.log('❌ Registration form not found for progress listeners');
@@ -1291,16 +1297,9 @@ function attachProgressEventListeners() {
     console.log(`📝 Attaching progress listeners to ${inputs.length} form inputs`);
 
     inputs.forEach((input, index) => {
-        // Remove existing listeners to avoid duplicates
-        input.removeEventListener('input', handleProgressUpdate);
-        input.removeEventListener('change', handleProgressUpdate);
-        input.removeEventListener('blur', handleProgressUpdate);
-
-        // Add new listeners
         input.addEventListener('input', handleProgressUpdate);
         input.addEventListener('change', handleProgressUpdate);
         input.addEventListener('blur', handleProgressUpdate);
-
         console.log(`✅ Listeners attached to ${input.id || input.name || 'unnamed field'}`);
     });
 }
@@ -1317,6 +1316,9 @@ function handleProgressUpdate(event) {
  * Setup form event listeners
  */
 function setupFormEventListeners() {
+    if (formListenersInitialized) return;
+    formListenersInitialized = true;
+
     const form = document.getElementById('registrationForm');
     if (form) {
         form.addEventListener('submit', handleFormSubmit);
@@ -1523,6 +1525,7 @@ function toggleMedicalCertificateUpload(consentGiven) {
 
         if (fileInput) {
             fileInput.required = false;
+            fileInput.disabled = true;
         }
 
         console.log('✅ Medical certificate upload disabled (consent given)');
@@ -1548,6 +1551,7 @@ function toggleMedicalCertificateUpload(consentGiven) {
 
         if (fileInput) {
             fileInput.required = true;
+            fileInput.disabled = false;
         }
 
         console.log('✅ Medical certificate upload enabled (consent not given)');

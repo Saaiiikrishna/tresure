@@ -103,6 +103,13 @@ public class RegistrationService {
         // Set plan and save registration
         registration.setPlan(plan);
         registration.setStatus(UserRegistration.RegistrationStatus.PENDING);
+
+        // Generate application ID before persisting
+        String applicationId = registration.isTeamRegistration()
+                ? applicationIdService.generateTeamApplicationId(plan.getId())
+                : applicationIdService.generateIndividualApplicationId(plan.getId());
+        registration.setApplicationId(applicationId);
+
         UserRegistration savedRegistration = registrationRepository.save(registration);
 
         try {

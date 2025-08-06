@@ -236,19 +236,23 @@ public class RegistrationController {
         // File size validation is handled in FileStorageService with configurable limits
         // This ensures consistent validation across the application
 
-        // Temporarily disable file type validation for testing email functionality
-        /*
-        // Validate file types (basic check)
+        // Validate file types
         String photoContentType = photoFile.getContentType();
-        if (photoContentType == null || !photoContentType.startsWith("image/")) {
+        if (photoContentType == null || !photoContentType.toLowerCase().startsWith("image/")) {
             return "Photo must be an image file (JPG, JPEG, PNG)";
         }
 
-        String medicalContentType = medicalFile.getContentType();
-        if (medicalContentType == null || !"application/pdf".equals(medicalContentType)) {
-            return "Medical certificate must be a PDF file";
+        String idContentType = idFile.getContentType();
+        if (idContentType == null || !(idContentType.equalsIgnoreCase("application/pdf") || idContentType.toLowerCase().startsWith("image/"))) {
+            return "ID document must be an image or PDF file";
         }
-        */
+
+        if (medicalConsentGiven == null || !medicalConsentGiven) {
+            String medicalContentType = medicalFile.getContentType();
+            if (medicalContentType == null || !"application/pdf".equalsIgnoreCase(medicalContentType)) {
+                return "Medical certificate must be a PDF file";
+            }
+        }
 
         return null; // All validations passed
     }
