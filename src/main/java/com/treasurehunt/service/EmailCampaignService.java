@@ -336,14 +336,19 @@ public class EmailCampaignService {
             }
             stats.put("typeCounts", typeCounts);
 
-            // Total counts with error handling
+            // PERFORMANCE FIX: Get total counts from status counts to avoid additional queries
             try {
-                stats.put("totalCampaigns", campaignRepository.count());
-                stats.put("activeCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENDING));
-                stats.put("scheduledCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SCHEDULED));
-                stats.put("sentCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENT));
+                long totalCampaigns = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+                long activeCampaigns = statusCounts.getOrDefault("SENDING", 0L);
+                long scheduledCampaigns = statusCounts.getOrDefault("SCHEDULED", 0L);
+                long sentCampaigns = statusCounts.getOrDefault("SENT", 0L);
+
+                stats.put("totalCampaigns", totalCampaigns);
+                stats.put("activeCampaigns", activeCampaigns);
+                stats.put("scheduledCampaigns", scheduledCampaigns);
+                stats.put("sentCampaigns", sentCampaigns);
             } catch (Exception e) {
-                logger.warn("Error getting campaign counts", e);
+                logger.warn("Error calculating campaign counts from status data", e);
                 stats.put("totalCampaigns", 0L);
                 stats.put("activeCampaigns", 0L);
                 stats.put("scheduledCampaigns", 0L);

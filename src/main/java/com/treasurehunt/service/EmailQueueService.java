@@ -343,14 +343,14 @@ public class EmailQueueService {
             }
             stats.put("typeCounts", typeCounts);
 
-            // Total counts - using consistent field names expected by templates
-            long totalEmails = emailQueueRepository.count();
-            long pendingEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.PENDING);
-            long sentEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.SENT);
-            long failedEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.FAILED);
-            long processingEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.PROCESSING);
-            long cancelledEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.CANCELLED);
-            long scheduledEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.SCHEDULED);
+            // PERFORMANCE FIX: Calculate counts from status data to avoid 7 additional queries
+            long totalEmails = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+            long pendingEmails = statusCounts.getOrDefault("PENDING", 0L);
+            long sentEmails = statusCounts.getOrDefault("SENT", 0L);
+            long failedEmails = statusCounts.getOrDefault("FAILED", 0L);
+            long processingEmails = statusCounts.getOrDefault("PROCESSING", 0L);
+            long cancelledEmails = statusCounts.getOrDefault("CANCELLED", 0L);
+            long scheduledEmails = statusCounts.getOrDefault("SCHEDULED", 0L);
 
             stats.put("totalEmails", totalEmails);
             stats.put("pendingEmails", pendingEmails);

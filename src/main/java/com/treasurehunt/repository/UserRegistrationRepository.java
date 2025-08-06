@@ -21,14 +21,12 @@ import java.util.stream.Stream;
 public interface UserRegistrationRepository extends JpaRepository<UserRegistration, Long> {
 
     /**
-     * Find registrations by plan with all related data loaded
+     * FIXED: Find registrations by plan (avoiding MultipleBagFetchException)
      * @param plan Treasure hunt plan
-     * @return List of registrations for the plan with team members and documents
+     * @return List of registrations for the plan
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.plan " +
-           "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.documents " +
            "WHERE r.plan = :plan " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findByPlanWithAllDataOrderByRegistrationDateDesc(@Param("plan") TreasureHuntPlan plan);
@@ -41,15 +39,13 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     List<UserRegistration> findByPlanOrderByRegistrationDateDesc(TreasureHuntPlan plan);
 
     /**
-     * Find registrations by plan and status with all related data loaded
+     * FIXED: Find registrations by plan and status (avoiding MultipleBagFetchException)
      * @param plan Treasure hunt plan
      * @param status Registration status
-     * @return List of registrations matching criteria with team members and documents
+     * @return List of registrations matching criteria
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.plan " +
-           "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.documents " +
            "WHERE r.plan = :plan AND r.status = :status " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findByPlanAndStatusWithAllDataOrderByRegistrationDateDesc(
@@ -80,14 +76,12 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     long countByPlanAndStatus(TreasureHuntPlan plan, UserRegistration.RegistrationStatus status);
 
     /**
-     * Find registrations by status with all related data loaded
+     * FIXED: Find registrations by status (avoiding MultipleBagFetchException)
      * @param status Registration status
-     * @return List of registrations with specified status with team members and documents
+     * @return List of registrations with specified status
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.plan " +
-           "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.documents " +
            "WHERE r.status = :status " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findByStatusWithAllDataOrderByRegistrationDateDesc(@Param("status") UserRegistration.RegistrationStatus status);
@@ -123,15 +117,31 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     List<UserRegistration> findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(String name);
 
     /**
-     * Find all registrations with all related data loaded
-     * @return List of all registrations with team members and documents
+     * FIXED: Find all registrations with plan data (avoiding MultipleBagFetchException)
+     * @return List of all registrations with plan data
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.plan " +
-           "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.documents " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findAllWithAllData();
+
+    /**
+     * NEW: Find all registrations with team members only
+     * @return List of all registrations with team members
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findAllWithTeamMembers();
+
+    /**
+     * NEW: Find all registrations with documents only
+     * @return List of all registrations with documents
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.documents " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findAllWithDocuments();
 
     /**
      * Count total registrations
