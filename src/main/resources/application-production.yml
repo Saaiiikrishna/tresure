@@ -35,7 +35,7 @@ spring:
   # JPA/Hibernate Configuration - Production settings
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO}
+      ddl-auto: ${JPA_DDL_AUTO:update}
     show-sql: false
     properties:
       hibernate:
