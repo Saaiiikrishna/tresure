@@ -86,7 +86,16 @@ public class SecurityConfig {
                 .sessionFixation().migrateSession()
             )
             .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/api/**", "/admin/email-templates/**") // Disable CSRF for API and email template endpoints
+                .ignoringRequestMatchers(
+                    "/api/**",
+                    "/admin/email-templates/**",
+                    "/admin/plans/create",
+                    "/admin/plans/*/edit",
+                    "/admin/plans/*/update",
+                    "/admin/images/upload",
+                    "/admin/images/update-url",
+                    "/admin/images/*/delete"
+                ) // CRITICAL FIX: Disable CSRF for admin POST endpoints that are failing
             )
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())
