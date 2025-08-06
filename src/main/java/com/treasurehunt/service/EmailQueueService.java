@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.SimpleMailMessage;
@@ -37,7 +38,7 @@ public class EmailQueueService {
     @Autowired
     private EmailQueueRepository emailQueueRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender mailSender;
 
     @Autowired
@@ -164,15 +165,23 @@ public class EmailQueueService {
             email.setStatus(EmailQueue.EmailStatus.PROCESSING);
             emailQueueRepository.save(email);
             
-            // Create and send email
+            // Create and send email (if mail sender is available)
+            if (mailSender == null) {
+                logger.warn("JavaMailSender not available - email will be marked as failed: {}", email.getSubject());
+                email.setStatus(EmailQueue.EmailStatus.FAILED);
+                email.setErrorMessage("JavaMailSender not configured");
+                emailQueueRepository.save(email);
+                return CompletableFuture.completedFuture(false);
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setTo(email.getRecipientEmail());
             helper.setSubject(email.getSubject());
             helper.setText(email.getBody(), true); // true = HTML content
             helper.setFrom(fromEmail);
-            
+
             mailSender.send(message);
             
             // Update status to sent
