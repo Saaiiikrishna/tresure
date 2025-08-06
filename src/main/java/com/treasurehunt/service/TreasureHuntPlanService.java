@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Service class for managing Treasure Hunt Plans
@@ -33,6 +35,13 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     private final TreasureHuntPlanRepository planRepository;
     private final UserRegistrationRepository registrationRepository;
 
+    // In-memory cache for plans to reduce database calls
+    private final ConcurrentHashMap<String, List<TreasureHuntPlan>> plansCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, TreasureHuntPlan> planByIdCache = new ConcurrentHashMap<>();
+    private volatile TreasureHuntPlan featuredPlanCache = null;
+    private volatile long lastCacheRefresh = 0;
+    private static final long CACHE_REFRESH_INTERVAL = 180000; // 3 minutes
+
     @Autowired
     public TreasureHuntPlanService(TreasureHuntPlanRepository planRepository,
                                    UserRegistrationRepository registrationRepository) {
@@ -41,14 +50,65 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get all active treasure hunt plans with caching
+     * Load all plans into cache on startup and periodically refresh
+     */
+    @PostConstruct
+    public void loadPlansIntoCache() {
+        try {
+            logger.info("Loading all plans into cache...");
+
+            // Load active plans
+            List<TreasureHuntPlan> activePlans = planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
+            plansCache.put("active", activePlans);
+
+            // Load all plans by ID
+            planByIdCache.clear();
+            for (TreasureHuntPlan plan : activePlans) {
+                planByIdCache.put(plan.getId(), plan);
+            }
+
+            // Load featured plan
+            featuredPlanCache = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
+                    .orElse(null);
+
+            lastCacheRefresh = System.currentTimeMillis();
+            logger.info("Loaded {} active plans into cache", activePlans.size());
+
+        } catch (Exception e) {
+            logger.error("Error loading plans into cache", e);
+        }
+    }
+
+    /**
+     * Refresh cache if it's older than the refresh interval
+     */
+    private void refreshCacheIfNeeded() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastCacheRefresh > CACHE_REFRESH_INTERVAL) {
+            logger.debug("Cache refresh interval exceeded, refreshing plans cache");
+            loadPlansIntoCache();
+        }
+    }
+
+    /**
+     * Get all active treasure hunt plans with in-memory caching (no database calls for cached values)
      * @return List of active plans
      */
-    @Cacheable(value = "treasureHuntPlans", key = "'active'")
     @Transactional(readOnly = true)
     public List<TreasureHuntPlan> getAllActivePlans() {
-        logger.debug("Fetching all active treasure hunt plans from database");
-        return planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
+        refreshCacheIfNeeded();
+
+        List<TreasureHuntPlan> cachedPlans = plansCache.get("active");
+        if (cachedPlans != null && !cachedPlans.isEmpty()) {
+            logger.debug("Returning {} active plans from cache", cachedPlans.size());
+            return new ArrayList<>(cachedPlans); // Return copy to prevent modification
+        }
+
+        // Fallback to database if cache is empty
+        logger.debug("Cache miss - fetching active plans from database");
+        List<TreasureHuntPlan> plans = planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
+        plansCache.put("active", plans);
+        return plans;
     }
 
     /**
@@ -228,14 +288,21 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get the featured plan for hero section with caching
+     * Get the featured plan for hero section with in-memory caching
      * Always returns a plan - either the explicitly featured one or a default fallback
      * @return Featured plan or default plan (never null)
      */
-    @Cacheable(value = "featuredPlan", key = "'current'")
     @Transactional(readOnly = true)
     public TreasureHuntPlan getFeaturedPlan() {
-        logger.debug("Fetching featured plan");
+        refreshCacheIfNeeded();
+
+        // Check cache first
+        if (featuredPlanCache != null) {
+            logger.debug("Returning featured plan from cache: {}", featuredPlanCache.getName());
+            return featuredPlanCache;
+        }
+
+        logger.debug("Cache miss - fetching featured plan from database");
         try {
             // First, try to get the explicitly featured plan
             TreasureHuntPlan featuredPlan = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
@@ -359,12 +426,11 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     /**
      * Set a plan as featured (unsets any previously featured plan)
      * Uses atomic transaction to prevent race conditions
-     * Evicts featured plan cache
+     * Updates in-memory cache immediately
      * @param planId Plan ID to set as featured
      * @return Updated plan
      * @throws IllegalArgumentException if plan not found
      */
-    @CacheEvict(value = {"featuredPlan", "treasureHuntPlans"}, allEntries = true)
     @Transactional
     public TreasureHuntPlan setFeaturedPlan(Long planId) {
         logger.info("Setting plan {} as featured", planId);
@@ -382,6 +448,10 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
         // Set the new featured plan
         plan.setIsFeatured(true);
         TreasureHuntPlan savedPlan = planRepository.save(plan);
+
+        // Update cache immediately
+        featuredPlanCache = savedPlan;
+        loadPlansIntoCache(); // Refresh entire cache to ensure consistency
 
         logger.info("Successfully set plan {} as featured", planId);
         return savedPlan;

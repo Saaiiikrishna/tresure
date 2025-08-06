@@ -392,6 +392,11 @@ async function handleRegistrationClick(event) {
             teamSize: parseInt(button.dataset.teamSize) || 1
         };
 
+        // Initialize modal persistence for this plan
+        if (window.modalPersistence) {
+            window.modalPersistence.init(planId);
+        }
+
         loadRegistrationForm();
         showModal('registrationModal');
     }
@@ -1727,6 +1732,11 @@ async function handleFormSubmit(event) {
         console.log('📋 Server response:', result);
 
         if (response.ok && result.success) {
+            // Clear saved form data on successful submission
+            if (window.modalPersistence) {
+                window.modalPersistence.markAsSubmitted();
+            }
+
             showEnhancedSuccessModal(result, isTeamRegistration);
             hideModal('registrationModal');
         } else {
