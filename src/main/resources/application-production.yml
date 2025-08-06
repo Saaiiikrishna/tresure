@@ -78,12 +78,7 @@ spring:
       enabled: false
   
   # Thymeleaf Configuration - Production optimized
-  thymeleaf:
-    cache: true  # Enable caching in production for performance
-    prefix: classpath:/templates/
-    suffix: .html
-    encoding: UTF-8
-    mode: HTML
+
   
   # Mail Configuration - Use environment variables
   mail:
