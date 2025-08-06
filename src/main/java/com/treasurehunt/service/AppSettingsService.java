@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.annotation.PostConstruct;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+
+import jakarta.annotation.PostConstruct;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -27,10 +31,36 @@ public class AppSettingsService {
     @Autowired
     private AppSettingsRepository appSettingsRepository;
 
+    // In-memory cache for settings to reduce database calls
+    private final ConcurrentHashMap<String, String> settingsCache = new ConcurrentHashMap<>();
+    private volatile long lastCacheRefresh = 0;
+    private static final long CACHE_REFRESH_INTERVAL = 300000; // 5 minutes
+
+    /**
+     * Load all settings into cache on startup and periodically refresh
+     */
+    @PostConstruct
+    public void loadAllSettingsIntoCache() {
+        try {
+            logger.info("Loading all settings into cache...");
+            List<AppSettings> allSettings = appSettingsRepository.findAll();
+
+            settingsCache.clear();
+            for (AppSettings setting : allSettings) {
+                settingsCache.put(setting.getSettingKey(), setting.getSettingValue());
+            }
+
+            lastCacheRefresh = System.currentTimeMillis();
+            logger.info("Loaded {} settings into cache", settingsCache.size());
+
+        } catch (Exception e) {
+            logger.error("Error loading settings into cache", e);
+        }
+    }
+
     /**
      * Initialize default settings on startup
      */
-    @PostConstruct
     public void initializeDefaultSettings() {
         try {
             logger.info("Initializing default application settings...");
@@ -111,6 +141,10 @@ public class AppSettingsService {
             updateSetting("hero_blur_intensity", heroBlurIntensity, "Hero section background blur intensity (0=no blur, 10=maximum blur)");
 
             logger.info("Default settings initialized successfully from environment variables");
+
+            // Refresh cache after all settings are initialized
+            loadAllSettingsIntoCache();
+
         } catch (Exception e) {
             logger.error("Error initializing default settings", e);
         }
@@ -128,22 +162,49 @@ public class AppSettingsService {
     }
 
     /**
-     * Get setting value by key with caching
+     * Get setting value by key with in-memory caching (no database calls for cached values)
      * @param key Setting key
      * @return Setting value or null if not found
      */
-    @Cacheable(value = "appSettings", key = "#key")
     public String getSettingValue(String key) {
         try {
             if (key == null || key.trim().isEmpty()) {
                 logger.warn("Attempted to get setting with null or empty key");
                 return null;
             }
+
+            // Check if cache needs refresh
+            refreshCacheIfNeeded();
+
+            // Get from cache first
+            String cachedValue = settingsCache.get(key);
+            if (cachedValue != null) {
+                return cachedValue;
+            }
+
+            // If not in cache, fetch from database and cache it
             Optional<AppSettings> setting = appSettingsRepository.findBySettingKey(key);
-            return setting.map(AppSettings::getSettingValue).orElse(null);
+            if (setting.isPresent()) {
+                String value = setting.get().getSettingValue();
+                settingsCache.put(key, value);
+                return value;
+            }
+
+            return null;
         } catch (Exception e) {
             logger.error("Error getting setting value for key: {}", key, e);
             return null;
+        }
+    }
+
+    /**
+     * Refresh cache if it's older than the refresh interval
+     */
+    private void refreshCacheIfNeeded() {
+        long currentTime = System.currentTimeMillis();
+        if (currentTime - lastCacheRefresh > CACHE_REFRESH_INTERVAL) {
+            logger.debug("Cache refresh interval exceeded, refreshing settings cache");
+            loadAllSettingsIntoCache();
         }
     }
 
@@ -159,13 +220,12 @@ public class AppSettingsService {
     }
 
     /**
-     * Update or create setting with cache eviction
+     * Update or create setting with cache update
      * @param key Setting key
      * @param value Setting value
      * @param description Setting description
      * @return Updated AppSettings
      */
-    @CacheEvict(value = "appSettings", key = "#key")
     public AppSettings updateSetting(String key, String value, String description) {
         try {
             if (key == null || key.trim().isEmpty()) {
@@ -186,6 +246,10 @@ public class AppSettingsService {
             }
 
             AppSettings savedSetting = appSettingsRepository.save(setting);
+
+            // Update cache immediately
+            settingsCache.put(key, value);
+
             logger.info("Updated setting: {} = {}", key, value);
             return savedSetting;
         } catch (Exception e) {
@@ -449,5 +513,24 @@ public class AppSettingsService {
         logger.info("Setting hero blur intensity to: {}", intensity);
         updateSetting("hero_blur_intensity", String.valueOf(intensity), "Hero section background blur intensity (0=no blur, 10=maximum blur)");
         logger.info("Hero blur intensity setting updated successfully");
+    }
+
+    /**
+     * Manually refresh the settings cache (useful for admin operations)
+     */
+    public void refreshCache() {
+        logger.info("Manually refreshing settings cache");
+        loadAllSettingsIntoCache();
+    }
+
+    /**
+     * Get cache statistics for monitoring
+     */
+    public Map<String, Object> getCacheStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("cacheSize", settingsCache.size());
+        stats.put("lastRefresh", new java.util.Date(lastCacheRefresh));
+        stats.put("refreshInterval", CACHE_REFRESH_INTERVAL);
+        return stats;
     }
 }
