@@ -68,10 +68,18 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
     List<EmailQueue> findByCampaignIdStartingWithOrderByCreatedDateDesc(String campaignIdPrefix);
 
     /**
-     * Find failed emails that can be retried
+     * PERFORMANCE FIX: Find failed emails that can be retried with optimized query and limit
      */
-    @Query("SELECT e FROM EmailQueue e WHERE e.status = 'FAILED' AND e.retryCount < e.maxRetryAttempts")
+    @Query("SELECT e FROM EmailQueue e WHERE e.status = 'FAILED' AND e.retryCount < e.maxRetryAttempts ORDER BY e.priority DESC, e.createdDate ASC")
     List<EmailQueue> findFailedEmailsForRetry();
+
+    /**
+     * PERFORMANCE FIX: Find failed emails for retry with limit to prevent large result sets
+     * @param limit Maximum number of emails to retry
+     * @return List of failed emails eligible for retry
+     */
+    @Query(value = "SELECT * FROM email_queue WHERE status = 'FAILED' AND retry_count < max_retry_attempts ORDER BY priority DESC, created_date ASC LIMIT :limit", nativeQuery = true)
+    List<EmailQueue> findFailedEmailsForRetryWithLimit(@Param("limit") int limit);
 
     /**
      * Count emails by status

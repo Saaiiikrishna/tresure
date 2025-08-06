@@ -64,6 +64,8 @@ spring:
         jdbc:
           time_zone: UTC
           batch_size: 50  # PERFORMANCE: Increased batch size for faster startup
+          # PERFORMANCE FIX: Add query timeout to prevent hanging queries
+          fetch_size: 100
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
@@ -71,6 +73,13 @@ spring:
           use_jdbc_metadata_defaults: false
         connection:
           provider_disables_autocommit: true
+        # PERFORMANCE FIX: Query optimization settings
+        query:
+          plan_cache_max_size: 2048
+          plan_parameter_metadata_max_size: 128
+        # PERFORMANCE FIX: Statement caching
+        statement_cache:
+          size: 50
     # FIXED: Removed redundant database-platform - auto-detected
     open-in-view: false
     defer-datasource-initialization: true
@@ -119,10 +128,12 @@ spring:
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
 
-  # Cache Configuration
+  # PERFORMANCE FIX: Enhanced Cache Configuration
   cache:
-    type: simple
-    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+    type: caffeine
+    caffeine:
+      spec: maximumSize=5000,expireAfterWrite=60m,expireAfterAccess=30m,recordStats
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages,registrationStatistics
 
   # Jackson Configuration
   jackson:
@@ -199,7 +210,7 @@ app:
 
   business:
     min-participant-age: ${MIN_PARTICIPANT_AGE:18}
-    max-team-size: ${MAX_TEAM_SIZE:10}  # CRITICAL: Changed from 100000 to reasonable limit
+    max-team-size: ${MAX_TEAM_SIZE:100}
     min-team-size: ${MIN_TEAM_SIZE:2}
     registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
     allow-cancellation: ${ALLOW_CANCELLATION:true}

@@ -11,6 +11,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -266,12 +268,13 @@ public class RegistrationService {
     }
 
     /**
-     * Update registration status
+     * PERFORMANCE FIX: Update registration status with cache eviction
      * @param id Registration ID
      * @param newStatus New status
      * @return Updated registration
      * @throws IllegalArgumentException if registration not found
      */
+    @CacheEvict(value = "registrationStatistics", allEntries = true)
     public UserRegistration updateRegistrationStatus(Long id, UserRegistration.RegistrationStatus newStatus) {
         logger.info("Updating registration status for ID: {} to {}", id, newStatus);
 
@@ -357,11 +360,14 @@ public class RegistrationService {
     }
 
     /**
-     * Get registration statistics
+     * PERFORMANCE FIX: Get registration statistics with caching
      * @return Registration statistics
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "registrationStatistics", key = "'stats'")
     public RegistrationStatistics getRegistrationStatistics() {
+        logger.debug("Calculating registration statistics (will be cached)");
+
         long totalRegistrations = registrationRepository.countTotalRegistrations();
         long pendingCount = registrationRepository.countByStatus(UserRegistration.RegistrationStatus.PENDING);
         long confirmedCount = registrationRepository.countByStatus(UserRegistration.RegistrationStatus.CONFIRMED);

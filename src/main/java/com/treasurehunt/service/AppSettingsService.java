@@ -146,11 +146,25 @@ public class AppSettingsService {
             // Background media enabled setting
             defaultSettings.add(new AppSettings("background_media_enabled", getEnvOrDefault("BACKGROUND_MEDIA_ENABLED", "true"), "Enable background media (videos/images)"));
 
-            // PERFORMANCE FIX: Batch save all settings at once
+            // PERFORMANCE FIX: Batch save all settings at once with transaction optimization
             long startTime = System.currentTimeMillis();
-            appSettingsRepository.saveAll(defaultSettings);
-            long endTime = System.currentTimeMillis();
 
+            // Check if settings already exist to avoid unnecessary saves
+            List<AppSettings> settingsToSave = new ArrayList<>();
+            for (AppSettings setting : defaultSettings) {
+                if (!settingsCache.containsKey(setting.getSettingKey())) {
+                    settingsToSave.add(setting);
+                }
+            }
+
+            if (!settingsToSave.isEmpty()) {
+                appSettingsRepository.saveAll(settingsToSave);
+                logger.info("✅ Batch saved {} new default settings", settingsToSave.size());
+            } else {
+                logger.info("✅ All default settings already exist, skipping batch save");
+            }
+
+            long endTime = System.currentTimeMillis();
             logger.info("✅ Batch initialized {} default settings in {}ms", defaultSettings.size(), (endTime - startTime));
 
             // Update cache with new settings

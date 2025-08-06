@@ -19,9 +19,9 @@ public class QueryPerformanceAspect {
 
     private static final Logger logger = LoggerFactory.getLogger(QueryPerformanceAspect.class);
 
-    // Performance thresholds
-    private static final long SLOW_QUERY_THRESHOLD_MS = 1000; // 1 second
-    private static final long WARNING_QUERY_THRESHOLD_MS = 500; // 500ms
+    // PERFORMANCE FIX: Reduced thresholds for better monitoring
+    private static final long SLOW_QUERY_THRESHOLD_MS = 500; // Reduced from 1000ms to 500ms
+    private static final long WARNING_QUERY_THRESHOLD_MS = 250; // Reduced from 500ms to 250ms
 
     private final PerformanceMonitoringService performanceMonitoringService;
 
