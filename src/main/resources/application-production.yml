@@ -32,6 +32,20 @@ spring:
       validation-timeout: 5000
       auto-commit: false
 
+  # Thymeleaf Configuration - Production settings
+  thymeleaf:
+    cache: true
+    check-template: true
+    check-template-location: true
+    enabled: true
+    encoding: UTF-8
+    mode: HTML
+    prefix: classpath:/templates/
+    suffix: .html
+    servlet:
+      content-type: text/html
+      produce-partial-output-while-processing: false
+
   # JPA/Hibernate Configuration - Production settings
   jpa:
     hibernate:
@@ -233,6 +247,9 @@ server:
     include-binding-errors: never
     include-stacktrace: never
     include-exception: false
+    whitelabel:
+      enabled: false  # Disable default error page
+    path: /error
   compression:
     enabled: true
     mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
@@ -258,7 +275,7 @@ server:
 # Actuator Configuration - Secured for production monitoring
 management:
   server:
-    port: ${MANAGEMENT_PORT:8081}
+    port: ${MANAGEMENT_PORT:-1}  # Disable separate management port in production
   endpoints:
     web:
       exposure:
