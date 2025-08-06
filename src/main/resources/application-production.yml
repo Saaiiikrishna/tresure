@@ -47,14 +47,12 @@ spring:
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
-        connection:
-          provider_disables_autocommit: true
-          handling_mode: delayed_acquisition_and_release_after_transaction
         temp:
           use_jdbc_metadata_defaults: false
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     defer-datasource-initialization: true
+    generate-ddl: true
 
   # Transaction Configuration
   transaction:
