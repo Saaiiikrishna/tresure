@@ -3,9 +3,9 @@ package com.treasurehunt.config;
 import com.treasurehunt.service.MockEmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.autoconfigure.mail.MailProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -22,6 +22,18 @@ public class EmailConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailConfig.class);
 
+    @Value("${spring.mail.host:}")
+    private String mailHost;
+
+    @Value("${spring.mail.port:587}")
+    private int mailPort;
+
+    @Value("${spring.mail.username:}")
+    private String mailUsername;
+
+    @Value("${spring.mail.password:}")
+    private String mailPassword;
+
     /**
      * Production JavaMailSender - only created if Jakarta Mail classes are available
      */
@@ -29,14 +41,14 @@ public class EmailConfig {
     @Primary
     @ConditionalOnClass(name = "jakarta.mail.internet.MimeMessage")
     @ConditionalOnProperty(name = "spring.mail.host")
-    public JavaMailSender productionJavaMailSender(MailProperties mailProperties) {
+    public JavaMailSender productionJavaMailSender() {
         try {
             JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
 
-            mailSender.setHost(mailProperties.getHost());
-            mailSender.setPort(mailProperties.getPort());
-            mailSender.setUsername(mailProperties.getUsername());
-            mailSender.setPassword(mailProperties.getPassword());
+            mailSender.setHost(mailHost);
+            mailSender.setPort(mailPort);
+            mailSender.setUsername(mailUsername);
+            mailSender.setPassword(mailPassword);
 
             Properties props = mailSender.getJavaMailProperties();
             props.put("mail.transport.protocol", "smtp");
@@ -49,7 +61,7 @@ public class EmailConfig {
             props.put("mail.smtp.timeout", "10000");
             props.put("mail.smtp.writetimeout", "10000");
 
-            logger.info("✅ Production JavaMailSender configured for host: {}", mailProperties.getHost());
+            logger.info("✅ Production JavaMailSender configured for host: {}", mailHost);
             return mailSender;
 
         } catch (Exception e) {
