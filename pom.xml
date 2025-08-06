@@ -17,13 +17,56 @@
     
     <properties>
         <java.version>17</java.version>
+        <!-- CRITICAL: Explicit Tomcat version to prevent classpath issues -->
+        <tomcat.version>10.1.16</tomcat.version>
     </properties>
+
+    <!-- CRITICAL: Dependency Management to ensure consistent versions -->
+    <dependencyManagement>
+        <dependencies>
+            <!-- Tomcat Embedded Dependencies - Force consistent versions -->
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-websocket</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-el</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     
     <dependencies>
         <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- CRITICAL FIX: Explicit Tomcat dependencies to resolve NoClassDefFoundError -->
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <version>${tomcat.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-websocket</artifactId>
+            <version>${tomcat.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-el</artifactId>
+            <version>${tomcat.version}</version>
         </dependency>
 
         <!-- Explicit Spring Web dependency to fix UriComponentsBuilder ClassNotFoundException -->
