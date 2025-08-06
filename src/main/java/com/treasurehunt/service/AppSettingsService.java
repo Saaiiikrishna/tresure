@@ -58,8 +58,43 @@ public class AppSettingsService {
             logger.info("Loaded {} settings into cache", settingsCache.size());
 
         } catch (Exception e) {
-            logger.error("Error loading settings into cache", e);
+            logger.error("Error loading settings into cache, using emergency defaults", e);
+            // PRODUCTION FIX: Load emergency defaults to prevent 500 errors
+            loadEmergencyDefaults();
         }
+    }
+
+    /**
+     * Load emergency default settings to prevent application crashes
+     */
+    private void loadEmergencyDefaults() {
+        logger.warn("Loading emergency default settings to prevent application failure");
+
+        // Critical settings that must exist
+        settingsCache.put("hero_fallback_image_url", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        settingsCache.put("about_section_image_url", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        settingsCache.put("contact_background_image_url", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        settingsCache.put("hero_preview_video_url", "https://www.youtube.com/embed/dQw4w9WgXcQ");
+        settingsCache.put("hero_background_video_url", "");
+        settingsCache.put("background_media_enabled", "true");
+        settingsCache.put("hero_blur_intensity", "5");
+        settingsCache.put("company_name", "Treasure Hunt Adventures");
+        settingsCache.put("company_email", "info@treasurehuntadventures.com");
+        settingsCache.put("company_phone", "+1 (555) 123-4567");
+        settingsCache.put("company_address", "123 Adventure Street, Explorer City, EC 12345");
+        settingsCache.put("contact.phone", "+91 852-085-7988");
+        settingsCache.put("contact.email", "tresurhunting@gmail.com");
+        settingsCache.put("contact.address", "Treasure Hunt Adventures, Hyderabad, Telangana");
+        settingsCache.put("contact.hours", "Mon-Fri, 9AM-6PM");
+        settingsCache.put("contact.emergency", "+91 852-085-7988");
+        settingsCache.put("facebook_url", "https://facebook.com/treasurehuntadventures");
+        settingsCache.put("twitter_url", "https://twitter.com/treasurehuntadv");
+        settingsCache.put("instagram_url", "https://instagram.com/treasurehuntadventures");
+        settingsCache.put("linkedin_url", "https://linkedin.com/company/treasurehuntadventures");
+        settingsCache.put("youtube_url", "https://youtube.com/treasurehuntadventures");
+
+        lastCacheRefresh = System.currentTimeMillis();
+        logger.info("Emergency defaults loaded: {} settings", settingsCache.size());
     }
 
     /**

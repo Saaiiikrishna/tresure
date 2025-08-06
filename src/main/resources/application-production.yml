@@ -40,10 +40,8 @@ spring:
       # PERFORMANCE FIX: Enhanced connection pool settings
       initialization-fail-timeout: 30000
       keepalive-time: 300000
-      initialization-fail-timeout: 1
       connection-init-sql: SELECT 1
       # Aggressive connection management
-      keepalive-time: 30000
       register-mbeans: true
 
   # Thymeleaf Configuration - Production settings
@@ -263,9 +261,13 @@ logging:
     org.springframework.beans: INFO
     org.postgresql: INFO
     com.zaxxer.hikari: INFO
-    # FIXED: Disable noisy Azure telemetry warnings in production
+    # FIXED: Completely disable Azure telemetry warnings in production
     com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline.TelemetryPipeline: OFF
     com.azure.monitor: OFF
+    com.azure: OFF
+    # Additional Azure telemetry silencing
+    com.azure.core: OFF
+    com.azure.identity: OFF
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

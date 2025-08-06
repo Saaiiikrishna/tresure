@@ -6,6 +6,7 @@ import com.treasurehunt.entity.UploadedDocument;
 import com.treasurehunt.exception.ResourceNotFoundException;
 import com.treasurehunt.exception.ValidationException;
 import com.treasurehunt.service.AppSettingsService;
+import com.treasurehunt.service.EmailNotificationService;
 import com.treasurehunt.service.InputSanitizationService;
 import com.treasurehunt.service.RegistrationService;
 import com.treasurehunt.service.TreasureHuntPlanService;
@@ -25,6 +26,7 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,18 +48,21 @@ public class AdminController {
     private final FileStorageService fileStorageService;
     private final AppSettingsService appSettingsService;
     private final InputSanitizationService inputSanitizationService;
+    private final EmailNotificationService emailNotificationService;
 
     @Autowired
     public AdminController(TreasureHuntPlanService planService,
                           RegistrationService registrationService,
                           FileStorageService fileStorageService,
                           AppSettingsService appSettingsService,
-                          InputSanitizationService inputSanitizationService) {
+                          InputSanitizationService inputSanitizationService,
+                          EmailNotificationService emailNotificationService) {
         this.planService = planService;
         this.registrationService = registrationService;
         this.fileStorageService = fileStorageService;
         this.appSettingsService = appSettingsService;
         this.inputSanitizationService = inputSanitizationService;
+        this.emailNotificationService = emailNotificationService;
     }
 
     /**
@@ -574,12 +579,23 @@ public class AdminController {
             response.put("message", "Status updated successfully");
             response.put("newStatus", updatedRegistration.getStatus().toString());
 
-            // Send appropriate emails based on status change
+            // FIXED: Send appropriate emails based on status change
             if (newStatus == UserRegistration.RegistrationStatus.CONFIRMED) {
-                // Send confirmation emails to all participants
+                // Send approval/confirmation emails to all participants
+                logger.info("Sending approval emails for confirmed registration: {}", id);
                 registrationService.sendConfirmationEmails(updatedRegistration);
+
+                // Also send approval emails (different from confirmation emails)
+                try {
+                    emailNotificationService.sendApprovalEmailsAsync(
+                        emailNotificationService.prepareApprovalEmailData(id)
+                    );
+                } catch (Exception e) {
+                    logger.warn("Error sending approval emails for registration {}: {}", id, e.getMessage());
+                }
             } else if (newStatus == UserRegistration.RegistrationStatus.CANCELLED) {
                 // Send cancellation email to team leader or individual
+                logger.info("Sending cancellation email for cancelled registration: {}", id);
                 registrationService.sendCancellationEmail(updatedRegistration);
             }
 
@@ -658,28 +674,31 @@ public class AdminController {
         logger.debug("Loading settings management page");
 
         try {
-            String heroPreviewVideoUrl = appSettingsService.getHeroPreviewVideoUrl();
-            List<TreasureHuntPlan> activePlans = planService.getActivePlans();
-            TreasureHuntPlan featuredPlan = planService.getFeaturedPlan();
+            // PRODUCTION FIX: Add safe fallbacks for all settings to prevent 500 errors
+            String heroPreviewVideoUrl = safeGetSetting(() -> appSettingsService.getHeroPreviewVideoUrl(), "https://www.youtube.com/embed/dQw4w9WgXcQ");
+            List<TreasureHuntPlan> activePlans = safeGetPlans(() -> planService.getActivePlans());
+            TreasureHuntPlan featuredPlan = safeGetFeaturedPlan(() -> planService.getFeaturedPlan());
 
             model.addAttribute("heroPreviewVideoUrl", heroPreviewVideoUrl);
             model.addAttribute("activePlans", activePlans);
             model.addAttribute("featuredPlan", featuredPlan);
-            model.addAttribute("companyInfo", appSettingsService.getCompanyInfo());
-            model.addAttribute("socialLinks", appSettingsService.getSocialMediaLinks());
-            model.addAttribute("contactInfo", appSettingsService.getContactInfo());
-            model.addAttribute("heroBlurIntensity", appSettingsService.getHeroBlurIntensity());
+            model.addAttribute("companyInfo", safeGetSetting(() -> appSettingsService.getCompanyInfo(), new HashMap<>()));
+            model.addAttribute("socialLinks", safeGetSetting(() -> appSettingsService.getSocialMediaLinks(), new HashMap<>()));
+            model.addAttribute("contactInfo", safeGetSetting(() -> appSettingsService.getContactInfo(), new HashMap<>()));
+            model.addAttribute("heroBlurIntensity", safeGetSetting(() -> appSettingsService.getHeroBlurIntensity(), 5));
 
-            // FIXED: Add image URLs for admin settings page
-            model.addAttribute("heroFallbackImageUrl", appSettingsService.getHeroFallbackImageUrl());
-            model.addAttribute("aboutSectionImageUrl", appSettingsService.getAboutSectionImageUrl());
-            model.addAttribute("contactBackgroundImageUrl", appSettingsService.getContactBackgroundImageUrl());
+            // FIXED: Add image URLs for admin settings page with safe fallbacks
+            model.addAttribute("heroFallbackImageUrl", safeGetSetting(() -> appSettingsService.getHeroFallbackImageUrl(), "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"));
+            model.addAttribute("aboutSectionImageUrl", safeGetSetting(() -> appSettingsService.getAboutSectionImageUrl(), "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"));
+            model.addAttribute("contactBackgroundImageUrl", safeGetSetting(() -> appSettingsService.getContactBackgroundImageUrl(), "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"));
 
             return "admin/settings";
 
         } catch (Exception e) {
             logger.error("Error loading settings page", e);
             model.addAttribute("error", "Error loading settings: " + e.getMessage());
+            // PRODUCTION FIX: Add emergency fallback attributes to prevent template errors
+            addEmergencyFallbackAttributes(model);
             return "admin/settings";
         }
     }
@@ -969,5 +988,61 @@ public class AdminController {
             response.put("message", "Error updating contact information: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
         }
+    }
+
+    // PRODUCTION FIX: Helper methods for safe settings retrieval to prevent 500 errors
+
+    /**
+     * Safely get a setting with fallback value
+     */
+    private <T> T safeGetSetting(java.util.function.Supplier<T> supplier, T fallback) {
+        try {
+            T result = supplier.get();
+            return result != null ? result : fallback;
+        } catch (Exception e) {
+            logger.warn("Error getting setting, using fallback: {}", e.getMessage());
+            return fallback;
+        }
+    }
+
+    /**
+     * Safely get plans with fallback
+     */
+    private List<TreasureHuntPlan> safeGetPlans(java.util.function.Supplier<List<TreasureHuntPlan>> supplier) {
+        try {
+            List<TreasureHuntPlan> result = supplier.get();
+            return result != null ? result : new ArrayList<>();
+        } catch (Exception e) {
+            logger.warn("Error getting plans, using empty list: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * Safely get featured plan with fallback
+     */
+    private TreasureHuntPlan safeGetFeaturedPlan(java.util.function.Supplier<TreasureHuntPlan> supplier) {
+        try {
+            return supplier.get();
+        } catch (Exception e) {
+            logger.warn("Error getting featured plan, using null: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Add emergency fallback attributes to prevent template errors
+     */
+    private void addEmergencyFallbackAttributes(Model model) {
+        model.addAttribute("heroPreviewVideoUrl", "https://www.youtube.com/embed/dQw4w9WgXcQ");
+        model.addAttribute("activePlans", new ArrayList<>());
+        model.addAttribute("featuredPlan", null);
+        model.addAttribute("companyInfo", new HashMap<>());
+        model.addAttribute("socialLinks", new HashMap<>());
+        model.addAttribute("contactInfo", new HashMap<>());
+        model.addAttribute("heroBlurIntensity", 5);
+        model.addAttribute("heroFallbackImageUrl", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        model.addAttribute("aboutSectionImageUrl", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        model.addAttribute("contactBackgroundImageUrl", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
     }
 }

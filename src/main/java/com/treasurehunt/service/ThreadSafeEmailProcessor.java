@@ -151,12 +151,13 @@ public class ThreadSafeEmailProcessor {
             email.setLastAttemptDate(LocalDateTime.now());
             emailQueueRepository.save(email);
 
-            // Send the email
+            // FIXED: Correct parameter order for sendEmail method
+            // Method signature: sendEmail(String to, String subject, String body, String from)
             emailService.sendEmail(
-                email.getRecipientEmail(),
-                email.getRecipientName(),
-                email.getSubject(),
-                email.getBody()
+                email.getRecipientEmail(),  // to
+                email.getSubject(),         // subject
+                email.getBody(),            // body
+                null                        // from (null = use default)
             );
 
             // Mark as sent successfully
