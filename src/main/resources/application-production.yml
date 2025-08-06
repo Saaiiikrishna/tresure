@@ -236,6 +236,8 @@ logging:
     org.springframework.beans: INFO
     org.postgresql: INFO
     com.zaxxer.hikari: INFO
+    # FIXED: Disable noisy Azure telemetry warnings in production
+    com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline.TelemetryPipeline: ERROR
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

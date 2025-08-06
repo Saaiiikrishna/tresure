@@ -167,7 +167,7 @@ public class AppSettingsService {
     }
 
     /**
-     * Get setting value by key with in-memory caching (no database calls for cached values)
+     * FIXED: Get setting value by key with PURE in-memory caching (NO database calls for cached values)
      * @param key Setting key
      * @return Setting value or null if not found
      */
@@ -179,28 +179,58 @@ public class AppSettingsService {
                 return null;
             }
 
-            // Check if cache needs refresh
-            refreshCacheIfNeeded();
-
-            // Get from cache first
+            // CRITICAL FIX: Always check cache first, NO database calls during normal operation
             String cachedValue = settingsCache.get(key);
             if (cachedValue != null) {
+                logger.debug("Cache HIT for setting: {}", key);
                 return cachedValue;
             }
 
-            // If not in cache, fetch from database and cache it
-            Optional<AppSettings> setting = appSettingsRepository.findBySettingKey(key);
-            if (setting.isPresent()) {
-                String value = setting.get().getSettingValue();
-                settingsCache.put(key, value);
-                return value;
+            // CRITICAL FIX: Only go to database if cache is completely empty (startup scenario)
+            if (settingsCache.isEmpty()) {
+                logger.warn("Settings cache is empty, performing emergency reload for key: {}", key);
+                loadAllSettingsIntoCache();
+
+                // Try cache again after reload
+                cachedValue = settingsCache.get(key);
+                if (cachedValue != null) {
+                    return cachedValue;
+                }
             }
 
+            // If still not found, log and return null (don't hit database)
+            logger.debug("Cache MISS for setting: {} (not performing database lookup)", key);
             return null;
+
         } catch (Exception e) {
             logger.error("Error getting setting value for key: {}", key, e);
             return null;
         }
+    }
+
+    /**
+     * PERFORMANCE FIX: Get multiple settings at once to prevent N+1 queries
+     * @param keys List of setting keys to retrieve
+     * @return Map of key-value pairs
+     */
+    public Map<String, String> getMultipleSettings(List<String> keys) {
+        Map<String, String> result = new HashMap<>();
+
+        if (keys == null || keys.isEmpty()) {
+            return result;
+        }
+
+        logger.debug("Bulk retrieving {} settings from cache", keys.size());
+
+        for (String key : keys) {
+            String value = settingsCache.get(key);
+            if (value != null) {
+                result.put(key, value);
+            }
+        }
+
+        logger.debug("Successfully retrieved {} out of {} requested settings", result.size(), keys.size());
+        return result;
     }
 
     /**
