@@ -171,7 +171,7 @@ public class EmailQueueService {
                 email.setStatus(EmailQueue.EmailStatus.FAILED);
                 email.setErrorMessage("JavaMailSender not configured");
                 emailQueueRepository.save(email);
-                return CompletableFuture.completedFuture(false);
+                return; // Method has void return type
             }
 
             MimeMessage message = mailSender.createMimeMessage();
