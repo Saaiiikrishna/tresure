@@ -125,8 +125,9 @@ app:
   
   # Email Configuration
   email:
-    from-address: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
-    support-address: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
+    from: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
+    support: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
+    company-name: ${COMPANY_NAME:Treasure Hunt Adventures (DEV)}
     enabled: false # Disable email in dev mode
   
   # Performance Configuration

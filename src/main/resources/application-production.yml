@@ -146,8 +146,8 @@ app:
     allowed-document-types: ${ALLOWED_DOCUMENT_TYPES}
 
   email:
-    from-address: ${MAIL_FROM_ADDRESS}
-    support-address: ${MAIL_SUPPORT_ADDRESS}
+    from: ${MAIL_FROM_ADDRESS}
+    support: ${MAIL_SUPPORT_ADDRESS}
     company-name: ${COMPANY_NAME}
     mock-enabled: false
     retry-attempts: ${EMAIL_RETRY_ATTEMPTS:3}

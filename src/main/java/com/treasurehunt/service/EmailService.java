@@ -55,9 +55,17 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            // Set email properties
-            helper.setFrom(fromEmail);
-            helper.setTo(registration.getEmail());
+            // Set email properties with validation
+            String cleanFrom = validateAndCleanEmail(fromEmail);
+            String cleanTo = validateAndCleanEmail(registration.getEmail());
+
+            if (cleanFrom == null || cleanTo == null) {
+                logger.error("Invalid email addresses - From: {}, To: {}", fromEmail, registration.getEmail());
+                return CompletableFuture.failedFuture(new MessagingException("Invalid email addresses"));
+            }
+
+            helper.setFrom(cleanFrom);
+            helper.setTo(cleanTo);
             helper.setSubject("Registration Received for " + registration.getPlan().getName());
 
             // Create email content using Thymeleaf template
@@ -415,13 +423,22 @@ public class EmailService {
      */
     public boolean sendEmail(String to, String subject, String body, String from) {
         try {
+            // Validate and clean email addresses
+            String cleanTo = validateAndCleanEmail(to);
+            String cleanFrom = validateAndCleanEmail(from != null ? from : fromEmail);
+
+            if (cleanTo == null || cleanFrom == null) {
+                logger.error("Invalid email addresses - To: {}, From: {}", to, from);
+                return false;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setTo(to);
+            helper.setTo(cleanTo);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
-            helper.setFrom(from != null ? from : fromEmail);
+            helper.setFrom(cleanFrom);
 
             mailSender.send(message);
             logger.info("Successfully sent email to: {}", to);
@@ -431,6 +448,36 @@ public class EmailService {
             logger.error("Failed to send email to: {}", to, e);
             return false;
         }
+    }
+
+    /**
+     * Validate and clean email address to prevent parsing errors
+     * @param email Email address to validate
+     * @return Cleaned email address or null if invalid
+     */
+    private String validateAndCleanEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+
+        // Remove any extra whitespace and potential formatting issues
+        String cleanEmail = email.trim();
+
+        // Basic email validation regex
+        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+        if (!cleanEmail.matches(emailRegex)) {
+            logger.warn("Invalid email format: {}", email);
+            return null;
+        }
+
+        // Check for common formatting issues that cause "Extra route-addr" errors
+        if (cleanEmail.contains("<") || cleanEmail.contains(">") ||
+            cleanEmail.contains("\"") || cleanEmail.contains("\\")) {
+            logger.warn("Email contains invalid characters: {}", email);
+            return null;
+        }
+
+        return cleanEmail;
     }
 
     /**
