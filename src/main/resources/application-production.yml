@@ -51,8 +51,14 @@ spring:
           provider_disables_autocommit: true
         temp:
           use_jdbc_metadata_defaults: false
+        # Additional stability settings
+        hbm2ddl:
+          auto: ${JPA_DDL_AUTO:update}
+        connection:
+          handling_mode: delayed_acquisition_and_release_after_transaction
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
+    defer-datasource-initialization: true
 
   # Transaction Configuration
   transaction:
