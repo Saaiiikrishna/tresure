@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -72,19 +73,20 @@ public class HealthController {
     }
 
     /**
-     * Detailed health check with all components
+     * Detailed health check with all components - ADMIN ONLY
      */
     @GetMapping("/detailed")
-    @Operation(summary = "Detailed health check", description = "Returns comprehensive health status of all components")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Detailed health check", description = "Returns comprehensive health status of all components - Admin only")
     @ApiResponse(responseCode = "200", description = "Detailed health information")
     public ResponseEntity<Map<String, Object>> detailedHealth() {
         Map<String, Object> health = new HashMap<>();
-        
+
         // Basic info
         health.put("timestamp", LocalDateTime.now());
         health.put("application", "Treasure Hunt Application");
         health.put("version", "1.0.0");
-        
+
         // Component health checks
         Map<String, Object> components = new HashMap<>();
         components.put("database", checkDatabaseHealth());
@@ -92,30 +94,31 @@ public class HealthController {
         components.put("configuration", checkConfigurationHealth());
         components.put("events", checkEventSystemHealth());
         components.put("performance", checkPerformanceHealth());
-        
+
         health.put("components", components);
-        
+
         // Overall status
         boolean allHealthy = components.values().stream()
             .allMatch(component -> "UP".equals(((Map<?, ?>) component).get("status")));
         health.put("status", allHealthy ? "UP" : "DOWN");
-        
+
         return ResponseEntity.ok(health);
     }
 
     /**
-     * Performance metrics endpoint
+     * Performance metrics endpoint - ADMIN ONLY
      */
     @GetMapping("/metrics")
-    @Operation(summary = "Performance metrics", description = "Returns current performance metrics")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Performance metrics", description = "Returns current performance metrics - Admin only")
     @ApiResponse(responseCode = "200", description = "Performance metrics")
     public ResponseEntity<Map<String, Object>> metrics() {
         Map<String, Object> metrics = new HashMap<>();
-        
+
         // Get performance metrics
-        PerformanceMonitoringService.PerformanceMetrics performanceMetrics = 
+        PerformanceMonitoringService.PerformanceMetrics performanceMetrics =
             performanceMonitoringService.getCurrentMetrics();
-        
+
         metrics.put("timestamp", LocalDateTime.now());
         metrics.put("memory", Map.of(
             "heapUsed", performanceMetrics.heapUsed,
@@ -123,26 +126,26 @@ public class HealthController {
             "heapUtilization", performanceMetrics.heapUtilization,
             "nonHeapUsed", performanceMetrics.nonHeapUsed
         ));
-        
+
         metrics.put("threads", Map.of(
             "threadCount", performanceMetrics.threadCount,
             "peakThreadCount", performanceMetrics.peakThreadCount,
             "daemonThreadCount", performanceMetrics.daemonThreadCount
         ));
-        
+
         metrics.put("application", Map.of(
             "totalRequests", performanceMetrics.totalRequests,
             "totalErrors", performanceMetrics.totalErrors,
             "slowQueries", performanceMetrics.slowQueries
         ));
-        
+
         metrics.put("system", Map.of(
             "availableProcessors", performanceMetrics.availableProcessors,
             "freeMemory", performanceMetrics.freeMemory,
             "totalMemory", performanceMetrics.totalMemory,
             "maxMemory", performanceMetrics.maxMemory
         ));
-        
+
         return ResponseEntity.ok(metrics);
     }
 

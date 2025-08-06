@@ -141,17 +141,7 @@ public class EmailQueueService {
         return emailQueueRepository.save(email);
     }
 
-    /**
-     * Process email queue - DISABLED to prevent conflicts with ThreadSafeEmailProcessor
-     * Email processing is now handled by ThreadSafeEmailProcessor.processEmailQueue()
-     */
-    // @Scheduled(fixedRate = 60000) // DISABLED - using ThreadSafeEmailProcessor instead
-    // @Async
-    public void processEmailQueueLegacy() {
-        logger.debug("Legacy email queue processing method - DISABLED");
-        // This method is disabled to prevent conflicts with ThreadSafeEmailProcessor
-        // All email processing is now handled by ThreadSafeEmailProcessor
-    }
+
 
     /**
      * Send individual email - DEPRECATED, use ThreadSafeEmailProcessor instead

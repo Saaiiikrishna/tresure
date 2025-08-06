@@ -273,9 +273,9 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
             "INVALID_ARGUMENT",
-            ex.getMessage(),
+            "Invalid request parameters provided",  // CRITICAL: Don't expose raw exception message
             HttpStatus.BAD_REQUEST.value(),
-            request.getDescription(false)
+            sanitizeRequestDescription(request.getDescription(false))
         );
 
         return ResponseEntity.badRequest().body(errorResponse);

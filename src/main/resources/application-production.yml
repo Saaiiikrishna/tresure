@@ -21,19 +21,22 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
-      minimum-idle: ${DB_POOL_MIN_IDLE:2}
-      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
-      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
-      max-lifetime: ${DB_MAX_LIFETIME:1800000}
-      leak-detection-threshold: ${DB_LEAK_DETECTION:60000}
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:15}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:20000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:300000}
+      max-lifetime: ${DB_MAX_LIFETIME:900000}
+      leak-detection-threshold: ${DB_LEAK_DETECTION:30000}
       # Azure PostgreSQL specific settings
       connection-test-query: SELECT 1
-      validation-timeout: 5000
-      auto-commit: false
-      # Additional stability settings
+      validation-timeout: 3000
+      auto-commit: false  # CRITICAL: Must be false for Spring transaction management
+      # Connection leak prevention
       initialization-fail-timeout: 1
       connection-init-sql: SELECT 1
+      # Aggressive connection management
+      keepalive-time: 30000
+      register-mbeans: true
 
   # Thymeleaf Configuration - Production settings
   thymeleaf:
@@ -66,14 +69,19 @@ spring:
         batch_versioned_data: true
         temp:
           use_jdbc_metadata_defaults: false
+        connection:
+          provider_disables_autocommit: true
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     open-in-view: false
     defer-datasource-initialization: true
     generate-ddl: true
+    # Connection management
+
 
   # Transaction Configuration
   transaction:
     rollback-on-commit-failure: true
+    default-timeout: 30
 
   # H2 Console - DISABLED in production
   h2:
@@ -191,7 +199,7 @@ app:
 
   business:
     min-participant-age: ${MIN_PARTICIPANT_AGE:18}
-    max-team-size: ${MAX_TEAM_SIZE:100000}
+    max-team-size: ${MAX_TEAM_SIZE:10}  # CRITICAL: Changed from 100000 to reasonable limit
     min-team-size: ${MIN_TEAM_SIZE:2}
     registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
     allow-cancellation: ${ALLOW_CANCELLATION:true}
@@ -218,7 +226,7 @@ app:
 logging:
   level:
     root: INFO
-    com.treasurehunt: DEBUG
+    com.treasurehunt: INFO  # CRITICAL: Changed from DEBUG to prevent sensitive data exposure
     org.springframework.security: INFO
     org.springframework.mail: INFO
     org.hibernate: INFO
@@ -302,7 +310,7 @@ management:
       enabled: true
       mode: simple
   security:
-    enabled: false
+    enabled: true  # CRITICAL: Must be enabled in production
 
 # Graceful Shutdown Configuration
 spring.lifecycle.timeout-per-shutdown-phase: 30s

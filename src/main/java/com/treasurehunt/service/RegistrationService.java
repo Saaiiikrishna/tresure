@@ -146,6 +146,8 @@ public class RegistrationService {
         }
     }
 
+
+
     /**
      * Get registration by ID
      * @param id Registration ID
@@ -209,89 +211,35 @@ public class RegistrationService {
     }
 
     /**
-     * Get all registrations
-     * @return List of all registrations
+     * Get all registrations with optimized query
+     * @return List of all registrations with related data loaded
      */
     @Transactional(readOnly = true)
     public List<UserRegistration> getAllRegistrations() {
-        logger.debug("Fetching all registrations");
-        List<UserRegistration> registrations = registrationRepository.findAll();
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            try {
-                if (registration.getPlan() != null) {
-                    // Trigger lazy loading of plan data - load both name and id
-                    registration.getPlan().getName(); // This triggers lazy loading
-                    registration.getPlan().getId(); // Ensure ID is also loaded
-                    logger.debug("Loaded plan data for registration ID: {}", registration.getId());
-                } else {
-                    logger.warn("Registration ID {} has null plan", registration.getId());
-                }
-
-                // Force load team members for template access
-                registration.getTeamMembers().size(); // This triggers lazy loading
-
-                // Force load documents for template access
-                registration.getDocuments().size(); // This triggers lazy loading
-
-            } catch (Exception e) {
-                logger.error("Error loading lazy data for registration ID: {}", registration.getId(), e);
-                // Continue processing other registrations
-            }
-        }
-
-        return registrations;
+        logger.debug("Fetching all registrations with optimized query");
+        return registrationRepository.findAllWithAllData();
     }
 
     /**
-     * Get registrations by plan
+     * Get registrations by plan with optimized query
      * @param plan Treasure hunt plan
-     * @return List of registrations for the plan
+     * @return List of registrations for the plan with related data loaded
      */
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(TreasureHuntPlan plan) {
-        logger.debug("Fetching registrations for plan ID: {}", plan.getId());
-        List<UserRegistration> registrations = registrationRepository.findByPlanOrderByRegistrationDateDesc(plan);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        logger.debug("Fetching registrations for plan ID: {} with optimized query", plan.getId());
+        return registrationRepository.findByPlanWithAllDataOrderByRegistrationDateDesc(plan);
     }
 
     /**
-     * Get registrations by status
+     * Get registrations by status with optimized query
      * @param status Registration status
-     * @return List of registrations with specified status
+     * @return List of registrations with specified status with related data loaded
      */
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByStatus(UserRegistration.RegistrationStatus status) {
-        logger.debug("Fetching registrations with status: {}", status);
-        List<UserRegistration> registrations = registrationRepository.findByStatusOrderByRegistrationDateDesc(status);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        logger.debug("Fetching registrations with status: {} with optimized query", status);
+        return registrationRepository.findByStatusWithAllDataOrderByRegistrationDateDesc(status);
     }
 
     /**
@@ -302,21 +250,7 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(Long planId) {
         logger.debug("Fetching registrations for plan ID: {}", planId);
-        List<UserRegistration> registrations = registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        return registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
     }
 
     /**
@@ -328,21 +262,7 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlanAndStatus(Long planId, UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations for plan ID: {} with status: {}", planId, status);
-        List<UserRegistration> registrations = registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        return registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
     }
 
     /**
@@ -412,21 +332,7 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> searchByEmail(String email) {
         logger.debug("Searching registrations by email: {}", email);
-        List<UserRegistration> registrations = registrationRepository.findByEmailIgnoreCaseOrderByRegistrationDateDesc(email);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        return registrationRepository.findByEmailIgnoreCaseOrderByRegistrationDateDesc(email);
     }
 
     /**
@@ -437,21 +343,7 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> searchByName(String name) {
         logger.debug("Searching registrations by name: {}", name);
-        List<UserRegistration> registrations = registrationRepository.findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(name);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        return registrationRepository.findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(name);
     }
 
     /**
@@ -461,21 +353,7 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRecentRegistrations() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-        List<UserRegistration> registrations = registrationRepository.findRecentRegistrations(cutoffDate);
-
-        // Force load plan data, team members, and documents to avoid lazy loading issues in templates
-        for (UserRegistration registration : registrations) {
-            if (registration.getPlan() != null) {
-                registration.getPlan().getName(); // This triggers lazy loading
-                registration.getPlan().getId(); // Ensure ID is also loaded
-            }
-            // Force load team members for template access
-            registration.getTeamMembers().size(); // This triggers lazy loading
-            // Force load documents for template access
-            registration.getDocuments().size(); // This triggers lazy loading
-        }
-
-        return registrations;
+        return registrationRepository.findRecentRegistrations(cutoffDate);
     }
 
     /**

@@ -290,12 +290,13 @@ public class HomeController {
     @GetMapping("/actuator/health")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> actuatorHealthCheck() {
+        Map<String, Object> health = new HashMap<>();
+
         try {
-            // Simple health check - verify we can access the database
+            // Lightweight health check - verify we can access the database
             long planCount = planService.getActivePlanCount();
             logger.debug("Actuator health check passed - {} active plans", planCount);
 
-            Map<String, Object> health = new HashMap<>();
             health.put("status", "UP");
             health.put("components", Map.of(
                 "db", Map.of("status", "UP", "details", Map.of("activePlans", planCount)),
@@ -305,9 +306,8 @@ public class HomeController {
             return ResponseEntity.ok(health);
 
         } catch (Exception e) {
-            logger.error("Actuator health check failed", e);
+            logger.warn("Actuator health check failed: {}", e.getMessage());
 
-            Map<String, Object> health = new HashMap<>();
             health.put("status", "DOWN");
             health.put("components", Map.of(
                 "db", Map.of("status", "DOWN", "details", Map.of("error", e.getMessage()))
@@ -325,11 +325,12 @@ public class HomeController {
     @ResponseBody
     public ResponseEntity<String> simpleHealthCheck() {
         try {
-            // Very simple health check
-            planService.getActivePlanCount();
+            // Very lightweight health check - just verify service is running
+            long planCount = planService.getActivePlanCount();
+            logger.debug("Simple health check passed - {} plans", planCount);
             return ResponseEntity.ok("OK");
         } catch (Exception e) {
-            logger.error("Simple health check failed", e);
+            logger.warn("Simple health check failed: {}", e.getMessage());
             return ResponseEntity.status(503).body("ERROR");
         }
     }

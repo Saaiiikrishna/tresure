@@ -21,11 +21,39 @@ import java.util.stream.Stream;
 public interface UserRegistrationRepository extends JpaRepository<UserRegistration, Long> {
 
     /**
+     * Find registrations by plan with all related data loaded
+     * @param plan Treasure hunt plan
+     * @return List of registrations for the plan with team members and documents
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.documents " +
+           "WHERE r.plan = :plan " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByPlanWithAllDataOrderByRegistrationDateDesc(@Param("plan") TreasureHuntPlan plan);
+
+    /**
      * Find registrations by plan
      * @param plan Treasure hunt plan
      * @return List of registrations for the plan
      */
     List<UserRegistration> findByPlanOrderByRegistrationDateDesc(TreasureHuntPlan plan);
+
+    /**
+     * Find registrations by plan and status with all related data loaded
+     * @param plan Treasure hunt plan
+     * @param status Registration status
+     * @return List of registrations matching criteria with team members and documents
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.documents " +
+           "WHERE r.plan = :plan AND r.status = :status " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByPlanAndStatusWithAllDataOrderByRegistrationDateDesc(
+            @Param("plan") TreasureHuntPlan plan, @Param("status") UserRegistration.RegistrationStatus status);
 
     /**
      * Find registrations by plan and status
@@ -50,6 +78,19 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
      * @return Number of confirmed registrations
      */
     long countByPlanAndStatus(TreasureHuntPlan plan, UserRegistration.RegistrationStatus status);
+
+    /**
+     * Find registrations by status with all related data loaded
+     * @param status Registration status
+     * @return List of registrations with specified status with team members and documents
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.documents " +
+           "WHERE r.status = :status " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByStatusWithAllDataOrderByRegistrationDateDesc(@Param("status") UserRegistration.RegistrationStatus status);
 
     /**
      * Find registrations by status
@@ -80,6 +121,17 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
      * @return List of matching registrations
      */
     List<UserRegistration> findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(String name);
+
+    /**
+     * Find all registrations with all related data loaded
+     * @return List of all registrations with team members and documents
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "LEFT JOIN FETCH r.documents " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findAllWithAllData();
 
     /**
      * Count total registrations

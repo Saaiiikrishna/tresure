@@ -6,6 +6,7 @@ import com.treasurehunt.entity.UploadedDocument;
 import com.treasurehunt.exception.ResourceNotFoundException;
 import com.treasurehunt.exception.ValidationException;
 import com.treasurehunt.service.AppSettingsService;
+import com.treasurehunt.service.InputSanitizationService;
 import com.treasurehunt.service.RegistrationService;
 import com.treasurehunt.service.TreasureHuntPlanService;
 import com.treasurehunt.service.FileStorageService;
@@ -44,16 +45,19 @@ public class AdminController {
     private final RegistrationService registrationService;
     private final FileStorageService fileStorageService;
     private final AppSettingsService appSettingsService;
+    private final InputSanitizationService inputSanitizationService;
 
     @Autowired
     public AdminController(TreasureHuntPlanService planService,
                           RegistrationService registrationService,
                           FileStorageService fileStorageService,
-                          AppSettingsService appSettingsService) {
+                          AppSettingsService appSettingsService,
+                          InputSanitizationService inputSanitizationService) {
         this.planService = planService;
         this.registrationService = registrationService;
         this.fileStorageService = fileStorageService;
         this.appSettingsService = appSettingsService;
+        this.inputSanitizationService = inputSanitizationService;
     }
 
     /**
@@ -513,20 +517,26 @@ public class AdminController {
     public ResponseEntity<List<UserRegistration>> searchRegistrations(
             @RequestParam String query,
             @RequestParam(defaultValue = "email") String type) {
-        
-        logger.debug("Searching registrations by {}: {}", type, query);
-        
+
+        // CRITICAL: Sanitize search input to prevent injection attacks
+        String sanitizedQuery = inputSanitizationService.sanitizeSearchQuery(query);
+        if (sanitizedQuery.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        logger.debug("Searching registrations by {}: [SANITIZED]", type);
+
         try {
             List<UserRegistration> results;
-            
+
             if ("email".equals(type)) {
-                results = registrationService.searchByEmail(query);
+                results = registrationService.searchByEmail(sanitizedQuery);
             } else if ("name".equals(type)) {
-                results = registrationService.searchByName(query);
+                results = registrationService.searchByName(sanitizedQuery);
             } else {
                 return ResponseEntity.badRequest().build();
             }
-            
+
             return ResponseEntity.ok(results);
             
         } catch (Exception e) {

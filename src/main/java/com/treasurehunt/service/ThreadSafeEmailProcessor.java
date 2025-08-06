@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
@@ -175,7 +176,7 @@ public class ThreadSafeEmailProcessor {
      * Process a single email (with separate transaction for external calls)
      * @param email Email to process
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void processSingleEmail(EmailQueue email) {
         processSingleEmailInTransaction(email);
     }
@@ -215,7 +216,7 @@ public class ThreadSafeEmailProcessor {
      * @param email Email that failed to process
      * @param error The error that occurred
      */
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void handleEmailProcessingError(EmailQueue email, Exception error) {
         handleEmailProcessingErrorInTransaction(email, error);
     }

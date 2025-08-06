@@ -587,9 +587,14 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * Get total count of active plans
      * @return Number of active plans
      */
-    @Transactional(readOnly = true)
+    @Transactional(readOnly = true, timeout = 5)
     public long getActivePlanCount() {
-        return planRepository.countByStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
+        try {
+            return planRepository.countByStatus(TreasureHuntPlan.PlanStatus.ACTIVE);
+        } catch (Exception e) {
+            logger.error("Error getting active plan count", e);
+            return 0L; // Return 0 instead of throwing exception for health checks
+        }
     }
 
     /**

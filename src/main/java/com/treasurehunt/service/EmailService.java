@@ -90,9 +90,7 @@ public class EmailService {
 
             String htmlContent = templateEngine.process("email/registration-confirmation", context);
 
-            // Log template content preview for debugging
-            String preview = htmlContent.length() > 500 ? htmlContent.substring(0, 500) + "..." : htmlContent;
-            logger.info("Template content preview: {}", preview);
+            // Log template processing completion without content for security
             logger.info("=== EMAIL TEMPLATE PROCESSING COMPLETE ===");
             helper.setText(htmlContent, true);
 
