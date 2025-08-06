@@ -77,15 +77,15 @@ public class HomeController {
         response.setHeader("Expires", "0");
 
         try {
-            // PERFORMANCE FIX: Bulk retrieve all settings at once to prevent N+1 queries
+            // CRITICAL FIX: Use correct setting keys with underscores (not dots)
             List<String> requiredSettings = List.of(
-                "hero.background.video.url",
-                "hero.fallback.image.url",
-                "about.section.image.url",
-                "contact.background.image.url",
-                "background.media.enabled",
-                "hero.preview.video.url",
-                "hero.blur.intensity"
+                "hero_background_video_url",
+                "hero_fallback_image_url",
+                "about_section_image_url",
+                "contact_background_image_url",
+                "background_media_enabled",
+                "hero_preview_video_url",
+                "hero_blur_intensity"
             );
 
             Map<String, String> settings = appSettingsService.getMultipleSettings(requiredSettings);
@@ -95,14 +95,14 @@ public class HomeController {
             List<TreasureHuntPlan> availablePlans = planService.getAvailablePlans();
             TreasureHuntPlan featuredPlan = planService.getFeaturedPlan();
 
-            // Extract settings from bulk result
-            String heroVideoUrl = settings.get("hero.background.video.url");
-            String heroFallbackImageUrl = settings.get("hero.fallback.image.url");
-            String aboutSectionImageUrl = settings.get("about.section.image.url");
-            String contactBackgroundImageUrl = settings.get("contact.background.image.url");
-            boolean backgroundMediaEnabled = Boolean.parseBoolean(settings.getOrDefault("background.media.enabled", "true"));
-            String heroPreviewVideoUrl = settings.get("hero.preview.video.url");
-            String heroBlurIntensity = settings.getOrDefault("hero.blur.intensity", "5");
+            // Extract settings from bulk result with correct keys
+            String heroVideoUrl = settings.get("hero_background_video_url");
+            String heroFallbackImageUrl = settings.get("hero_fallback_image_url");
+            String aboutSectionImageUrl = settings.get("about_section_image_url");
+            String contactBackgroundImageUrl = settings.get("contact_background_image_url");
+            boolean backgroundMediaEnabled = Boolean.parseBoolean(settings.getOrDefault("background_media_enabled", "true"));
+            String heroPreviewVideoUrl = settings.get("hero_preview_video_url");
+            String heroBlurIntensity = settings.getOrDefault("hero_blur_intensity", "5");
 
             // Debug logging for image URLs
             logger.info("=== HOME PAGE IMAGE URLS ===");
@@ -134,11 +134,9 @@ public class HomeController {
             model.addAttribute("heroBlurIntensity", heroBlurIntensity); // From bulk settings
             model.addAttribute("featuredPlan", featuredPlan);
 
-            // PERFORMANCE FIX: Get footer data in bulk as well
-            List<String> footerSettings = List.of("company.info", "social.links");
-            Map<String, String> footerData = appSettingsService.getMultipleSettings(footerSettings);
-            model.addAttribute("companyInfo", footerData.get("company.info"));
-            model.addAttribute("socialLinks", footerData.get("social.links"));
+            // FIXED: Use original service methods for complex objects
+            model.addAttribute("companyInfo", appSettingsService.getCompanyInfo());
+            model.addAttribute("socialLinks", appSettingsService.getSocialMediaLinks());
             model.addAttribute("footerLinks", appSettingsService.getFooterLinks());
             model.addAttribute("contactInfo", appSettingsService.getContactInfo());
 

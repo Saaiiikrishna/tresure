@@ -55,7 +55,7 @@ spring:
   # JPA/Hibernate Configuration - Production settings
   jpa:
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO}  # REVERTED: Keeping create-drop as requested for development stability
+      ddl-auto: ${JPA_DDL_AUTO}
     show-sql: false
     properties:
       hibernate:

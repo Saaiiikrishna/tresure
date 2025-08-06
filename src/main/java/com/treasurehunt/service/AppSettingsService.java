@@ -143,6 +143,9 @@ public class AppSettingsService {
             // Hero section blur intensity setting (0-10 scale)
             defaultSettings.add(new AppSettings("hero_blur_intensity", getEnvOrDefault("HERO_BLUR_INTENSITY", "3"), "Hero section background blur intensity (0=no blur, 10=maximum blur)"));
 
+            // Background media enabled setting
+            defaultSettings.add(new AppSettings("background_media_enabled", getEnvOrDefault("BACKGROUND_MEDIA_ENABLED", "true"), "Enable background media (videos/images)"));
+
             // PERFORMANCE FIX: Batch save all settings at once
             long startTime = System.currentTimeMillis();
             appSettingsRepository.saveAll(defaultSettings);
