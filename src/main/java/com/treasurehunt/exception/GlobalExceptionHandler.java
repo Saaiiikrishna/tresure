@@ -37,9 +37,9 @@ public class GlobalExceptionHandler {
 
     private final Optional<PerformanceMonitoringService> performanceMonitoringService;
 
-    @Autowired(required = false)
-    public GlobalExceptionHandler(@Lazy Optional<PerformanceMonitoringService> performanceMonitoringService) {
-        this.performanceMonitoringService = performanceMonitoringService != null ? performanceMonitoringService : Optional.empty();
+    @Autowired
+    public GlobalExceptionHandler(@Lazy @Autowired(required = false) PerformanceMonitoringService performanceMonitoringService) {
+        this.performanceMonitoringService = Optional.ofNullable(performanceMonitoringService);
     }
 
     /**

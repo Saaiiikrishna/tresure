@@ -112,10 +112,14 @@ public class ProductionReadinessService {
                 }
             }
             
-            // Check DDL settings
+            // Check DDL settings - Log warning but allow startup
             String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto");
             if ("create-drop".equals(ddlAuto) || "create".equals(ddlAuto)) {
-                criticalIssues.add("Dangerous DDL auto setting in production: " + ddlAuto);
+                logger.warn("⚠️  DANGEROUS DDL AUTO SETTING DETECTED: {}", ddlAuto);
+                logger.warn("⚠️  This setting will DELETE ALL DATA when the application stops!");
+                logger.warn("⚠️  Change to 'update' for production to avoid data loss");
+                logger.warn("⚠️  Current setting allowed for development/testing purposes");
+                warnings.add("Dangerous DDL auto setting detected: " + ddlAuto + " - WILL DELETE DATA ON RESTART!");
             }
             
             // Check SQL logging

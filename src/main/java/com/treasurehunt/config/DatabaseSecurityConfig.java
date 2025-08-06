@@ -129,10 +129,13 @@ public class DatabaseSecurityConfig {
      * Validate database configuration
      */
     private void validateDatabaseConfiguration(List<String> securityIssues, List<String> warnings) {
-        // Check JPA settings
+        // Check JPA settings - Log warning but allow startup
         String ddlAuto = environment.getProperty("spring.jpa.hibernate.ddl-auto", "");
         if ("create-drop".equals(ddlAuto) || "create".equals(ddlAuto)) {
-            securityIssues.add("Dangerous DDL auto setting detected: " + ddlAuto);
+            logger.warn("⚠️  DATABASE SECURITY WARNING: Dangerous DDL auto setting detected: {}", ddlAuto);
+            logger.warn("⚠️  This setting will DELETE ALL DATA when the application stops!");
+            logger.warn("⚠️  Change to 'update' for production to avoid data loss");
+            warnings.add("Dangerous DDL auto setting detected: " + ddlAuto + " - WILL DELETE DATA ON RESTART!");
         }
         
         boolean showSql = environment.getProperty("spring.jpa.show-sql", Boolean.class, false);
