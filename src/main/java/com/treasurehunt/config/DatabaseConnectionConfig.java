@@ -89,6 +89,9 @@ public class DatabaseConnectionConfig {
         // Pool name for monitoring
         config.setPoolName("TreasureHuntCP");
 
+        // Transaction management - CRITICAL: Disable autoCommit for Spring transaction management
+        config.setAutoCommit(false);
+
         // Additional performance settings
         config.addDataSourceProperty("cachePrepStmts", "true");
         config.addDataSourceProperty("prepStmtCacheSize", "250");

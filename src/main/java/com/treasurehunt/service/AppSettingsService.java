@@ -46,8 +46,11 @@ public class AppSettingsService {
 
             logger.info("Application settings initialization completed successfully");
         } catch (Exception e) {
-            logger.error("Error initializing application settings", e);
+            logger.error("Error initializing application settings: {}", e.getMessage());
+            logger.warn("Application will continue startup without default settings initialization");
+            logger.debug("Full error details:", e);
             // Don't throw exception to prevent application startup failure
+            // Settings can be configured later through admin interface
         }
     }
 
