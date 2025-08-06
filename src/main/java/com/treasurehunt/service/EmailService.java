@@ -31,6 +31,9 @@ public class EmailService {
     @Value("${app.email.from}")
     private String fromEmail;
 
+    @Value("${app.email.from-name}")
+    private String fromName;
+
     @Value("${app.email.support}")
     private String supportEmail;
 
@@ -55,7 +58,7 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            // Set email properties with validation
+            // Set email properties with validation and display name
             String cleanFrom = validateAndCleanEmail(fromEmail);
             String cleanTo = validateAndCleanEmail(registration.getEmail());
 
@@ -64,7 +67,8 @@ public class EmailService {
                 return CompletableFuture.failedFuture(new MessagingException("Invalid email addresses"));
             }
 
-            helper.setFrom(cleanFrom);
+            String formattedFrom = formatEmailWithName(cleanFrom, fromName);
+            helper.setFrom(formattedFrom);
             helper.setTo(cleanTo);
             helper.setSubject("Registration Received for " + registration.getPlan().getName());
 
@@ -438,7 +442,11 @@ public class EmailService {
             helper.setTo(cleanTo);
             helper.setSubject(subject);
             helper.setText(body, true); // true indicates HTML content
-            helper.setFrom(cleanFrom);
+
+            // Use display name only if using the default from email
+            String formattedFrom = (from == null || from.equals(fromEmail)) ?
+                formatEmailWithName(cleanFrom, fromName) : cleanFrom;
+            helper.setFrom(formattedFrom);
 
             mailSender.send(message);
             logger.info("Successfully sent email to: {}", to);
@@ -478,6 +486,19 @@ public class EmailService {
         }
 
         return cleanEmail;
+    }
+
+    /**
+     * Format email address with display name
+     * @param email Email address
+     * @param name Display name
+     * @return Formatted email address with display name
+     */
+    private String formatEmailWithName(String email, String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return email;
+        }
+        return String.format("\"%s\" <%s>", name.trim(), email);
     }
 
     /**

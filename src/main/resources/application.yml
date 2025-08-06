@@ -107,6 +107,7 @@ app:
   
   email:
     from: ${MAIL_FROM_ADDRESS}
+    from-name: ${MAIL_FROM_NAME:Treasure Hunt - MySillyDreams}
     support: ${MAIL_SUPPORT_ADDRESS}
     company-name: ${COMPANY_NAME:Treasure Hunt Adventures}
     mock:

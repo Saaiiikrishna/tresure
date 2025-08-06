@@ -126,6 +126,7 @@ app:
   # Email Configuration
   email:
     from: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
+    from-name: ${MAIL_FROM_NAME:Treasure Hunt - MySillyDreams (DEV)}
     support: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
     company-name: ${COMPANY_NAME:Treasure Hunt Adventures (DEV)}
     enabled: false # Disable email in dev mode
