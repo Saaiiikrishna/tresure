@@ -348,7 +348,8 @@ public class AppSettingsService {
      * @return Hero fallback image URL or default
      */
     public String getHeroFallbackImageUrl() {
-        String value = getSettingValue("hero_background_fallback_image", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        // FIXED: Use correct setting key that matches initialization and HomeController
+        String value = getSettingValue("hero_fallback_image_url", "https://images.unsplash.com/photo-1551632811-561732d1e306?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
         logger.debug("getHeroFallbackImageUrl() returning: {}", value);
         return value;
     }
@@ -358,7 +359,8 @@ public class AppSettingsService {
      * @return About section image URL or default
      */
     public String getAboutSectionImageUrl() {
-        String value = getSettingValue("about_section_image", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        // FIXED: Use correct setting key that matches initialization and HomeController
+        String value = getSettingValue("about_section_image_url", "https://images.unsplash.com/photo-1559827260-dc66d52bef19?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
         logger.debug("getAboutSectionImageUrl() returning: {}", value);
         return value;
     }
@@ -368,7 +370,8 @@ public class AppSettingsService {
      * @return Contact background image URL or default
      */
     public String getContactBackgroundImageUrl() {
-        String value = getSettingValue("contact_background_image", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+        // FIXED: Use correct setting key that matches initialization and HomeController
+        String value = getSettingValue("contact_background_image_url", "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
         logger.debug("getContactBackgroundImageUrl() returning: {}", value);
         return value;
     }
@@ -408,6 +411,33 @@ public class AppSettingsService {
         }
 
         return updateSetting("hero_background_video_url", videoUrl, "Hero section background video URL");
+    }
+
+    /**
+     * Update hero fallback image URL
+     * @param imageUrl New image URL
+     * @return Updated setting
+     */
+    public AppSettings updateHeroFallbackImageUrl(String imageUrl) {
+        return updateSetting("hero_fallback_image_url", imageUrl, "Hero section fallback image URL");
+    }
+
+    /**
+     * Update about section image URL
+     * @param imageUrl New image URL
+     * @return Updated setting
+     */
+    public AppSettings updateAboutSectionImageUrl(String imageUrl) {
+        return updateSetting("about_section_image_url", imageUrl, "About section image URL");
+    }
+
+    /**
+     * Update contact background image URL
+     * @param imageUrl New image URL
+     * @return Updated setting
+     */
+    public AppSettings updateContactBackgroundImageUrl(String imageUrl) {
+        return updateSetting("contact_background_image_url", imageUrl, "Contact section background image URL");
     }
 
     /**

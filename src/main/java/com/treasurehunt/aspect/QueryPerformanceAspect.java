@@ -87,12 +87,17 @@ public class QueryPerformanceAspect {
             
         } catch (Throwable throwable) {
             long executionTime = System.currentTimeMillis() - startTime;
-            logger.warn("Service method {} failed after {}ms: {}", 
-                       methodName, executionTime, throwable.getMessage());
-            
+            // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+            String errorMessage = throwable.getMessage();
+            if (errorMessage == null) {
+                errorMessage = throwable.getClass().getSimpleName();
+            }
+            logger.warn("Service method {} failed after {}ms: {}",
+                       methodName, executionTime, errorMessage);
+
             // Increment error counter
             performanceMonitoringService.incrementErrorCount();
-            
+
             throw throwable;
         }
     }
@@ -124,12 +129,17 @@ public class QueryPerformanceAspect {
             
         } catch (Throwable throwable) {
             long executionTime = System.currentTimeMillis() - startTime;
-            logger.error("Controller method {} failed after {}ms: {}", 
-                        methodName, executionTime, throwable.getMessage());
-            
+            // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+            String errorMessage = throwable.getMessage();
+            if (errorMessage == null) {
+                errorMessage = throwable.getClass().getSimpleName();
+            }
+            logger.error("Controller method {} failed after {}ms: {}",
+                        methodName, executionTime, errorMessage);
+
             // Increment error counter
             performanceMonitoringService.incrementErrorCount();
-            
+
             throw throwable;
         }
     }
@@ -183,9 +193,14 @@ public class QueryPerformanceAspect {
             
         } catch (Throwable throwable) {
             long executionTime = System.currentTimeMillis() - startTime;
-            logger.error("Cache operation {} failed after {}ms: {}", 
-                        methodName, executionTime, throwable.getMessage());
-            
+            // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+            String errorMessage = throwable.getMessage();
+            if (errorMessage == null) {
+                errorMessage = throwable.getClass().getSimpleName();
+            }
+            logger.error("Cache operation {} failed after {}ms: {}",
+                        methodName, executionTime, errorMessage);
+
             throw throwable;
         }
     }
@@ -216,9 +231,14 @@ public class QueryPerformanceAspect {
             
         } catch (Throwable throwable) {
             long executionTime = System.currentTimeMillis() - startTime;
-            logger.error("File operation {} failed after {}ms: {}", 
-                        methodName, executionTime, throwable.getMessage());
-            
+            // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+            String errorMessage = throwable.getMessage();
+            if (errorMessage == null) {
+                errorMessage = throwable.getClass().getSimpleName();
+            }
+            logger.error("File operation {} failed after {}ms: {}",
+                        methodName, executionTime, errorMessage);
+
             throw throwable;
         }
     }

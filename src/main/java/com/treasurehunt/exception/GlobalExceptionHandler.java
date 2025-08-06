@@ -308,8 +308,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleRuntimeException(
             RuntimeException ex, WebRequest request) {
 
-        // Log full exception details for debugging (server-side only)
-        logger.error("Runtime exception occurred: {}", ex.getMessage(), ex);
+        // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+        String errorMessage = ex.getMessage();
+        if (errorMessage == null) {
+            errorMessage = ex.getClass().getSimpleName();
+        }
+        logger.error("Runtime exception occurred: {} - {}", ex.getClass().getSimpleName(), errorMessage);
         safeIncrementErrorCount();
 
         // Create sanitized error response (no sensitive information)
@@ -373,8 +377,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex, WebRequest request) {
 
-        // Log full exception details for debugging (server-side only)
-        logger.error("Unexpected exception occurred: {}", ex.getMessage(), ex);
+        // FIXED: Safe logging to prevent ThrowableProxy serialization issues
+        String errorMessage = ex.getMessage();
+        if (errorMessage == null) {
+            errorMessage = ex.getClass().getSimpleName();
+        }
+        logger.error("Unexpected exception occurred: {} - {}", ex.getClass().getSimpleName(), errorMessage);
         safeIncrementErrorCount();
 
         // Create sanitized error response (no sensitive information)

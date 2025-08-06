@@ -670,6 +670,11 @@ public class AdminController {
             model.addAttribute("contactInfo", appSettingsService.getContactInfo());
             model.addAttribute("heroBlurIntensity", appSettingsService.getHeroBlurIntensity());
 
+            // FIXED: Add image URLs for admin settings page
+            model.addAttribute("heroFallbackImageUrl", appSettingsService.getHeroFallbackImageUrl());
+            model.addAttribute("aboutSectionImageUrl", appSettingsService.getAboutSectionImageUrl());
+            model.addAttribute("contactBackgroundImageUrl", appSettingsService.getContactBackgroundImageUrl());
+
             return "admin/settings";
 
         } catch (Exception e) {
@@ -732,6 +737,84 @@ public class AdminController {
             response.put("success", false);
             response.put("message", "Error updating featured plan: " + e.getMessage());
             return ResponseEntity.internalServerError().body(response);
+        }
+    }
+
+    /**
+     * Update hero fallback image URL
+     * @param imageUrl New image URL
+     * @return JSON response
+     */
+    @PostMapping("/settings/hero-fallback-image")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateHeroFallbackImage(@RequestParam String imageUrl) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            appSettingsService.updateHeroFallbackImageUrl(imageUrl);
+
+            response.put("success", true);
+            response.put("message", "Hero fallback image updated successfully");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error updating hero fallback image", e);
+            response.put("success", false);
+            response.put("message", "Error updating image: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update about section image URL
+     * @param imageUrl New image URL
+     * @return JSON response
+     */
+    @PostMapping("/settings/about-section-image")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateAboutSectionImage(@RequestParam String imageUrl) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            appSettingsService.updateAboutSectionImageUrl(imageUrl);
+
+            response.put("success", true);
+            response.put("message", "About section image updated successfully");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error updating about section image", e);
+            response.put("success", false);
+            response.put("message", "Error updating image: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update contact background image URL
+     * @param imageUrl New image URL
+     * @return JSON response
+     */
+    @PostMapping("/settings/contact-background-image")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> updateContactBackgroundImage(@RequestParam String imageUrl) {
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            appSettingsService.updateContactBackgroundImageUrl(imageUrl);
+
+            response.put("success", true);
+            response.put("message", "Contact background image updated successfully");
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            logger.error("Error updating contact background image", e);
+            response.put("success", false);
+            response.put("message", "Error updating image: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
         }
     }
 

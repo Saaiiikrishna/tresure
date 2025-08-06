@@ -52,9 +52,14 @@ ON email_campaigns(status);
 
 -- 10. FIX: Uploaded images category queries
 -- Add index for image category lookups
-CREATE INDEX IF NOT EXISTS idx_uploaded_images_category_active 
-ON uploaded_images(image_category, is_active) 
+CREATE INDEX IF NOT EXISTS idx_uploaded_images_category_active
+ON uploaded_images(image_category, is_active)
 WHERE is_active = true;
+
+-- 11. FIX: Featured plan queries (addresses slow featured plan lookup)
+-- Add composite index for featured plan status queries
+CREATE INDEX IF NOT EXISTS idx_treasure_hunt_plans_featured_status
+ON treasure_hunt_plans(is_featured, status);
 
 -- =====================================================
 -- QUERY PERFORMANCE STATISTICS

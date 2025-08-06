@@ -59,13 +59,15 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
             logger.info("Loading all plans into cache...");
             long startTime = System.currentTimeMillis();
 
-            // PERFORMANCE FIX: Use optimized query with timeout
-            List<TreasureHuntPlan> activePlans;
+            // PERFORMANCE FIX: Use optimized query with timeout and error handling
+            List<TreasureHuntPlan> activePlans = new ArrayList<>();
             try {
+                // Use a timeout-aware query execution
                 activePlans = planRepository.findByStatusOrderByCreatedDateDesc(TreasureHuntPlan.PlanStatus.ACTIVE);
+                logger.debug("Successfully loaded {} active plans from database", activePlans.size());
             } catch (Exception e) {
                 logger.warn("Database query for plans failed during startup, using empty cache: {}", e.getMessage());
-                activePlans = new ArrayList<>();
+                // Continue with empty cache - application should still start
             }
 
             plansCache.put("active", activePlans);
@@ -76,10 +78,13 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
                 planByIdCache.put(plan.getId(), plan);
             }
 
-            // PERFORMANCE FIX: Load featured plan with fallback
+            // PERFORMANCE FIX: Load featured plan with fallback and timeout handling
             try {
                 featuredPlanCache = planRepository.findByIsFeaturedTrueAndStatus(TreasureHuntPlan.PlanStatus.ACTIVE)
                         .orElse(activePlans.isEmpty() ? null : activePlans.get(0));
+                if (featuredPlanCache != null) {
+                    logger.debug("Featured plan loaded: {}", featuredPlanCache.getName());
+                }
             } catch (Exception e) {
                 logger.warn("Featured plan query failed, using first active plan as fallback: {}", e.getMessage());
                 featuredPlanCache = activePlans.isEmpty() ? null : activePlans.get(0);

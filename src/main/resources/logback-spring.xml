@@ -103,4 +103,12 @@
     <logger name="org.apache.catalina" level="WARN"/>
     <logger name="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" level="WARN"/>
     <logger name="org.springframework.boot.actuate" level="WARN"/>
+
+    <!-- FIXED: Completely disable Azure telemetry logging -->
+    <logger name="com.azure.monitor" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline.TelemetryPipeline" level="OFF"/>
 </configuration>
