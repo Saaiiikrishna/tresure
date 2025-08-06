@@ -154,18 +154,21 @@ public class EmailCampaignController {
         logger.info("Displaying campaign details for ID: {}", id);
         
         try {
-            EmailCampaign campaign = campaignService.getAllCampaigns(PageRequest.of(0, 1))
-                .getContent().stream()
-                .filter(c -> c.getId().equals(id))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Campaign not found"));
-            
+            // PERFORMANCE FIX: Get campaign directly by ID instead of filtering from all campaigns
+            Optional<EmailCampaign> campaignOpt = campaignService.getCampaignById(id);
+            if (campaignOpt.isEmpty()) {
+                logger.warn("Campaign not found with ID: {}", id);
+                return "redirect:/admin/email-campaigns?error=Campaign not found";
+            }
+
+            EmailCampaign campaign = campaignOpt.get();
+
             // Get emails for this campaign
             List<EmailQueue> campaignEmails = emailQueueService.getEmailsByCampaign("CAMP-" + id + "-*");
-            
+
             model.addAttribute("campaign", campaign);
             model.addAttribute("campaignEmails", campaignEmails);
-            
+
             return "admin/email-campaigns/details";
             
         } catch (Exception e) {

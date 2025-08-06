@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
@@ -292,6 +293,17 @@ public class EmailCampaignService {
      */
     public Page<EmailCampaign> getAllCampaigns(Pageable pageable) {
         return campaignRepository.findAll(pageable);
+    }
+
+    /**
+     * PERFORMANCE FIX: Get campaign by ID
+     * @param id Campaign ID
+     * @return Optional campaign
+     */
+    @Transactional(readOnly = true)
+    public Optional<EmailCampaign> getCampaignById(Long id) {
+        logger.debug("Fetching campaign with ID: {}", id);
+        return campaignRepository.findById(id);
     }
 
     /**

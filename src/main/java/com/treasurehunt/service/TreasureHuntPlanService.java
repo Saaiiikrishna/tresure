@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import jakarta.annotation.PostConstruct;
@@ -129,7 +130,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get all available plans (active with available spots) with caching
+     * PERFORMANCE FIX: Get all available plans (active with available spots) with caching
      * @return List of available plans
      */
     @Transactional(readOnly = true)
@@ -138,10 +139,12 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
         logger.debug("Fetching available treasure hunt plans from database");
         List<TreasureHuntPlan> plans = planRepository.findAvailablePlans();
 
+        // PERFORMANCE FIX: Get all confirmed registration counts in a single query
+        Map<Long, Long> registrationCounts = registrationRepository.getConfirmedRegistrationCountsByPlan();
+
         // Set confirmed registrations count for each plan to avoid lazy loading issues
         for (TreasureHuntPlan plan : plans) {
-            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
-                plan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+            long confirmedCount = registrationCounts.getOrDefault(plan.getId(), 0L);
             plan.setConfirmedRegistrationsCount(confirmedCount);
         }
 
@@ -189,7 +192,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get all plans (for admin)
+     * PERFORMANCE FIX: Get all plans (for admin) with optimized registration counts
      * @return List of all plans
      */
     @Transactional(readOnly = true)
@@ -197,13 +200,16 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
         logger.debug("Fetching all treasure hunt plans for admin");
         List<TreasureHuntPlan> plans = planRepository.findAll();
 
-        // Add confirmed registrations count to each plan
+        // PERFORMANCE FIX: Get all confirmed registration counts in a single query
+        Map<Long, Long> registrationCounts = registrationRepository.getConfirmedRegistrationCountsByPlan();
+
+        // Set confirmed registrations count for each plan
         for (TreasureHuntPlan plan : plans) {
-            long confirmedCount = registrationRepository.countByPlanIdAndStatus(
-                plan.getId(), UserRegistration.RegistrationStatus.CONFIRMED);
+            long confirmedCount = registrationCounts.getOrDefault(plan.getId(), 0L);
             plan.setConfirmedRegistrationsCount(confirmedCount);
         }
 
+        logger.debug("Loaded {} plans with registration counts", plans.size());
         return plans;
     }
 

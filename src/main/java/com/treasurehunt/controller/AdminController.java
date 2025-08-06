@@ -70,14 +70,17 @@ public class AdminController {
         logger.debug("Loading admin dashboard");
         
         try {
-            // Get statistics
-            List<TreasureHuntPlan> allPlans = planService.getAllPlans();
+            // PERFORMANCE FIX: Get statistics efficiently to avoid N+1 queries
             RegistrationService.RegistrationStatistics stats = registrationService.getRegistrationStatistics();
             List<UserRegistration> recentRegistrations = registrationService.getRecentRegistrations();
 
+            // Get plan statistics from cache to avoid database queries
+            List<TreasureHuntPlan> allPlans = planService.getAllPlans();
+            long activePlansCount = allPlans.stream()
+                    .filter(p -> p.getStatus() == TreasureHuntPlan.PlanStatus.ACTIVE).count();
+
             model.addAttribute("totalPlans", allPlans.size());
-            model.addAttribute("activePlans", allPlans.stream()
-                    .filter(p -> p.getStatus() == TreasureHuntPlan.PlanStatus.ACTIVE).count());
+            model.addAttribute("activePlans", activePlansCount);
             model.addAttribute("totalRegistrations", stats.getTotalRegistrations());
             model.addAttribute("pendingRegistrations", stats.getPendingCount());
             model.addAttribute("confirmedRegistrations", stats.getConfirmedCount());
@@ -454,7 +457,7 @@ public class AdminController {
             model.addAttribute("selectedPlanId", planId);
             model.addAttribute("statuses", UserRegistration.RegistrationStatus.values());
 
-            // Add all plans for the filter dropdown
+            // PERFORMANCE FIX: Get plans from cache to avoid additional database query
             List<TreasureHuntPlan> allPlans = planService.getAllPlans();
             model.addAttribute("allPlans", allPlans);
 

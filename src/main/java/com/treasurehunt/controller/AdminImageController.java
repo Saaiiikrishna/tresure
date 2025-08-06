@@ -52,14 +52,13 @@ public class AdminImageController {
         logger.info("Displaying image management page");
 
         try {
-            // Get current images for each category
+            // PERFORMANCE FIX: Get current images for each category with optimized queries
             Map<String, UploadedImage> currentImages = new HashMap<>();
-            
-            for (UploadedImage.ImageCategory category : UploadedImage.ImageCategory.values()) {
-                Optional<UploadedImage> image = imageManagementService.getActiveImageByCategory(category.getValue());
-                if (image.isPresent()) {
-                    currentImages.put(category.getValue(), image.get());
-                }
+
+            // Get all active images at once to avoid N+1 queries
+            List<UploadedImage> allActiveImages = imageManagementService.getAllActiveImages();
+            for (UploadedImage image : allActiveImages) {
+                currentImages.put(image.getImageCategory(), image);
             }
 
             // Get storage statistics
@@ -71,11 +70,12 @@ public class AdminImageController {
                 .limit(5)
                 .toList();
 
-            // Get background media toggle setting
-            boolean backgroundMediaEnabled = appSettingsService.getBackgroundMediaEnabled();
+            // PERFORMANCE FIX: Get settings in bulk to avoid individual queries
+            List<String> settingKeys = List.of("background_media_enabled", "hero_blur_intensity");
+            Map<String, String> settings = appSettingsService.getMultipleSettings(settingKeys);
 
-            // Get hero blur intensity setting
-            int heroBlurIntensity = appSettingsService.getHeroBlurIntensity();
+            boolean backgroundMediaEnabled = Boolean.parseBoolean(settings.getOrDefault("background_media_enabled", "true"));
+            int heroBlurIntensity = Integer.parseInt(settings.getOrDefault("hero_blur_intensity", "3"));
 
             model.addAttribute("currentImages", currentImages);
             model.addAttribute("imageCategories", UploadedImage.ImageCategory.values());

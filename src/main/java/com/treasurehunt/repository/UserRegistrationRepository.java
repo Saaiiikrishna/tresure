@@ -9,7 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Stream;
 
@@ -142,6 +144,30 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
            "LEFT JOIN FETCH r.documents " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findAllWithDocuments();
+
+    /**
+     * PERFORMANCE FIX: Get confirmed registration counts by plan in single query
+     * @return Map of plan ID to confirmed registration count
+     */
+    @Query("SELECT r.plan.id, COUNT(r) FROM UserRegistration r " +
+           "WHERE r.status = 'CONFIRMED' " +
+           "GROUP BY r.plan.id")
+    List<Object[]> getConfirmedRegistrationCountsByPlanRaw();
+
+    /**
+     * PERFORMANCE FIX: Get confirmed registration counts by plan as Map
+     * @return Map of plan ID to confirmed registration count
+     */
+    default Map<Long, Long> getConfirmedRegistrationCountsByPlan() {
+        List<Object[]> results = getConfirmedRegistrationCountsByPlanRaw();
+        Map<Long, Long> counts = new HashMap<>();
+        for (Object[] result : results) {
+            Long planId = (Long) result[0];
+            Long count = (Long) result[1];
+            counts.put(planId, count);
+        }
+        return counts;
+    }
 
     /**
      * Count total registrations
