@@ -149,7 +149,7 @@ spring:
     type: caffeine
     caffeine:
       spec: maximumSize=5000,expireAfterWrite=60m,expireAfterAccess=30m,recordStats
-    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages,registrationStatistics
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages,registrationStatistics,planStatistics,emailTemplates
 
   # Jackson Configuration
   jackson:

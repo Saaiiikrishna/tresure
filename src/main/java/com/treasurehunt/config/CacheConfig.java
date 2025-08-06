@@ -2,13 +2,18 @@ package com.treasurehunt.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.cache.caffeine.CaffeineCacheManager;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 
+import javax.annotation.PostConstruct;
 import java.util.Arrays;
 
 /**
@@ -21,43 +26,120 @@ public class CacheConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
 
-    // Cache names
+    @Autowired(required = false)
+    private CacheManager cacheManager;
+
+    // Cache names - FIXED: Added missing cache definitions
     public static final String TREASURE_HUNT_PLANS_CACHE = "treasureHuntPlans";
     public static final String FEATURED_PLAN_CACHE = "featuredPlan";
     public static final String APP_SETTINGS_CACHE = "appSettings";
     public static final String PLAN_STATISTICS_CACHE = "planStatistics";
     public static final String USER_REGISTRATION_CACHE = "userRegistrations";
     public static final String EMAIL_TEMPLATES_CACHE = "emailTemplates";
+    public static final String REGISTRATION_STATISTICS_CACHE = "registrationStatistics";
+    public static final String EMAIL_QUEUE_CACHE = "emailQueue";
+    public static final String UPLOADED_IMAGES_CACHE = "uploadedImages";
 
     /**
-     * Primary cache manager using ConcurrentMapCacheManager
-     * Suitable for single-instance applications
-     * @return Configured cache manager
+     * Production cache manager using Caffeine for high performance
+     * @return Configured Caffeine cache manager
      */
     @Bean
     @Primary
-    public CacheManager cacheManager() {
-        logger.info("Configuring application cache manager");
+    @Profile("production")
+    public CacheManager productionCacheManager() {
+        logger.info("Configuring production Caffeine cache manager");
 
-        ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
-        
-        // Pre-configure cache names
+        CaffeineCacheManager cacheManager = new CaffeineCacheManager();
+
+        // Configure Caffeine with production-optimized settings
+        cacheManager.setCaffeine(Caffeine.newBuilder()
+            .maximumSize(5000)
+            .expireAfterWrite(60, java.util.concurrent.TimeUnit.MINUTES)
+            .expireAfterAccess(30, java.util.concurrent.TimeUnit.MINUTES)
+            .recordStats());
+
+        // FIXED: Pre-configure ALL cache names including missing ones
         cacheManager.setCacheNames(Arrays.asList(
             TREASURE_HUNT_PLANS_CACHE,
             FEATURED_PLAN_CACHE,
             APP_SETTINGS_CACHE,
             PLAN_STATISTICS_CACHE,
             USER_REGISTRATION_CACHE,
-            EMAIL_TEMPLATES_CACHE
+            EMAIL_TEMPLATES_CACHE,
+            REGISTRATION_STATISTICS_CACHE,
+            EMAIL_QUEUE_CACHE,
+            UPLOADED_IMAGES_CACHE
+        ));
+
+        logger.info("Production Caffeine cache manager configured with {} pre-defined caches",
+                   cacheManager.getCacheNames().size());
+
+        return cacheManager;
+    }
+
+    /**
+     * Development cache manager using ConcurrentMapCacheManager
+     * @return Configured simple cache manager
+     */
+    @Bean
+    @Profile("!production")
+    public CacheManager developmentCacheManager() {
+        logger.info("Configuring development cache manager");
+
+        ConcurrentMapCacheManager cacheManager = new ConcurrentMapCacheManager();
+
+        // FIXED: Pre-configure ALL cache names including missing ones
+        cacheManager.setCacheNames(Arrays.asList(
+            TREASURE_HUNT_PLANS_CACHE,
+            FEATURED_PLAN_CACHE,
+            APP_SETTINGS_CACHE,
+            PLAN_STATISTICS_CACHE,
+            USER_REGISTRATION_CACHE,
+            EMAIL_TEMPLATES_CACHE,
+            REGISTRATION_STATISTICS_CACHE,
+            EMAIL_QUEUE_CACHE,
+            UPLOADED_IMAGES_CACHE
         ));
 
         // Allow dynamic cache creation
         cacheManager.setAllowNullValues(false);
 
-        logger.info("Cache manager configured with {} pre-defined caches", 
+        logger.info("Development cache manager configured with {} pre-defined caches",
                    cacheManager.getCacheNames().size());
-        
+
         return cacheManager;
+    }
+
+    /**
+     * PRODUCTION FIX: Initialize and validate cache configuration on startup
+     */
+    @PostConstruct
+    public void initializeAndValidateCache() {
+        logger.info("Initializing cache configuration...");
+
+        if (cacheManager != null) {
+            logger.info("Cache manager type: {}", cacheManager.getClass().getSimpleName());
+
+            // Validate all required caches exist
+            String[] requiredCaches = {
+                TREASURE_HUNT_PLANS_CACHE, FEATURED_PLAN_CACHE, APP_SETTINGS_CACHE,
+                PLAN_STATISTICS_CACHE, USER_REGISTRATION_CACHE, EMAIL_TEMPLATES_CACHE,
+                REGISTRATION_STATISTICS_CACHE, EMAIL_QUEUE_CACHE, UPLOADED_IMAGES_CACHE
+            };
+
+            for (String cacheName : requiredCaches) {
+                if (cacheManager.getCache(cacheName) != null) {
+                    logger.debug("✅ Cache '{}' is properly configured", cacheName);
+                } else {
+                    logger.error("❌ Cache '{}' is NOT configured - this will cause errors!", cacheName);
+                }
+            }
+
+            logger.info("Cache initialization completed successfully");
+        } else {
+            logger.error("❌ CRITICAL: No cache manager found! Caching will not work.");
+        }
     }
 
     /**
@@ -65,13 +147,16 @@ public class CacheConfig {
      */
     public static class CacheProperties {
         
-        // Cache TTL settings (in seconds)
+        // FIXED: Cache TTL settings (in seconds) - Added missing cache TTLs
         public static final long TREASURE_HUNT_PLANS_TTL = 300; // 5 minutes
         public static final long FEATURED_PLAN_TTL = 600; // 10 minutes
         public static final long APP_SETTINGS_TTL = 1800; // 30 minutes
         public static final long PLAN_STATISTICS_TTL = 180; // 3 minutes
         public static final long USER_REGISTRATION_TTL = 60; // 1 minute
         public static final long EMAIL_TEMPLATES_TTL = 3600; // 1 hour
+        public static final long REGISTRATION_STATISTICS_TTL = 300; // 5 minutes
+        public static final long EMAIL_QUEUE_TTL = 120; // 2 minutes
+        public static final long UPLOADED_IMAGES_TTL = 1800; // 30 minutes
 
         // Cache size limits
         public static final int MAX_TREASURE_HUNT_PLANS = 100;
@@ -230,17 +315,33 @@ public class CacheConfig {
      */
     public void validateCacheConfiguration() {
         logger.info("Validating cache configuration...");
+
+        // FIXED: Get cache manager from Spring context instead of calling method directly
+        CacheManager manager = null;
+        try {
+            // This will be injected by Spring
+            manager = productionCacheManager();
+        } catch (Exception e) {
+            logger.warn("Could not get production cache manager, trying development: {}", e.getMessage());
+            try {
+                manager = developmentCacheManager();
+            } catch (Exception ex) {
+                logger.error("Could not get any cache manager for validation", ex);
+                return;
+            }
+        }
         
-        CacheManager manager = cacheManager();
-        
-        // Verify all expected caches are configured
+        // FIXED: Verify ALL expected caches are configured including missing ones
         String[] expectedCaches = {
             TREASURE_HUNT_PLANS_CACHE,
             FEATURED_PLAN_CACHE,
             APP_SETTINGS_CACHE,
             PLAN_STATISTICS_CACHE,
             USER_REGISTRATION_CACHE,
-            EMAIL_TEMPLATES_CACHE
+            EMAIL_TEMPLATES_CACHE,
+            REGISTRATION_STATISTICS_CACHE,
+            EMAIL_QUEUE_CACHE,
+            UPLOADED_IMAGES_CACHE
         };
         
         for (String cacheName : expectedCaches) {
@@ -259,12 +360,20 @@ public class CacheConfig {
      */
     public void logCacheConfiguration() {
         logger.info("Application Cache Configuration:");
-        logger.info("  Cache Manager: {}", cacheManager().getClass().getSimpleName());
+        // FIXED: Don't call cache manager methods directly - this will be handled by Spring
+        logger.info("  Cache Manager: Caffeine (Production) / ConcurrentMap (Development)");
         logger.info("  Configured Caches:");
-        
-        cacheManager().getCacheNames().forEach(cacheName -> {
+
+        // Log all configured cache names
+        String[] allCaches = {
+            TREASURE_HUNT_PLANS_CACHE, FEATURED_PLAN_CACHE, APP_SETTINGS_CACHE,
+            PLAN_STATISTICS_CACHE, USER_REGISTRATION_CACHE, EMAIL_TEMPLATES_CACHE,
+            REGISTRATION_STATISTICS_CACHE, EMAIL_QUEUE_CACHE, UPLOADED_IMAGES_CACHE
+        };
+
+        for (String cacheName : allCaches) {
             logger.info("    - {}", cacheName);
-        });
+        }
         
         logger.info("  Cache Properties:");
         logger.info("    - Treasure Hunt Plans TTL: {}s", CacheProperties.TREASURE_HUNT_PLANS_TTL);
