@@ -241,6 +241,13 @@ server:
   forward-headers-strategy: framework
   use-forward-headers: true
   tomcat:
+    # Performance settings for high load
+    max-threads: ${TOMCAT_MAX_THREADS:200}
+    min-spare-threads: ${TOMCAT_MIN_THREADS:10}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:8192}
+    connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT:20000}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+    # HTTPS configuration
     remoteip:
       remote-ip-header: x-forwarded-for
       protocol-header: x-forwarded-proto
