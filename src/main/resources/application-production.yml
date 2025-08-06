@@ -7,19 +7,26 @@ spring:
     insights:
       enabled: false
 
-  # Completely disable Azure Application Insights to prevent telemetry warnings
+  # PRODUCTION FIX: Completely disable all Azure services to prevent telemetry errors
   cloud:
     azure:
       application-insights:
         enabled: false
         connection-string: ""
+      active-directory:
+        enabled: false
+      cosmos:
+        enabled: false
+      storage:
+        enabled: false
 
   # FIXED: Disable Azure Monitor OpenTelemetry to prevent telemetry pipeline errors
   azure:
     monitor:
       opentelemetry:
         enabled: false
-
+    application-insights:
+      enabled: false
   # Database Configuration - Azure PostgreSQL for production
   datasource:
     url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
@@ -88,12 +95,10 @@ spring:
         # PERFORMANCE FIX: Statement caching
         statement_cache:
           size: 50
-        # PERFORMANCE FIX: Enable second-level cache
+        # PRODUCTION FIX: Disable second-level cache to prevent JCacheRegionFactory errors
         cache:
-          use_second_level_cache: true
-          use_query_cache: true
-          region:
-            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+          use_second_level_cache: false
+          use_query_cache: false
     # FIXED: Removed redundant database-platform - auto-detected
     open-in-view: false
     defer-datasource-initialization: true
@@ -110,10 +115,7 @@ spring:
   h2:
     console:
       enabled: false
-  
-  # Thymeleaf Configuration - Production optimized
 
-  
   # Mail Configuration - Use environment variables
   mail:
     host: ${MAIL_HOST}
@@ -167,6 +169,44 @@ spring:
   # Security Configuration
   security:
     require-ssl: ${REQUIRE_SSL}
+    enabled: true
+
+# PRODUCTION FIX: Consolidated Management Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        exclude: "*"
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: false
+      show-details: ${ACTUATOR_HEALTH_DETAILS}
+      show-components: always
+      probes:
+        enabled: true
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+      export:
+        prometheus:
+          enabled: ${PROMETHEUS_ENABLED}
+  metrics:
+    export:
+      azure-monitor:
+        enabled: false
+  server:
+    port: ${MANAGEMENT_PORT:-1}  # Disable separate management port in production
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: simple
 
 # Custom Application Properties
 app:
@@ -312,37 +352,6 @@ server:
     enabled: ${HTTP2_ENABLED}
 
 # Actuator Configuration - Secured for production monitoring
-management:
-  server:
-    port: ${MANAGEMENT_PORT:-1}  # Disable separate management port in production
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-      base-path: /actuator
-  endpoint:
-    health:
-      show-details: ${ACTUATOR_HEALTH_DETAILS}
-      show-components: always
-      probes:
-        enabled: true
-    info:
-      enabled: true
-    metrics:
-      enabled: true
-      export:
-        prometheus:
-          enabled: ${PROMETHEUS_ENABLED}
-  info:
-    env:
-      enabled: true
-    build:
-      enabled: true
-    git:
-      enabled: true
-      mode: simple
-  security:
-    enabled: true  # CRITICAL: Must be enabled in production
 
 # Graceful Shutdown Configuration
 spring.lifecycle.timeout-per-shutdown-phase: 30s
