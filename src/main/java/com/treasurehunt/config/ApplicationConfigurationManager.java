@@ -330,13 +330,21 @@ public class ApplicationConfigurationManager {
     }
 
     private void validateEmailConfig() {
+        // FIXED: Provide default values instead of throwing exceptions
         if (email.getFromAddress() == null || email.getFromAddress().trim().isEmpty()) {
-            throw new IllegalStateException("Email from address must be configured");
+            String defaultFrom = environment.getProperty("MAIL_FROM_ADDRESS", "noreply@treasurehunt.local");
+            email.setFromAddress(defaultFrom);
+            logger.warn("⚠️ Email from address not configured, using default: {}", defaultFrom);
         }
+
         if (email.getSupportAddress() == null || email.getSupportAddress().trim().isEmpty()) {
-            throw new IllegalStateException("Email support address must be configured");
+            String defaultSupport = environment.getProperty("MAIL_SUPPORT_ADDRESS", "support@treasurehunt.local");
+            email.setSupportAddress(defaultSupport);
+            logger.warn("⚠️ Email support address not configured, using default: {}", defaultSupport);
         }
-        logger.debug("✅ Email configuration validated");
+
+        logger.info("✅ Email configuration validated - From: {}, Support: {}",
+                   email.getFromAddress(), email.getSupportAddress());
     }
 
     private void validateSecurityConfig() {

@@ -324,6 +324,49 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handle Spring's NoResourceFoundException (for static resources)
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFoundException(
+            org.springframework.web.servlet.resource.NoResourceFoundException ex, WebRequest request) {
+
+        String resourcePath = ex.getResourcePath();
+
+        // FIXED: Don't log errors for common bot/scanner requests
+        if (isCommonBotRequest(resourcePath)) {
+            logger.debug("Bot/scanner request for non-existent resource: {}", resourcePath);
+        } else {
+            logger.warn("Static resource not found: {}", resourcePath);
+        }
+
+        safeIncrementErrorCount();
+
+        ErrorResponse errorResponse = new ErrorResponse(
+            "RESOURCE_NOT_FOUND",
+            "The requested resource was not found",
+            HttpStatus.NOT_FOUND.value(),
+            sanitizeRequestDescription(request.getDescription(false))
+        );
+
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    /**
+     * Check if the request is from a common bot or security scanner
+     */
+    private boolean isCommonBotRequest(String resourcePath) {
+        if (resourcePath == null) return false;
+
+        String lowerPath = resourcePath.toLowerCase();
+        return lowerPath.contains("robots") && lowerPath.contains(".txt") ||
+               lowerPath.contains("sitemap") ||
+               lowerPath.contains("wp-") ||
+               lowerPath.contains("admin") ||
+               lowerPath.contains("phpmyadmin") ||
+               lowerPath.matches(".*robots\\d+.*\\.txt.*");
+    }
+
+    /**
      * Handle all other exceptions
      */
     @ExceptionHandler(Exception.class)
