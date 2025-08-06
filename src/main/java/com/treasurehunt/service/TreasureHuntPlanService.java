@@ -112,12 +112,13 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get all available plans (active with available spots)
+     * Get all available plans (active with available spots) with caching
      * @return List of available plans
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "treasureHuntPlans", key = "'available'")
     public List<TreasureHuntPlan> getAvailablePlans() {
-        logger.debug("Fetching available treasure hunt plans");
+        logger.debug("Fetching available treasure hunt plans from database");
         List<TreasureHuntPlan> plans = planRepository.findAvailablePlans();
 
         // Set confirmed registrations count for each plan to avoid lazy loading issues
@@ -127,6 +128,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
             plan.setConfirmedRegistrationsCount(confirmedCount);
         }
 
+        logger.debug("Loaded {} available plans into cache", plans.size());
         return plans;
     }
 
@@ -193,6 +195,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * @param plan Plan to create
      * @return Created plan
      */
+    @CacheEvict(value = {"treasureHuntPlans", "featuredPlan"}, allEntries = true)
     public TreasureHuntPlan createPlan(TreasureHuntPlan plan) {
         logger.info("Creating new treasure hunt plan: {}", plan.getName());
         
@@ -217,6 +220,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * @return Updated plan
      * @throws IllegalArgumentException if plan not found
      */
+    @CacheEvict(value = {"treasureHuntPlans", "featuredPlan"}, allEntries = true)
     public TreasureHuntPlan updatePlan(Long id, TreasureHuntPlan updatedPlan) {
         logger.info("Updating treasure hunt plan with ID: {}", id);
 
@@ -288,11 +292,12 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
     }
 
     /**
-     * Get the featured plan for hero section with in-memory caching
+     * Get the featured plan for hero section with caching
      * Always returns a plan - either the explicitly featured one or a default fallback
      * @return Featured plan or default plan (never null)
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = "featuredPlan", key = "'featured'")
     public TreasureHuntPlan getFeaturedPlan() {
         refreshCacheIfNeeded();
 
@@ -432,6 +437,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * @throws IllegalArgumentException if plan not found
      */
     @Transactional
+    @CacheEvict(value = {"treasureHuntPlans", "featuredPlan"}, allEntries = true)
     public TreasureHuntPlan setFeaturedPlan(Long planId) {
         logger.info("Setting plan {} as featured", planId);
 
@@ -503,6 +509,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * @return Updated plan
      * @throws IllegalArgumentException if plan not found
      */
+    @CacheEvict(value = {"treasureHuntPlans", "featuredPlan"}, allEntries = true)
     public TreasureHuntPlan togglePlanStatus(Long id) {
         logger.info("Toggling status for treasure hunt plan with ID: {}", id);
         
@@ -527,6 +534,7 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
      * @throws IllegalArgumentException if plan not found or has existing registrations
      */
     @Transactional
+    @CacheEvict(value = {"treasureHuntPlans", "featuredPlan"}, allEntries = true)
     public void deletePlan(Long id) {
         logger.info("Deleting treasure hunt plan with ID: {}", id);
 
