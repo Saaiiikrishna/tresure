@@ -495,170 +495,6 @@ function filterPlans(filter) {
 }
 
 /**
- * Generate Step 1 content based on plan type
- */
-function generateStep1Content(isTeamBased, teamSize) {
-    let content = '';
-
-    if (isTeamBased) {
-        console.log('✅ Generating team-based form for', teamSize, 'members');
-        content += `
-            <div class="alert alert-info mb-4">
-                <h5 class="alert-heading mb-2">
-                    <i class="fas fa-users me-2"></i>Team Registration
-                </h5>
-                <p class="mb-0">
-                    This plan requires a team of <strong>${teamSize} members</strong>.
-                    Please provide complete information for each team member below.
-                </p>
-            </div>
-
-            <!-- Team Name -->
-            <div class="row g-3 mb-4">
-                <div class="col-12">
-                    <label for="teamName" class="form-label">Team Name *</label>
-                    <input type="text" class="form-control" id="teamName" name="teamName" required maxlength="100"
-                           placeholder="Enter your team name (e.g., 'Adventure Seekers')">
-                    <div class="form-text">Choose a fun name for your team!</div>
-                </div>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h6 class="mb-0 d-flex align-items-center">
-                    <i class="fas fa-user-friends me-2 text-primary"></i>
-                    Team Members (${teamSize} required)
-                </h6>
-                <div class="progress-indicator">
-                    <span class="badge bg-secondary" id="teamProgress">0 / ${teamSize} completed</span>
-                </div>
-            </div>
-        `;
-
-        // Generate forms for each team member
-        for (let i = 1; i <= teamSize; i++) {
-            content += generateMemberForm(i, teamSize, true);
-        }
-    } else {
-        console.log('✅ Generating individual form');
-        content += `
-            <div class="alert alert-primary mb-4">
-                <h5 class="alert-heading mb-2">
-                    <i class="fas fa-user me-2"></i>Individual Registration
-                </h5>
-                <p class="mb-0">
-                    This is an individual adventure. Please provide your personal information below.
-                </p>
-            </div>
-            ${generateMemberForm(1, 1, false)}
-        `;
-    }
-
-    return content;
-}
-
-/**
- * Generate member form for team or individual registration
- */
-function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) {
-    const isTeamLeader = memberNumber === 1;
-    const isIndividualRegistration = totalMembers === 1;
-    const showEmergencyContacts = isIndividualRegistration || isTeamLeader;
-
-    const memberTitle = totalMembers > 1 ?
-        `<h6 class="mb-3 text-primary d-flex align-items-center">
-            <span class="badge bg-primary me-2">${memberNumber}</span>
-            ${memberNumber === 1 ? '👑 Team Leader' : `👤 Team Member ${memberNumber}`}
-        </h6>` : '';
-
-    return `
-        ${showMemberTitle ? memberTitle : ''}
-        <div class="member-form border rounded p-3 mb-4" data-member="${memberNumber}">
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label for="fullName_${memberNumber}" class="form-label">Full Name *</label>
-                    <input type="text" class="form-control" id="fullName_${memberNumber}"
-                           name="members[${memberNumber-1}].fullName" required maxlength="100"
-                           placeholder="Enter full name">
-
-                </div>
-                <div class="col-md-6">
-                    <label for="age_${memberNumber}" class="form-label">Age *</label>
-                    <input type="number" class="form-control" id="age_${memberNumber}"
-                           name="members[${memberNumber-1}].age" required min="18" max="65"
-                           placeholder="Age (18-65)">
-
-                </div>
-                <div class="col-md-6">
-                    <label for="gender_${memberNumber}" class="form-label">Gender *</label>
-                    <select class="form-select" id="gender_${memberNumber}"
-                            name="members[${memberNumber-1}].gender" required>
-                        <option value="">Select Gender</option>
-                        <option value="MALE">Male</option>
-                        <option value="FEMALE">Female</option>
-                        <option value="OTHER">Other</option>
-                    </select>
-
-                </div>
-                <div class="col-md-6">
-                    <label for="email_${memberNumber}" class="form-label">Email Address *</label>
-                    <input type="email" class="form-control" id="email_${memberNumber}"
-                           name="members[${memberNumber-1}].email" required maxlength="100"
-                           placeholder="email@example.com">
-
-                </div>
-                <div class="col-md-6">
-                    <label for="phoneNumber_${memberNumber}" class="form-label">Phone Number *</label>
-                    <div class="input-group">
-                        <span class="input-group-text">+91</span>
-                        <input type="tel" class="form-control" id="phoneNumber_${memberNumber}"
-                               name="members[${memberNumber-1}].phoneNumber" required maxlength="10" minlength="10"
-                               pattern="[6-9][0-9]{9}" placeholder="9876543210">
-                    </div>
-
-                </div>
-                <div class="col-12">
-                    <label for="bio_${memberNumber}" class="form-label">Tell us about yourself</label>
-                    <textarea class="form-control" id="bio_${memberNumber}" name="members[${memberNumber-1}].bio"
-                              rows="3" maxlength="2000"
-                              placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!"
-                              oninput="updateCharacterCount(${memberNumber})"></textarea>
-                    <div class="form-text">
-                        <span id="charCount_${memberNumber}">0</span>/2000 characters
-                    </div>
-                </div>
-                ${showEmergencyContacts ? `
-                <div class="col-md-6">
-                    <label for="emergencyContactName_${memberNumber}" class="form-label">Emergency Contact Name *</label>
-                    <input type="text" class="form-control" id="emergencyContactName_${memberNumber}"
-                           name="members[${memberNumber-1}].emergencyContactName" required maxlength="100"
-                           placeholder="Emergency contact full name">
-
-                </div>
-                <div class="col-12">
-                    <label for="emergencyContactPhone_${memberNumber}" class="form-label">Emergency Contact Phone *</label>
-                    <div class="input-group">
-                        <span class="input-group-text">+91</span>
-                        <input type="tel" class="form-control" id="emergencyContactPhone_${memberNumber}"
-                               name="members[${memberNumber-1}].emergencyContactPhone" required maxlength="10" minlength="10"
-                               pattern="[6-9][0-9]{9}" placeholder="9876543210">
-                    </div>
-
-                </div>
-                ` : `
-                <div class="col-12">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <strong>Note:</strong> Emergency contact information is only required for individual registrations and team leaders.
-                        As a team member, this information is optional.
-                    </div>
-                </div>
-                `}
-            </div>
-        </div>
-    `;
-}
-
-/**
  * Update character count for bio field
  */
 function updateCharacterCount(memberNumber) {
@@ -683,232 +519,51 @@ function updateCharacterCount(memberNumber) {
 /**
  * Load registration form
  */
-function loadRegistrationForm() {
+async function loadRegistrationForm() {
     const container = document.getElementById('registrationFormContainer');
     if (!container) return;
 
-    // Determine if this is a team-based plan
-    const isTeamBased = window.selectedPlan.teamType === 'TEAM';
-    const teamSize = window.selectedPlan.teamSize || 1;
-    const totalPrice = window.selectedPlan.priceInr ? (window.selectedPlan.priceInr * teamSize) : (window.selectedPlan.price * teamSize);
+    const planId = window.selectedPlan.id;
+    if (!planId) {
+        container.innerHTML = '<div class="alert alert-danger">Could not load registration form. Plan ID is missing.</div>';
+        return;
+    }
 
-    container.innerHTML = `
-        <div class="registration-form">
-            <!-- Progress Steps -->
-            <div class="progress-steps mb-4">
-                <div class="progress-step active" data-step="1">
-                    <div class="step-circle">1</div>
-                    <div class="step-label">${isTeamBased ? 'Team Info' : 'Personal Info'}</div>
-                </div>
-                <div class="progress-step" data-step="2">
-                    <div class="step-circle">2</div>
-                    <div class="step-label">Documents & Consent</div>
-                </div>
-            </div>
+    try {
+        const response = await fetch(`/register/form/${planId}`);
+        if (!response.ok) {
+            throw new Error(`Failed to load form: ${response.statusText}`);
+        }
+        const formHtml = await response.text();
+        container.innerHTML = formHtml;
 
-            <!-- Plan Summary -->
-            <div class="alert alert-info mb-4">
-                <h6><i class="fas fa-info-circle me-2"></i>Selected Plan: ${selectedPlan.name}</h6>
-                <div class="row">
-                    <div class="col-md-6">
-                        <p class="mb-1"><strong>Format:</strong> ${isTeamBased ? `Teams of ${teamSize} players` : 'Individual players'}</p>
-                        <p class="mb-0"><strong>Price:</strong> ₹${selectedPlan.priceInr || selectedPlan.price} per person</p>
-                    </div>
-                    <div class="col-md-6">
-                        ${isTeamBased ? `<p class="mb-1"><strong>Team Size:</strong> ${teamSize} players</p>` : ''}
-                        <p class="mb-0"><strong>Total Cost:</strong> ₹${totalPrice.toFixed(2)}</p>
-                    </div>
-                </div>
-            </div>
+        // After injecting the HTML, setup all event listeners and initial states
+        setupFormEventListeners();
 
-            <!-- Payment Advisory Notice -->
-            <div class="alert alert-warning mb-4">
-                <h6><i class="fas fa-exclamation-triangle me-2"></i>Payment Advisory</h6>
-                <p class="mb-0"><strong>Important:</strong> Payment made is non-refundable. Please ensure all details are correct before proceeding with registration.</p>
-            </div>
-
-            <!-- Registration Form -->
-            <form id="registrationForm" enctype="multipart/form-data">
-                <input type="hidden" name="planId" value="${selectedPlan.id}">
-                <input type="hidden" name="teamSize" value="${teamSize}">
-                <input type="hidden" name="isTeamBased" value="${isTeamBased}">
-
-                <!-- Step 1: Team/Personal Information -->
-                <div class="form-step" data-step="1">
-                    ${generateStep1Content(isTeamBased, teamSize)}
-
-                    <div class="text-end mt-4">
-                        <button type="button" id="nextStepBtn" class="btn btn-primary" onclick="window.nextStepRobust()">
-                            Next Step <i class="fas fa-arrow-right ms-2"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Step 2: Documents & Consent -->
-                <div class="form-step d-none" data-step="2">
-                    <h5 class="mb-3">Document Upload & Medical Consent</h5>
-
-                    <!-- Team Registration Info Notice -->
-                    ${isTeamBased ? `
-                    <div class="alert alert-info mb-4">
-                        <h6><i class="fas fa-info-circle me-2"></i>Team Registration Document Requirements</h6>
-                        <p class="mb-0">For team registrations, you only need to upload documents for <strong>ONE team member</strong> (typically the team leader). Individual participant documents for all team members are not required.</p>
-                    </div>
-                    ` : ''}
-
-                    <!-- Medical Consent -->
-                    <div class="mb-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h6 class="mb-0">Medical Consent & Risk Acknowledgment</h6>
-                            </div>
-                            <div class="card-body">
-                                <div class="medical-consent-text" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
-                                    <p><strong>IMPORTANT: Please read carefully before proceeding.</strong></p>
-                                    <p>By participating in treasure hunt activities, I acknowledge and understand that:</p>
-                                    <ul>
-                                        <li>Physical activities involve inherent risks including but not limited to injury, illness, or property damage</li>
-                                        <li>I am in good physical health and have no medical conditions that would prevent safe participation</li>
-                                        <li>I will follow all safety instructions provided by guides and staff</li>
-                                        <li>I understand that activities may involve walking on uneven terrain, climbing, and problem-solving under time pressure</li>
-                                        <li>Weather conditions may affect the nature and safety of activities</li>
-                                        <li>I am responsible for my own safety and the safety of others in my group</li>
-                                        <li>Emergency medical treatment may be necessary and I consent to such treatment</li>
-                                        <li>I have adequate insurance coverage for any potential medical expenses</li>
-                                        <li>I release Treasure Hunt Adventures from liability for injuries or damages that may occur during participation</li>
-                                        <li>I understand that activities may be modified or cancelled due to safety concerns</li>
-                                    </ul>
-                                    <p>Participants with medical conditions, injuries, or physical limitations must consult with their physician before participating and must inform our staff of any relevant conditions.</p>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" id="medicalConsent" name="medicalConsentGiven" required>
-                                    <label class="form-check-label" for="medicalConsent">
-                                        <strong>I have read, understood, and agree to the medical consent and risk acknowledgment above. *</strong>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- File Uploads -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <label class="form-label">Passport Photo <small class="text-danger">(Required - JPG, PNG, max 2MB)</small></label>
-                            <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('photoFile').click();">
-                                <i class="fas fa-camera fs-2 text-muted mb-2"></i>
-                                <p class="mb-2">Click to upload or drag & drop</p>
-                                <div id="photoFileInfo" class="file-info d-none"></div>
-                            </div>
-                            <input type="file" id="photoFile" name="photoFile" accept="image/jpeg,image/jpg,image/png" style="display: none;" onchange="handleFileUpload(this, 'photo', 2)">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Government ID <small class="text-danger">(Required - PDF, JPG, max 5MB)</small></label>
-                            <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('idFile').click();">
-                                <i class="fas fa-id-card fs-2 text-muted mb-2"></i>
-                                <p class="mb-2">Click to upload or drag & drop</p>
-                                <div id="idFileInfo" class="file-info d-none"></div>
-                            </div>
-                            <input type="file" id="idFile" name="idFile" accept="application/pdf,image/jpeg,image/jpg" style="display: none;" onchange="handleFileUpload(this, 'id', 5)">
-                        </div>
-                        <div class="col-md-4" id="medicalCertificateContainer">
-                            <label class="form-label" id="medicalCertificateLabel">Medical Certificate <small class="text-danger" id="medicalCertificateRequired">(Required - PDF only, max 5MB)</small></label>
-                            <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('medicalFile').click();" id="medicalFileUploadArea">
-                                <i class="fas fa-file-medical fs-2 text-muted mb-2"></i>
-                                <p class="mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
-                                <div id="medicalFileInfo" class="file-info d-none"></div>
-                            </div>
-                            <input type="file" id="medicalFile" name="medicalFile" accept="application/pdf" style="display: none;" onchange="handleFileUpload(this, 'medical', 5)">
-                            <div class="form-text mt-2" id="medicalCertificateHelperText">
-                                Medical certificate is required unless medical consent is given above.
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between">
-                        <button type="button" class="btn btn-outline-secondary" onclick="previousStep()">
-                            <i class="fas fa-arrow-left me-2"></i> Previous
-                        </button>
-                        <button type="submit" class="btn btn-success" id="submitBtn" disabled>
-                            <span class="spinner-border spinner-border-sm d-none me-2"></span>
-                            Submit Registration
-                        </button>
-                    </div>
-                </div>
-            </form>
-        </div>
-    `;
-
-    // Setup form event listeners
-    setupFormEventListeners();
-
-    // Initialize form to show Step 1 - use robust functions
-    setTimeout(() => {
-        window.currentStep = 1;
-        window.showStepRobust(1);
-
-        // Setup medical consent checkbox listener
+        // Initialize form to show Step 1
         setTimeout(() => {
+            window.currentStep = 1;
+            window.showStepRobust(1);
+
+            // Setup medical consent checkbox listener
             const medicalConsent = document.getElementById('medicalConsent');
             if (medicalConsent) {
                 medicalConsent.addEventListener('change', function() {
-                    console.log('🏥 Medical consent changed:', this.checked);
                     toggleMedicalCertificateUpload(this.checked);
                     checkFormCompletion();
                 });
-
-                // Initialize the state based on current checkbox value
                 toggleMedicalCertificateUpload(medicalConsent.checked);
-                console.log('✅ Medical consent listener attached');
             }
-        }, 1000);
-
-        console.log('Form initialized with step 1 using robust functions');
-    }, 200);
-
-    // Setup validation and progress tracking with multiple attempts
-    let setupAttempts = 0;
-    const maxAttempts = 10;
-
-    function attemptSetup() {
-        setupAttempts++;
-        console.log(`🔧 Setup attempt ${setupAttempts}/${maxAttempts}`);
-
-        const form = document.getElementById('registrationForm');
-        const inputs = form ? form.querySelectorAll('input, select') : [];
-
-        if (form && inputs.length > 0) {
-            console.log(`✅ Found form with ${inputs.length} inputs, setting up...`);
 
             // Setup validation and progress tracking
             setupFormValidation();
             updateTeamProgress();
+        }, 100);
 
-            // Add event listeners to each input individually
-            inputs.forEach((input, index) => {
-                // Remove existing listeners to avoid duplicates
-                input.removeEventListener('input', handleInputChange);
-                input.removeEventListener('change', handleInputChange);
-                input.removeEventListener('blur', handleInputChange);
-
-                // Add new listeners
-                input.addEventListener('input', handleInputChange);
-                input.addEventListener('change', handleInputChange);
-                input.addEventListener('blur', handleInputChange);
-
-                console.log(`📝 Listeners added to ${input.id || input.name || 'field-' + index}`);
-            });
-
-            console.log('✅ All event listeners attached successfully');
-        } else if (setupAttempts < maxAttempts) {
-            console.log(`❌ Form not ready, retrying in 500ms...`);
-            setTimeout(attemptSetup, 500);
-        } else {
-            console.log('❌ Failed to setup after maximum attempts');
-        }
+    } catch (error) {
+        console.error('Error loading registration form:', error);
+        container.innerHTML = `<div class="alert alert-danger">Error loading registration form: ${error.message}</div>`;
     }
-
-    // Start setup attempts
-    setTimeout(attemptSetup, 500);
 }
 
 /**
@@ -2043,24 +1698,36 @@ function populateTeamMembersList() {
 
     memberForms.forEach((form, index) => {
         const memberNumber = index + 1;
+        const isTeamLeader = memberNumber === 1;
         const fullName = document.getElementById(`fullName_${memberNumber}`)?.value || 'N/A';
         const email = document.getElementById(`email_${memberNumber}`)?.value || 'N/A';
         const phone = document.getElementById(`phoneNumber_${memberNumber}`)?.value || 'N/A';
+        const age = document.getElementById(`age_${memberNumber}`)?.value || 'N/A';
+        const gender = document.getElementById(`gender_${memberNumber}`)?.value || 'N/A';
+        const emergencyName = document.getElementById(`emergencyContactName_${memberNumber}`)?.value || '';
+        const emergencyPhone = document.getElementById(`emergencyContactPhone_${memberNumber}`)?.value || '';
 
         membersHtml += `
             <div class="card mb-2">
+                <div class="card-header py-2">
+                    <strong>${fullName}</strong> -
+                    <small class="text-muted">${isTeamLeader ? '👑 Team Leader' : `👤 Member ${memberNumber}`}</small>
+                </div>
                 <div class="card-body py-2">
                     <div class="row">
-                        <div class="col-md-4">
-                            <strong>${fullName}</strong>
-                            <br><small class="text-muted">Member ${memberNumber}</small>
+                        <div class="col-md-6">
+                            <p class="mb-1"><i class="fas fa-envelope me-2"></i>${email}</p>
+                            <p class="mb-0"><i class="fas fa-phone me-2"></i>+91 ${phone}</p>
                         </div>
-                        <div class="col-md-4">
-                            <i class="fas fa-envelope me-1"></i>${email}
+                        <div class="col-md-6">
+                            <p class="mb-1"><i class="fas fa-birthday-cake me-2"></i>${age} years old</p>
+                            <p class="mb-0"><i class="fas fa-venus-mars me-2"></i>${gender}</p>
                         </div>
-                        <div class="col-md-4">
-                            <i class="fas fa-phone me-1"></i>+91 ${phone}
+                        ${(emergencyName && emergencyPhone) ? `
+                        <div class="col-12 mt-2">
+                             <p class="mb-0 border-top pt-2"><i class="fas fa-first-aid me-2"></i><strong>Emergency:</strong> ${emergencyName} (${emergencyPhone})</p>
                         </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -2082,19 +1749,24 @@ function populateParticipantDetails() {
     const phone = document.getElementById('phoneNumber_1')?.value || 'N/A';
     const age = document.getElementById('age_1')?.value || 'N/A';
     const gender = document.getElementById('gender_1')?.value || 'N/A';
+    const emergencyName = document.getElementById('emergencyContactName_1')?.value || 'N/A';
+    const emergencyPhone = document.getElementById('emergencyContactPhone_1')?.value || 'N/A';
 
     participantDetails.innerHTML = `
         <div class="card">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>Name:</strong> ${fullName}</p>
-                        <p><strong>Email:</strong> ${email}</p>
-                        <p><strong>Phone:</strong> +91 ${phone}</p>
+                        <p class="mb-2"><strong>Name:</strong> ${fullName}</p>
+                        <p class="mb-2"><strong>Email:</strong> ${email}</p>
+                        <p class="mb-0"><strong>Phone:</strong> +91 ${phone}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Age:</strong> ${age} years</p>
-                        <p><strong>Gender:</strong> ${gender}</p>
+                        <p class="mb-2"><strong>Age:</strong> ${age} years</p>
+                        <p class="mb-2"><strong>Gender:</strong> ${gender}</p>
+                    </div>
+                    <div class="col-12 mt-2">
+                        <p class="mb-0 border-top pt-2"><strong>Emergency Contact:</strong> ${emergencyName} (${emergencyPhone})</p>
                     </div>
                 </div>
             </div>

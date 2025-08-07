@@ -1,0 +1,235 @@
+<div class="registration-form" th:fragment="form(plan)" xmlns:th="http://www.thymeleaf.org">
+    <!-- Progress Steps -->
+    <div class="progress-steps mb-4">
+        <div class="progress-step active" data-step="1">
+            <div class="step-circle">1</div>
+            <div class="step-label" th:text="${plan.teamType.name() == 'TEAM'} ? 'Team Info' : 'Personal Info'">Personal Info</div>
+        </div>
+        <div class="progress-step" data-step="2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Documents & Consent</div>
+        </div>
+    </div>
+
+    <!-- Plan Summary -->
+    <div class="alert alert-info mb-4">
+        <h6><i class="fas fa-info-circle me-2"></i>Selected Plan: <span th:text="${plan.name}">Plan Name</span></h6>
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1"><strong>Format:</strong> <span th:text="${plan.teamType.name() == 'TEAM'} ? 'Teams of ' + ${plan.teamSize} + ' players' : 'Individual players'"></span></p>
+                <p class="mb-0"><strong>Price:</strong> ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 'COMMA', 2, 'POINT')}"></span> per person</p>
+            </div>
+            <div class="col-md-6">
+                <p th:if="${plan.teamType.name() == 'TEAM'}" class="mb-1"><strong>Team Size:</strong> <span th:text="${plan.teamSize}"></span> players</p>
+                <p class="mb-0"><strong>Total Cost:</strong> ₹<span th:text="${#numbers.formatDecimal(plan.priceInr.multiply(plan.teamSize), 1, 'COMMA', 2, 'POINT')}"></span></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Payment Advisory Notice -->
+    <div class="alert alert-warning mb-4">
+        <h6><i class="fas fa-exclamation-triangle me-2"></i>Payment Advisory</h6>
+        <p class="mb-0"><strong>Important:</strong> Payment made is non-refundable. Please ensure all details are correct before proceeding with registration.</p>
+    </div>
+
+    <!-- Registration Form -->
+    <form id="registrationForm" enctype="multipart/form-data">
+        <input type="hidden" name="planId" th:value="${plan.id}" />
+        <input type="hidden" name="teamSize" th:value="${plan.teamSize}" />
+        <input type="hidden" name="isTeamBased" th:value="${plan.teamType.name() == 'TEAM'}" />
+
+        <!-- Step 1: Team/Personal Information -->
+        <div class="form-step" data-step="1">
+            <div th:if="${plan.teamType.name() == 'TEAM'}">
+                <div class="alert alert-info mb-4">
+                    <h5 class="alert-heading mb-2"><i class="fas fa-users me-2"></i>Team Registration</h5>
+                    <p class="mb-0">This plan requires a team of <strong th:text="${plan.teamSize}"></strong> members. Please provide complete information for each team member below.</p>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-12">
+                        <label for="teamName" class="form-label">Team Name *</label>
+                        <input type="text" class="form-control" id="teamName" name="teamName" required="required" maxlength="100" placeholder="Enter your team name (e.g., 'Adventure Seekers')" />
+                        <div class="form-text">Choose a fun name for your team!</div>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0 d-flex align-items-center">
+                        <i class="fas fa-user-friends me-2 text-primary"></i>
+                        Team Members (<span th:text="${plan.teamSize}"></span> required)
+                    </h6>
+                    <div class="progress-indicator">
+                        <span class="badge bg-secondary" id="teamProgress">0 / <span th:text="${plan.teamSize}"></span> completed</span>
+                    </div>
+                </div>
+                <div th:each="i : ${#numbers.sequence(1, plan.teamSize)}" th:include="~{fragments/registration-form :: memberForm(memberNumber=${i}, totalMembers=${plan.teamSize}, showMemberTitle=true)}"></div>
+            </div>
+
+            <div th:if="${plan.teamType.name() != 'TEAM'}">
+                 <div class="alert alert-primary mb-4">
+                    <h5 class="alert-heading mb-2"><i class="fas fa-user me-2"></i>Individual Registration</h5>
+                    <p class="mb-0">This is an individual adventure. Please provide your personal information below.</p>
+                </div>
+                <div th:include="~{fragments/registration-form :: memberForm(memberNumber=1, totalMembers=1, showMemberTitle=false)}"></div>
+            </div>
+
+            <div class="text-end mt-4">
+                <button type="button" id="nextStepBtn" class="btn btn-primary" onclick="window.nextStepRobust()">
+                    Next Step <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Documents & Consent -->
+        <div class="form-step d-none" data-step="2">
+            <h5 class="mb-3">Document Upload & Medical Consent</h5>
+
+            <div th:if="${plan.teamType.name() == 'TEAM'}" class="alert alert-info mb-4">
+                <h6><i class="fas fa-info-circle me-2"></i>Team Registration Document Requirements</h6>
+                <p class="mb-0">For team registrations, you only need to upload documents for <strong>ONE team member</strong> (typically the team leader). Individual participant documents for all team members are not required.</p>
+            </div>
+
+            <!-- Medical Consent -->
+            <div class="mb-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Medical Consent & Risk Acknowledgment</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="medical-consent-text" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa; padding: 1rem; border-radius: 0.5rem; margin-bottom: 1rem;">
+                            <p><strong>IMPORTANT: Please read carefully before proceeding.</strong></p>
+                            <p>By participating in treasure hunt activities, I acknowledge and understand that:</p>
+                            <ul>
+                                <li>Physical activities involve inherent risks including but not limited to injury, illness, or property damage</li>
+                                <li>I am in good physical health and have no medical conditions that would prevent safe participation</li>
+                                <li>I will follow all safety instructions provided by guides and staff</li>
+                                <li>I understand that activities may involve walking on uneven terrain, climbing, and problem-solving under time pressure</li>
+                                <li>Weather conditions may affect the nature and safety of activities</li>
+                                <li>I am responsible for my own safety and the safety of others in my group</li>
+                                <li>Emergency medical treatment may be necessary and I consent to such treatment</li>
+                                <li>I have adequate insurance coverage for any potential medical expenses</li>
+                                <li>I release Treasure Hunt Adventures from liability for injuries or damages that may occur during participation</li>
+                                <li>I understand that activities may be modified or cancelled due to safety concerns</li>
+                            </ul>
+                            <p>Participants with medical conditions, injuries, or physical limitations must consult with their physician before participating and must inform our staff of any relevant conditions.</p>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="medicalConsent" name="medicalConsentGiven" required="required" />
+                            <label class="form-check-label" for="medicalConsent">
+                                <strong>I have read, understood, and agree to the medical consent and risk acknowledgment above. *</strong>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Uploads -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <label class="form-label">Passport Photo <small class="text-danger">(Required - JPG, PNG, max 2MB)</small></label>
+                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('photoFile').click();">
+                        <i class="fas fa-camera fs-2 text-muted mb-2"></i>
+                        <p class="mb-2">Click to upload or drag & drop</p>
+                        <div id="photoFileInfo" class="file-info d-none"></div>
+                    </div>
+                    <input type="file" id="photoFile" name="photoFile" accept="image/jpeg,image/jpg,image/png" style="display: none;" onchange="handleFileUpload(this, 'photo', 2)" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Government ID <small class="text-danger">(Required - PDF, JPG, max 5MB)</small></label>
+                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('idFile').click();">
+                        <i class="fas fa-id-card fs-2 text-muted mb-2"></i>
+                        <p class="mb-2">Click to upload or drag & drop</p>
+                        <div id="idFileInfo" class="file-info d-none"></div>
+                    </div>
+                    <input type="file" id="idFile" name="idFile" accept="application/pdf,image/jpeg,image/jpg" style="display: none;" onchange="handleFileUpload(this, 'id', 5)" />
+                </div>
+                <div class="col-md-4" id="medicalCertificateContainer">
+                    <label class="form-label" id="medicalCertificateLabel">Medical Certificate <small class="text-danger" id="medicalCertificateRequired">(Required - PDF only, max 5MB)</small></label>
+                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('medicalFile').click();" id="medicalFileUploadArea">
+                        <i class="fas fa-file-medical fs-2 text-muted mb-2"></i>
+                        <p class="mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
+                        <div id="medicalFileInfo" class="file-info d-none"></div>
+                    </div>
+                    <input type="file" id="medicalFile" name="medicalFile" accept="application/pdf" style="display: none;" onchange="handleFileUpload(this, 'medical', 5)" />
+                    <div class="form-text mt-2" id="medicalCertificateHelperText">
+                        Medical certificate is required unless medical consent is given above.
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button type="button" class="btn btn-outline-secondary" onclick="previousStep()">
+                    <i class="fas fa-arrow-left me-2"></i> Previous
+                </button>
+                <button type="submit" class="btn btn-success" id="submitBtn" disabled="disabled">
+                    <span class="spinner-border spinner-border-sm d-none me-2"></span>
+                    Submit Registration
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div th:fragment="memberForm(memberNumber, totalMembers, showMemberTitle)" xmlns:th="http://www.thymeleaf.org">
+    <h6 th:if="${showMemberTitle}" class="mb-3 text-primary d-flex align-items-center">
+        <span class="badge bg-primary me-2" th:text="${memberNumber}">1</span>
+        <span th:if="${memberNumber == 1}">👑 Team Leader</span>
+        <span th:if="${memberNumber > 1}" th:text="'👤 Team Member ' + ${memberNumber}"></span>
+    </h6>
+    <div class="member-form border rounded p-3 mb-4" th:attr="data-member=${memberNumber}">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label th:for="'fullName_' + ${memberNumber}" class="form-label">Full Name *</label>
+                <input type="text" class="form-control" th:id="'fullName_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].fullName'" required="required" maxlength="100" placeholder="Enter full name" />
+            </div>
+            <div class="col-md-6">
+                <label th:for="'age_' + ${memberNumber}" class="form-label">Age *</label>
+                <input type="number" class="form-control" th:id="'age_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].age'" required="required" min="18" max="65" placeholder="Age (18-65)" />
+            </div>
+            <div class="col-md-6">
+                <label th:for="'gender_' + ${memberNumber}" class="form-label">Gender *</label>
+                <select class="form-select" th:id="'gender_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].gender'" required="required">
+                    <option value="">Select Gender</option>
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label th:for="'email_' + ${memberNumber}" class="form-label">Email Address *</label>
+                <input type="email" class="form-control" th:id="'email_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].email'" required="required" maxlength="100" placeholder="email@example.com" />
+            </div>
+            <div class="col-md-6">
+                <label th:for="'phoneNumber_' + ${memberNumber}" class="form-label">Phone Number *</label>
+                <div class="input-group">
+                    <span class="input-group-text">+91</span>
+                    <input type="tel" class="form-control" th:id="'phoneNumber_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].phoneNumber'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+                </div>
+            </div>
+            <div class="col-12">
+                <label th:for="'bio_' + ${memberNumber}" class="form-label">Tell us about yourself</label>
+                <textarea class="form-control" th:id="'bio_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].bio'" rows="3" maxlength="2000" placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!" th:attr="oninput='updateCharacterCount(' + ${memberNumber} + ')'"></textarea>
+                <div class="form-text">
+                    <span th:id="'charCount_' + ${memberNumber}">0</span>/2000 characters
+                </div>
+            </div>
+
+            <div th:if="${totalMembers == 1 or memberNumber == 1}" class="col-md-6">
+                <label th:for="'emergencyContactName_' + ${memberNumber}" class="form-label">Emergency Contact Name *</label>
+                <input type="text" class="form-control" th:id="'emergencyContactName_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].emergencyContactName'" required="required" maxlength="100" placeholder="Emergency contact full name" />
+            </div>
+             <div th:if="${totalMembers == 1 or memberNumber == 1}" class="col-12">
+                <label th:for="'emergencyContactPhone_' + ${memberNumber}" class="form-label">Emergency Contact Phone *</label>
+                <div class="input-group">
+                    <span class="input-group-text">+91</span>
+                    <input type="tel" class="form-control" th:id="'emergencyContactPhone_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].emergencyContactPhone'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+                </div>
+            </div>
+            <div th:if="${totalMembers > 1 and memberNumber > 1}" class="col-12">
+                 <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> Emergency contact information is only required for individual registrations and team leaders. As a team member, this information is optional.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

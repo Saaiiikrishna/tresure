@@ -2,239 +2,171 @@ package com.treasurehunt.service;
 
 import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.UserRegistration;
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.Arrays;
+import java.util.List;
 
 /**
- * Service class for handling email operations
- * Sends registration confirmations and other notifications
+ * Service class for generating email content using Thymeleaf templates.
+ * This service is responsible for creating the HTML body of emails.
+ * The actual sending is handled by other services (e.g., EmailQueueService).
  */
 @Service
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
-    private final JavaMailSender mailSender;
     private final TemplateEngine templateEngine;
-
-    @Value("${app.email.from}")
-    private String fromEmail;
-
-    @Value("${app.email.from-name}")
-    private String fromName;
-
-    @Value("${app.email.support}")
-    private String supportEmail;
 
     @Value("${app.email.company-name}")
     private String companyName;
 
-    public EmailService(JavaMailSender mailSender, TemplateEngine templateEngine) {
-        this.mailSender = mailSender;
+    @Value("${app.email.support}")
+    private String supportEmail;
+
+    public EmailService(TemplateEngine templateEngine) {
         this.templateEngine = templateEngine;
     }
 
     /**
-     * Send registration confirmation email asynchronously
+     * Generate registration confirmation email HTML body.
      * @param registration User registration
-     * @return CompletableFuture for async processing
+     * @return HTML content for the email
      */
-    @Async
-    public CompletableFuture<Void> sendRegistrationConfirmation(UserRegistration registration) {
-        try {
-            logger.info("Sending registration confirmation email to: {}", registration.getEmail());
-            
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            // Set email properties with validation and display name
-            String cleanFrom = validateAndCleanEmail(fromEmail);
-            String cleanTo = validateAndCleanEmail(registration.getEmail());
-
-            if (cleanFrom == null || cleanTo == null) {
-                logger.error("Invalid email addresses - From: {}, To: {}", fromEmail, registration.getEmail());
-                return CompletableFuture.failedFuture(new MessagingException("Invalid email addresses"));
-            }
-
-            String formattedFrom = formatEmailWithName(cleanFrom, fromName);
-            helper.setFrom(formattedFrom);
-            helper.setTo(cleanTo);
-            helper.setSubject("Registration Received for " + registration.getPlan().getName());
-
-            // Create email content using Thymeleaf template
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("registrationNumber", registration.getRegistrationNumber());
-
-            // Add pre-hunt checklist
-            context.setVariable("checklist", getPreHuntChecklist());
-
-            logger.info("=== PROCESSING EMAIL TEMPLATE ===");
-            logger.info("Template: email/registration-confirmation");
-            logger.info("Registration ID: {}", registration.getId());
-            logger.info("Plan: {}", registration.getPlan().getName());
-
-            String htmlContent = templateEngine.process("email/registration-confirmation", context);
-
-            // Log template processing completion without content for security
-            logger.info("=== EMAIL TEMPLATE PROCESSING COMPLETE ===");
-            helper.setText(htmlContent, true);
-
-            // Send email
-            mailSender.send(message);
-            
-            logger.info("Successfully sent registration confirmation email to: {}", registration.getEmail());
-            return CompletableFuture.completedFuture(null);
-            
-        } catch (MessagingException e) {
-            logger.error("Failed to send registration confirmation email to: {}", registration.getEmail(), e);
-            return CompletableFuture.failedFuture(e);
-        }
+    public String createRegistrationConfirmationBody(UserRegistration registration) {
+        logger.debug("Creating registration confirmation email body for: {}", registration.getEmail());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+        context.setVariable("checklist", getPreHuntChecklist());
+        return templateEngine.process("email/registration-confirmation", context);
     }
 
     /**
-     * Send registration status update email
+     * Generate admin notification email HTML body.
      * @param registration User registration
-     * @param newStatus New registration status
-     * @return CompletableFuture for async processing
+     * @return HTML content for the email
      */
-    @Async
-    public CompletableFuture<Void> sendStatusUpdateEmail(UserRegistration registration, 
-                                                        UserRegistration.RegistrationStatus newStatus) {
-        try {
-            logger.info("Sending status update email to: {} for status: {}", 
-                       registration.getEmail(), newStatus);
-            
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(registration.getEmail());
-            
-            String subject = getSubjectForStatus(newStatus, registration.getPlan().getName());
-            helper.setSubject(subject);
-
-            // Create email content
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("newStatus", newStatus);
-            context.setVariable("statusMessage", getStatusMessage(newStatus));
-
-            String htmlContent = templateEngine.process("email/status-update", context);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-            
-            logger.info("Successfully sent status update email to: {}", registration.getEmail());
-            return CompletableFuture.completedFuture(null);
-            
-        } catch (MessagingException e) {
-            logger.error("Failed to send status update email to: {}", registration.getEmail(), e);
-            return CompletableFuture.failedFuture(e);
-        }
+    public String createAdminNotificationBody(UserRegistration registration) {
+        logger.debug("Creating admin notification email body for registration ID: {}", registration.getId());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        return templateEngine.process("email/admin-notification", context);
     }
 
     /**
-     * Send admin notification email for new registration
+     * Generate application approval email HTML body.
      * @param registration User registration
-     * @return CompletableFuture for async processing
+     * @return HTML content for the email
      */
-    @Async
-    public CompletableFuture<Void> sendAdminNotification(UserRegistration registration) {
-        try {
-            logger.info("Sending admin notification for new registration ID: {}", registration.getId());
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(supportEmail);
-            helper.setSubject("New Registration - " + registration.getPlan().getName());
-
-            // Create admin notification content
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-
-            String htmlContent = templateEngine.process("email/admin-notification", context);
-            helper.setText(htmlContent, true);
-
-            mailSender.send(message);
-
-            logger.info("Successfully sent admin notification for registration ID: {}", registration.getId());
-            return CompletableFuture.completedFuture(null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send admin notification for registration ID: {}", registration.getId(), e);
-            return CompletableFuture.failedFuture(e);
-        }
+    public String createApplicationApprovalBody(UserRegistration registration) {
+        logger.debug("Creating application approval email body for: {}", registration.getEmail());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+        return templateEngine.process("email/application-approval", context);
     }
 
     /**
-     * Send application approval email asynchronously
-     * @param registration User registration
-     * @return CompletableFuture for async processing
+     * Generate team application approval email HTML body for a specific member.
+     * @param registration Team registration
+     * @param member The team member to generate the email for
+     * @return HTML content for the email
      */
-    @Async
-    public CompletableFuture<Void> sendApplicationApproval(UserRegistration registration) {
-        try {
-            logger.info("Sending application approval email to: {}", registration.getEmail());
+    public String createTeamApplicationApprovalBody(UserRegistration registration, TeamMember member) {
+        logger.debug("Creating team application approval email body for member: {}", member.getEmail());
+        TeamMember teamLeader = registration.getTeamMembers().stream()
+                .filter(m -> m.getMemberPosition() != null && m.getMemberPosition() == 1)
+                .findFirst()
+                .orElse(null);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("member", member);
+        context.setVariable("teamLeader", teamLeader);
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        return templateEngine.process("email/team-application-approval", context);
+    }
 
-            // Set email properties
-            helper.setFrom(fromEmail);
-            helper.setTo(registration.getEmail());
-            helper.setSubject("Application Approved - " + registration.getPlan().getName() + " Participation Confirmed");
+    /**
+     * Generate team member confirmation email HTML body.
+     * @param registration Team registration
+     * @param member The team member to generate the email for
+     * @return HTML content for the email
+     */
+    public String createTeamMemberConfirmationBody(UserRegistration registration, TeamMember member) {
+        logger.debug("Creating team member confirmation email body for: {}", member.getEmail());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("member", member);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+        context.setVariable("teamName", registration.getTeamName());
+        context.setVariable("isTeamLeader", member.isTeamLeader());
+        context.setVariable("checklist", getPreHuntChecklist());
+        return templateEngine.process("email/team-member-confirmation", context);
+    }
 
-            // Create email content using Thymeleaf template
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+    /**
+     * Generate team cancellation email HTML body.
+     * @param registration Team registration
+     * @param teamLeader The team leader to whom the email is addressed
+     * @return HTML content for the email
+     */
+    public String createTeamCancellationBody(UserRegistration registration, TeamMember teamLeader) {
+        logger.debug("Creating team cancellation email body for team leader: {}", teamLeader.getEmail());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("teamLeader", teamLeader);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+        context.setVariable("teamName", registration.getTeamName());
+        context.setVariable("teamMembers", registration.getTeamMembers());
+        return templateEngine.process("email/team-cancellation", context);
+    }
 
-            String htmlContent = templateEngine.process("email/application-approval", context);
-            helper.setText(htmlContent, true);
-
-            // Send email
-            mailSender.send(message);
-
-            logger.info("Successfully sent application approval email to: {}", registration.getEmail());
-            return CompletableFuture.completedFuture(null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send application approval email to: {}", registration.getEmail(), e);
-            return CompletableFuture.failedFuture(e);
-        }
+    /**
+     * Generate individual cancellation email HTML body.
+     * @param registration Individual registration
+     * @return HTML content for the email
+     */
+    public String createIndividualCancellationBody(UserRegistration registration) {
+        logger.debug("Creating individual cancellation email body for: {}", registration.getEmail());
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+        return templateEngine.process("email/individual-cancellation", context);
     }
 
     /**
      * Get pre-hunt checklist items
      * @return Array of checklist items
      */
-    private String[] getPreHuntChecklist() {
-        return new String[]{
+    private List<String> getPreHuntChecklist() {
+        return Arrays.asList(
             "Comfortable walking shoes with good grip",
             "Weather-appropriate clothing (layers recommended)",
             "Water bottle (minimum 1 liter)",
@@ -246,266 +178,6 @@ public class EmailService {
             "Sunscreen and hat (for outdoor hunts)",
             "Emergency contact information",
             "Positive attitude and team spirit!"
-        };
-    }
-
-    /**
-     * Get email subject for status update
-     * @param status Registration status
-     * @param planName Plan name
-     * @return Email subject
-     */
-    private String getSubjectForStatus(UserRegistration.RegistrationStatus status, String planName) {
-        switch (status) {
-            case CONFIRMED:
-                return "Registration Confirmed - " + planName;
-            case CANCELLED:
-                return "Registration Cancelled - " + planName;
-            default:
-                return "Registration Update - " + planName;
-        }
-    }
-
-    /**
-     * Get status message for email
-     * @param status Registration status
-     * @return Status message
-     */
-    private String getStatusMessage(UserRegistration.RegistrationStatus status) {
-        switch (status) {
-            case CONFIRMED:
-                return "Great news! Your registration has been confirmed. We're excited to have you join us for this adventure!";
-            case CANCELLED:
-                return "We're sorry to inform you that your registration has been cancelled. If you have any questions, please contact our support team.";
-            case PENDING:
-                return "Your registration is currently being reviewed. We'll update you once the review is complete.";
-            default:
-                return "Your registration status has been updated.";
-        }
-    }
-
-    /**
-     * Send confirmation email to individual team member
-     * @param registration Team registration
-     * @param member Team member to send email to
-     * @return CompletableFuture for async processing
-     */
-    @Async
-    public CompletableFuture<Void> sendTeamMemberConfirmation(UserRegistration registration, TeamMember member) {
-        logger.info("Sending team member confirmation email to: {}", member.getEmail());
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(member.getEmail());
-            helper.setSubject("Registration Confirmed - " + registration.getPlan().getName());
-
-            // Create email content using Thymeleaf template
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("member", member);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("registrationNumber", registration.getRegistrationNumber());
-            context.setVariable("teamName", registration.getTeamName());
-            context.setVariable("isTeamLeader", member.isTeamLeader());
-
-            // Add pre-hunt checklist
-            context.setVariable("checklist", getPreHuntChecklist());
-
-            String htmlContent = templateEngine.process("email/team-member-confirmation", context);
-            helper.setText(htmlContent, true);
-
-            // Send email
-            mailSender.send(message);
-
-            logger.info("Successfully sent team member confirmation email to: {}", member.getEmail());
-            return CompletableFuture.completedFuture(null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send team member confirmation email to: {}", member.getEmail(), e);
-            throw new RuntimeException("Failed to send team member confirmation email", e);
-        }
-    }
-
-    /**
-     * Send cancellation email to team leader
-     * @param registration Team registration
-     * @param teamLeader Team leader to send email to
-     * @return CompletableFuture for async processing
-     */
-    @Async
-    public CompletableFuture<Void> sendTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
-        logger.info("Sending team cancellation email to team leader: {}", teamLeader.getEmail());
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(teamLeader.getEmail());
-            helper.setSubject("Team Registration Cancelled - " + registration.getPlan().getName());
-
-            // Create email content using Thymeleaf template
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("teamLeader", teamLeader);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("registrationNumber", registration.getRegistrationNumber());
-            context.setVariable("teamName", registration.getTeamName());
-            context.setVariable("teamMembers", registration.getTeamMembers());
-
-            String htmlContent = templateEngine.process("email/team-cancellation", context);
-            helper.setText(htmlContent, true);
-
-            // Send email
-            mailSender.send(message);
-
-            logger.info("Successfully sent team cancellation email to team leader: {}", teamLeader.getEmail());
-            return CompletableFuture.completedFuture(null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send team cancellation email to team leader: {}", teamLeader.getEmail(), e);
-            throw new RuntimeException("Failed to send team cancellation email", e);
-        }
-    }
-
-    /**
-     * Send individual cancellation email
-     * @param registration Individual registration
-     * @return CompletableFuture for async processing
-     */
-    @Async
-    public CompletableFuture<Void> sendCancellationEmail(UserRegistration registration) {
-        logger.info("Sending cancellation email to: {}", registration.getEmail());
-
-        try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setFrom(fromEmail);
-            helper.setTo(registration.getEmail());
-            helper.setSubject("Registration Cancelled - " + registration.getPlan().getName());
-
-            // Create email content using Thymeleaf template
-            Context context = new Context();
-            context.setVariable("registration", registration);
-            context.setVariable("plan", registration.getPlan());
-            context.setVariable("companyName", companyName);
-            context.setVariable("supportEmail", supportEmail);
-            context.setVariable("registrationNumber", registration.getRegistrationNumber());
-
-            String htmlContent = templateEngine.process("email/individual-cancellation", context);
-            helper.setText(htmlContent, true);
-
-            // Send email
-            mailSender.send(message);
-
-            logger.info("Successfully sent cancellation email to: {}", registration.getEmail());
-            return CompletableFuture.completedFuture(null);
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send cancellation email to: {}", registration.getEmail(), e);
-            throw new RuntimeException("Failed to send cancellation email", e);
-        }
-    }
-
-    /**
-     * Send email with basic parameters (used by ThreadSafeEmailProcessor)
-     * @param to Recipient email
-     * @param subject Email subject
-     * @param body Email body
-     * @param from Sender email
-     * @return true if sent successfully, false otherwise
-     */
-    public boolean sendEmail(String to, String subject, String body, String from) {
-        try {
-            // Validate and clean email addresses
-            String cleanTo = validateAndCleanEmail(to);
-            String cleanFrom = validateAndCleanEmail(from != null ? from : fromEmail);
-
-            if (cleanTo == null || cleanFrom == null) {
-                logger.error("Invalid email addresses - To: {}, From: {}", to, from);
-                return false;
-            }
-
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(cleanTo);
-            helper.setSubject(subject);
-            helper.setText(body, true); // true indicates HTML content
-
-            // Use display name only if using the default from email
-            String formattedFrom = (from == null || from.equals(fromEmail)) ?
-                formatEmailWithName(cleanFrom, fromName) : cleanFrom;
-            helper.setFrom(formattedFrom);
-
-            mailSender.send(message);
-            logger.info("Successfully sent email to: {}", to);
-            return true;
-
-        } catch (MessagingException e) {
-            logger.error("Failed to send email to: {}", to, e);
-            return false;
-        }
-    }
-
-    /**
-     * Validate and clean email address to prevent parsing errors
-     * @param email Email address to validate
-     * @return Cleaned email address or null if invalid
-     */
-    private String validateAndCleanEmail(String email) {
-        if (email == null || email.trim().isEmpty()) {
-            return null;
-        }
-
-        // Remove any extra whitespace and potential formatting issues
-        String cleanEmail = email.trim();
-
-        // Basic email validation regex
-        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
-        if (!cleanEmail.matches(emailRegex)) {
-            logger.warn("Invalid email format: {}", email);
-            return null;
-        }
-
-        // Check for common formatting issues that cause "Extra route-addr" errors
-        if (cleanEmail.contains("<") || cleanEmail.contains(">") ||
-            cleanEmail.contains("\"") || cleanEmail.contains("\\")) {
-            logger.warn("Email contains invalid characters: {}", email);
-            return null;
-        }
-
-        return cleanEmail;
-    }
-
-    /**
-     * Format email address with display name
-     * @param email Email address
-     * @param name Display name
-     * @return Formatted email address with display name
-     */
-    private String formatEmailWithName(String email, String name) {
-        if (name == null || name.trim().isEmpty()) {
-            return email;
-        }
-        return String.format("\"%s\" <%s>", name.trim(), email);
-    }
-
-    /**
-     * Cleanup method for application shutdown
-     */
-    @javax.annotation.PreDestroy
-    public void cleanup() {
-        logger.info("EmailService cleanup initiated");
-        // Any cleanup operations if needed (e.g., cancel pending async operations)
-        logger.info("EmailService cleanup completed");
+        );
     }
 }
