@@ -3,10 +3,14 @@ package com.treasurehunt.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +19,14 @@ import java.util.List;
  * Maps to treasure_hunt_plans table in PostgreSQL database
  */
 @Entity
-@Table(name = "treasure_hunt_plans")
+@Table(name = "treasure_hunt_plans",
+       indexes = {
+           @Index(name = "idx_plan_status", columnList = "status"),
+           @Index(name = "idx_plan_featured", columnList = "is_featured"),
+           @Index(name = "idx_plan_difficulty", columnList = "difficulty_level"),
+           @Index(name = "idx_plan_price", columnList = "price_inr"),
+           @Index(name = "idx_plan_created_date", columnList = "created_date")
+       })
 public class TreasureHuntPlan {
 
     @Id
@@ -30,10 +41,8 @@ public class TreasureHuntPlan {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @NotNull(message = "Duration is required")
-    @Min(value = 1, message = "Duration must be at least 1 hour")
-    @Max(value = 24, message = "Duration must not exceed 24 hours")
-    @Column(name = "duration_hours", nullable = false)
+    @Min(value = 1, message = "Duration must be at least 1 second")
+    @Column(name = "duration_hours", nullable = true)
     private Integer durationHours;
 
     @NotNull(message = "Difficulty level is required")
@@ -60,22 +69,84 @@ public class TreasureHuntPlan {
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.00", message = "Price must be non-negative")
-    @DecimalMax(value = "9999.99", message = "Price must not exceed $9999.99 (₹829,999)")
-    @Column(name = "price_usd", nullable = false, precision = 10, scale = 2)
-    private BigDecimal priceUsd;
+    @DecimalMax(value = "999999.99", message = "Price must not exceed ₹999,999")
+    @Column(name = "price_inr", nullable = false, precision = 10, scale = 2)
+    private BigDecimal priceInr;
 
     @NotNull(message = "Status is required")
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private PlanStatus status = PlanStatus.ACTIVE;
 
+    @Size(max = 500, message = "Preview video URL must not exceed 500 characters")
+    @Column(name = "preview_video_url", length = 500)
+    private String previewVideoUrl;
+
+    @Min(value = 0, message = "Batches completed must be non-negative")
+    @Column(name = "batches_completed", nullable = false)
+    private Integer batchesCompleted = 0;
+
+    @DecimalMin(value = "0.0", message = "Rating must be between 0.0 and 5.0")
+    @DecimalMax(value = "5.0", message = "Rating must be between 0.0 and 5.0")
+    @Column(name = "rating", nullable = false, precision = 2, scale = 1)
+    private BigDecimal rating = BigDecimal.ZERO;
+
+    @DecimalMin(value = "0.0", message = "Prize money must be non-negative")
+    @Column(name = "prize_money", nullable = false, precision = 10, scale = 2)
+    private BigDecimal prizeMoney = BigDecimal.ZERO;
+
+    @Column(name = "is_featured", nullable = false)
+    private Boolean isFeatured = false;
+
+    @Min(value = 0, message = "Available slots must be non-negative")
+    @Column(name = "available_slots", nullable = false)
+    private Integer availableSlots = 0;
+
     @CreationTimestamp
     @Column(name = "created_date", nullable = false, updatable = false)
     private LocalDateTime createdDate;
 
-    @OneToMany(mappedBy = "plan", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // Event scheduling fields
+    @NotNull(message = "Start date is required")
+    @Column(name = "event_date")
+    private LocalDate eventDate;
+
+    @NotNull(message = "Start time is required")
+    @Column(name = "start_time")
+    private LocalTime startTime;
+
+    @NotNull(message = "End date is required")
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @NotNull(message = "End time is required")
+    @Column(name = "end_time")
+    private LocalTime endTime;
+
+    // Registration deadline
+    @Column(name = "registration_deadline")
+    private LocalDate registrationDeadline;
+
+    // Discount fields
+    @Column(name = "discount_enabled", nullable = false)
+    private Boolean discountEnabled = false;
+
+    @DecimalMin(value = "0.0", message = "Discount percentage must be non-negative")
+    @DecimalMax(value = "100.0", message = "Discount percentage cannot exceed 100%")
+    @Column(name = "discount_percentage", precision = 5, scale = 2)
+    private BigDecimal discountPercentage = BigDecimal.ZERO;
+
+    @OneToMany(mappedBy = "plan",
+               cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH},
+               fetch = FetchType.LAZY,
+               orphanRemoval = false) // Don't remove registrations when plan is deleted
+    @BatchSize(size = 20) // Optimize batch loading
     @JsonIgnore
     private List<UserRegistration> registrations = new ArrayList<>();
+
+    // Transient field for confirmed registrations count
+    @Transient
+    private Long confirmedRegistrationsCount = 0L;
 
     // Enums
     public enum DifficultyLevel {
@@ -93,15 +164,17 @@ public class TreasureHuntPlan {
     // Constructors
     public TreasureHuntPlan() {}
 
-    public TreasureHuntPlan(String name, String description, Integer durationHours, 
-                           DifficultyLevel difficultyLevel, Integer maxParticipants, 
-                           BigDecimal priceUsd) {
+    public TreasureHuntPlan(String name, String description, Integer durationHours,
+                           DifficultyLevel difficultyLevel, Integer maxParticipants,
+                           BigDecimal priceInr) {
         this.name = name;
         this.description = description;
         this.durationHours = durationHours;
         this.difficultyLevel = difficultyLevel;
         this.maxParticipants = maxParticipants;
-        this.priceUsd = priceUsd;
+        this.availableSlots = maxParticipants; // Initialize available slots to max participants
+        this.priceInr = priceInr;
+        this.prizeMoney = BigDecimal.ZERO; // Initialize prize money
         this.status = PlanStatus.ACTIVE;
     }
 
@@ -124,8 +197,22 @@ public class TreasureHuntPlan {
     public Integer getMaxParticipants() { return maxParticipants; }
     public void setMaxParticipants(Integer maxParticipants) { this.maxParticipants = maxParticipants; }
 
-    public BigDecimal getPriceUsd() { return priceUsd; }
-    public void setPriceUsd(BigDecimal priceUsd) { this.priceUsd = priceUsd; }
+    public BigDecimal getPriceInr() { return priceInr; }
+    public void setPriceInr(BigDecimal priceInr) { this.priceInr = priceInr; }
+
+    // Legacy method for backward compatibility - deprecated
+    @Deprecated
+    public BigDecimal getPriceUsd() {
+        if (priceInr == null) return BigDecimal.ZERO;
+        return priceInr.divide(new BigDecimal("83"), 2, BigDecimal.ROUND_HALF_UP);
+    }
+
+    @Deprecated
+    public void setPriceUsd(BigDecimal priceUsd) {
+        if (priceUsd != null) {
+            this.priceInr = priceUsd.multiply(new BigDecimal("83")).setScale(2, BigDecimal.ROUND_HALF_UP);
+        }
+    }
 
     public PlanStatus getStatus() { return status; }
     public void setStatus(PlanStatus status) { this.status = status; }
@@ -145,25 +232,27 @@ public class TreasureHuntPlan {
     }
 
     public long getRegistrationCount() {
-        return registrations.stream()
-                .filter(reg -> reg.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
-                .count();
+        // Use pre-loaded count to avoid lazy loading issues
+        if (confirmedRegistrationsCount != null) {
+            return confirmedRegistrationsCount;
+        }
+
+        // Fallback to collection count if available (when session is active)
+        try {
+            return registrations.stream()
+                    .filter(reg -> reg.getStatus() == UserRegistration.RegistrationStatus.CONFIRMED)
+                    .count();
+        } catch (Exception e) {
+            // If lazy loading fails, return 0 as fallback
+            return 0;
+        }
     }
 
     public boolean isAvailable() {
         return status == PlanStatus.ACTIVE && getRegistrationCount() < maxParticipants;
     }
 
-    /**
-     * Get price in Indian Rupees (converted from USD)
-     * Using approximate conversion rate of 1 USD = 83 INR
-     */
-    public BigDecimal getPriceInr() {
-        if (priceUsd == null) {
-            return BigDecimal.ZERO;
-        }
-        return priceUsd.multiply(new BigDecimal("83")).setScale(0, BigDecimal.ROUND_HALF_UP);
-    }
+
 
     // Getters and setters for new fields
     public Integer getTeamSize() {
@@ -182,8 +271,188 @@ public class TreasureHuntPlan {
         this.teamType = teamType;
     }
 
+    public String getPreviewVideoUrl() {
+        return previewVideoUrl;
+    }
+
+    public void setPreviewVideoUrl(String previewVideoUrl) {
+        this.previewVideoUrl = previewVideoUrl;
+    }
+
+    public Integer getBatchesCompleted() {
+        return batchesCompleted;
+    }
+
+    public void setBatchesCompleted(Integer batchesCompleted) {
+        this.batchesCompleted = batchesCompleted;
+    }
+
+    public BigDecimal getRating() {
+        return rating;
+    }
+
+    public void setRating(BigDecimal rating) {
+        this.rating = rating;
+    }
+
+    public BigDecimal getPrizeMoney() {
+        return prizeMoney;
+    }
+
+    public void setPrizeMoney(BigDecimal prizeMoney) {
+        this.prizeMoney = prizeMoney;
+    }
+
+    public Boolean getIsFeatured() {
+        return isFeatured;
+    }
+
+    public void setIsFeatured(Boolean isFeatured) {
+        this.isFeatured = isFeatured;
+    }
+
+    public Integer getAvailableSlots() {
+        return availableSlots;
+    }
+
+    public void setAvailableSlots(Integer availableSlots) {
+        this.availableSlots = availableSlots;
+    }
+
+    public Long getConfirmedRegistrationsCount() {
+        return confirmedRegistrationsCount;
+    }
+
+    public void setConfirmedRegistrationsCount(Long confirmedRegistrationsCount) {
+        this.confirmedRegistrationsCount = confirmedRegistrationsCount;
+    }
+
+    public LocalDate getEventDate() {
+        return eventDate;
+    }
+
+    public void setEventDate(LocalDate eventDate) {
+        this.eventDate = eventDate;
+    }
+
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public void setStartTime(LocalTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public LocalDate getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(LocalDate endDate) {
+        this.endDate = endDate;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public void setEndTime(LocalTime endTime) {
+        this.endTime = endTime;
+    }
+
     public boolean isTeamBased() {
         return teamType == TeamType.TEAM && teamSize > 1;
+    }
+
+    /**
+     * Calculate duration in hours between start and end datetime
+     * @return Duration in hours
+     */
+    public long calculateDurationHours() {
+        if (eventDate == null || startTime == null || endDate == null || endTime == null) {
+            return durationHours != null ? durationHours : 0;
+        }
+
+        LocalDateTime startDateTime = LocalDateTime.of(eventDate, startTime);
+        LocalDateTime endDateTime = LocalDateTime.of(endDate, endTime);
+
+        return java.time.Duration.between(startDateTime, endDateTime).toHours();
+    }
+
+    /**
+     * Format duration hours into readable text
+     * @param hours Total hours
+     * @return Formatted duration like "3 hours", "1 day 2 hours", "2 days 9 hours"
+     */
+    private String formatDurationText(long hours) {
+        if (hours <= 24) {
+            return hours + " hour" + (hours == 1 ? "" : "s");
+        } else {
+            long days = hours / 24;
+            long remainingHours = hours % 24;
+
+            String result = days + " day" + (days == 1 ? "" : "s");
+            if (remainingHours > 0) {
+                result += " " + remainingHours + " hour" + (remainingHours == 1 ? "" : "s");
+            }
+            return result;
+        }
+    }
+
+    /**
+     * Get formatted duration display with date and time range
+     * @return Formatted string like "23rd May, 09:00 AM - 06:00 PM (8 hours)"
+     */
+    public String getFormattedDuration() {
+        if (eventDate == null || startTime == null) {
+            return durationHours + " hours";
+        }
+
+        LocalTime actualEndTime = endTime != null ? endTime : startTime.plusHours(durationHours);
+        LocalDate actualEndDate = endDate != null ? endDate : eventDate;
+
+        // Calculate total hours
+        long totalHours = calculateDurationHours();
+
+        // Format date with ordinal suffix
+        String dayWithSuffix = getDayWithOrdinalSuffix(eventDate.getDayOfMonth());
+        String monthName = eventDate.getMonth().toString().toLowerCase();
+        monthName = monthName.substring(0, 1).toUpperCase() + monthName.substring(1);
+
+        // Format times
+        String startTimeFormatted = formatTime(startTime);
+        String endTimeFormatted = formatTime(actualEndTime);
+
+        // Format duration
+        String durationText = formatDurationText(totalHours);
+
+        return String.format("%s %s, %s - %s (%s)",
+            dayWithSuffix, monthName, startTimeFormatted, endTimeFormatted, durationText);
+    }
+
+    private String getDayWithOrdinalSuffix(int day) {
+        if (day >= 11 && day <= 13) {
+            return day + "th";
+        }
+        switch (day % 10) {
+            case 1: return day + "st";
+            case 2: return day + "nd";
+            case 3: return day + "rd";
+            default: return day + "th";
+        }
+    }
+
+    private String formatTime(LocalTime time) {
+        int hour = time.getHour();
+        int minute = time.getMinute();
+        String amPm = hour >= 12 ? "PM" : "AM";
+
+        if (hour == 0) {
+            hour = 12;
+        } else if (hour > 12) {
+            hour -= 12;
+        }
+
+        return String.format("%02d:%02d %s", hour, minute, amPm);
     }
 
     public String getTeamDescription() {
@@ -192,5 +461,177 @@ public class TreasureHuntPlan {
         } else {
             return "Teams of " + teamSize + " players";
         }
+    }
+
+    /**
+     * Get formatted date for display (e.g., "23rd May")
+     * @return Formatted date string or "TBD" if not set
+     */
+    public String getFormattedDate() {
+        if (eventDate == null) {
+            return "TBD";
+        }
+
+        String dayWithSuffix = getDayWithOrdinalSuffix(eventDate.getDayOfMonth());
+        String monthName = eventDate.getMonth().toString().toLowerCase();
+        monthName = monthName.substring(0, 1).toUpperCase() + monthName.substring(1);
+
+        return String.format("%s %s", dayWithSuffix, monthName);
+    }
+
+    /**
+     * Get formatted time range for display (e.g., "09:00 AM - 06:00 PM (3 hours)")
+     * @return Formatted time range string with duration or duration in hours if times not set
+     */
+    public String getFormattedTimeRange() {
+        if (eventDate == null || startTime == null) {
+            return durationHours + " hours";
+        }
+
+        LocalTime actualEndTime = endTime != null ? endTime : startTime.plusHours(durationHours);
+        String startTimeFormatted = formatTime(startTime);
+        String endTimeFormatted = formatTime(actualEndTime);
+
+        // Calculate total duration
+        long totalHours = calculateDurationHours();
+        String durationText = formatDurationText(totalHours);
+
+        return String.format("%s - %s (%s)", startTimeFormatted, endTimeFormatted, durationText);
+    }
+
+    /**
+     * Get formatted date range for display (e.g., "10th August" or "10th August - 12th August")
+     * @return Formatted date range string
+     */
+    public String getFormattedDateRange() {
+        if (eventDate == null) {
+            return "TBD";
+        }
+
+        String startDateFormatted = getFormattedDate();
+
+        // Check if it's a multi-day event
+        if (endDate != null && !endDate.equals(eventDate)) {
+            String endDayWithSuffix = getDayWithOrdinalSuffix(endDate.getDayOfMonth());
+            String endMonthName = endDate.getMonth().toString().toLowerCase();
+            endMonthName = endMonthName.substring(0, 1).toUpperCase() + endMonthName.substring(1);
+            String endDateFormatted = String.format("%s %s", endDayWithSuffix, endMonthName);
+
+            return String.format("%s - %s", startDateFormatted, endDateFormatted);
+        }
+
+        return startDateFormatted;
+    }
+
+    // Getters and setters for new fields
+    public LocalDate getRegistrationDeadline() {
+        return registrationDeadline;
+    }
+
+    public void setRegistrationDeadline(LocalDate registrationDeadline) {
+        this.registrationDeadline = registrationDeadline;
+    }
+
+    public Boolean getDiscountEnabled() {
+        return discountEnabled;
+    }
+
+    public void setDiscountEnabled(Boolean discountEnabled) {
+        this.discountEnabled = discountEnabled;
+    }
+
+    public BigDecimal getDiscountPercentage() {
+        return discountPercentage;
+    }
+
+    public void setDiscountPercentage(BigDecimal discountPercentage) {
+        this.discountPercentage = discountPercentage;
+    }
+
+    /**
+     * Calculate discounted price
+     * @return Discounted price if discount is enabled, otherwise original price
+     */
+    public BigDecimal getDiscountedPrice() {
+        if (discountEnabled != null && discountEnabled && discountPercentage != null && discountPercentage.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal discountAmount = priceInr.multiply(discountPercentage).divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            return priceInr.subtract(discountAmount);
+        }
+        return priceInr;
+    }
+
+    /**
+     * Check if registration deadline has passed
+     * @return true if deadline has passed, false otherwise
+     */
+    public boolean isRegistrationDeadlinePassed() {
+        if (registrationDeadline == null) {
+            return false;
+        }
+        return LocalDate.now().isAfter(registrationDeadline);
+    }
+
+    /**
+     * Get formatted registration deadline
+     * @return Formatted deadline string or "Open" if no deadline
+     */
+    public String getFormattedRegistrationDeadline() {
+        if (registrationDeadline == null) {
+            return "Open";
+        }
+
+        String dayWithSuffix = getDayWithOrdinalSuffix(registrationDeadline.getDayOfMonth());
+        String monthName = registrationDeadline.getMonth().toString().toLowerCase();
+        monthName = monthName.substring(0, 1).toUpperCase() + monthName.substring(1);
+
+        return String.format("%s %s", dayWithSuffix, monthName);
+    }
+
+    // ===== BIDIRECTIONAL RELATIONSHIP HELPER METHODS =====
+
+    /**
+     * Add a registration to this plan (bidirectional helper)
+     * @param registration Registration to add
+     */
+    public void addRegistration(UserRegistration registration) {
+        if (registration != null) {
+            registrations.add(registration);
+            registration.setPlan(this);
+        }
+    }
+
+    /**
+     * Remove a registration from this plan (bidirectional helper)
+     * @param registration Registration to remove
+     */
+    public void removeRegistration(UserRegistration registration) {
+        if (registration != null) {
+            registrations.remove(registration);
+            registration.setPlan(null);
+        }
+    }
+
+
+
+    /**
+     * Check if plan has available slots
+     * @return true if slots are available
+     */
+    public boolean hasAvailableSlots() {
+        if (availableSlots == null) {
+            return true; // Unlimited slots
+        }
+        return getConfirmedRegistrationsCount() < availableSlots;
+    }
+
+    /**
+     * Get remaining slots
+     * @return Number of remaining slots, or -1 if unlimited
+     */
+    public int getRemainingSlots() {
+        if (availableSlots == null) {
+            return -1; // Unlimited
+        }
+        return Math.max(0, availableSlots.intValue() - getConfirmedRegistrationsCount().intValue());
     }
 }

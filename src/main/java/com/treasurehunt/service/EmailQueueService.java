@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.mail.SimpleMailMessage;
@@ -17,6 +18,8 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
 
 import jakarta.mail.internet.MimeMessage;
 import java.time.LocalDateTime;
@@ -35,130 +38,140 @@ public class EmailQueueService {
     @Autowired
     private EmailQueueRepository emailQueueRepository;
 
-    @Autowired
+    @Autowired(required = false)
     private JavaMailSender mailSender;
+
+    @Autowired
+    private TemplateEngine templateEngine;
 
     @Value("${app.email.from}")
     private String fromEmail;
 
+    @Value("${app.email.company-name}")
+    private String companyName;
+
+    @Value("${app.email.support}")
+    private String supportEmail;
+
     /**
      * Add email to queue
      */
-    public EmailQueue queueEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue queueEmail(String recipientEmail, String recipientName, String subject,
                                 String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing email to: {} with subject: {}", recipientEmail, subject);
-        
+        logger.debug("Queuing {} email to: {}", emailType, recipientEmail);
+
         EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, emailType);
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
     /**
      * Add email to queue with registration reference
      */
-    public EmailQueue queueRegistrationEmail(UserRegistration registration, String subject, 
+    public EmailQueue queueRegistrationEmail(UserRegistration registration, String subject,
                                            String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing registration email for registration ID: {}", registration.getId());
-        
-        EmailQueue email = new EmailQueue(registration.getEmail(), registration.getFullName(), 
-                                         subject, body, emailType);
+        logger.debug("Queuing {} email for registration ID: {}", emailType, registration.getId());
+
+        // If body is null, generate it using EmailService template
+        String emailBody = body;
+        if (emailBody == null || emailBody.trim().isEmpty()) {
+            logger.debug("Generating email body using template for registration ID: {}", registration.getId());
+            try {
+                emailBody = generateRegistrationEmailBody(registration);
+            } catch (Exception e) {
+                logger.error("Error generating email body for registration ID: {}, using fallback", registration.getId(), e);
+                emailBody = generateFallbackEmailBody(registration);
+            }
+        }
+
+        EmailQueue email = new EmailQueue(registration.getEmail(), registration.getFullName(),
+                                         subject, emailBody, emailType);
         email.setRegistrationId(registration.getId());
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
     /**
      * Queue emails for all team members
      */
-    public void queueTeamMemberEmails(UserRegistration registration, List<TeamMember> teamMembers, 
+    public void queueTeamMemberEmails(UserRegistration registration, List<TeamMember> teamMembers,
                                      String subject, String body, EmailQueue.EmailType emailType) {
-        logger.info("Queuing emails for {} team members", teamMembers.size());
-        
+        logger.debug("Queuing {} emails for {} team members", emailType, teamMembers.size());
+
         for (TeamMember member : teamMembers) {
-            EmailQueue email = new EmailQueue(member.getEmail(), member.getFullName(), 
+            EmailQueue email = new EmailQueue(member.getEmail(), member.getFullName(),
                                              subject, body, emailType);
             email.setRegistrationId(registration.getId());
             email.setScheduledDate(LocalDateTime.now());
             emailQueueRepository.save(email);
         }
+
+        logger.info("Queued {} team member emails for registration {}", teamMembers.size(), registration.getId());
     }
 
     /**
      * Add email to queue with campaign information
      */
-    public EmailQueue queueCampaignEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue queueCampaignEmail(String recipientEmail, String recipientName, String subject,
                                        String body, String campaignId, String campaignName) {
-        logger.info("Queuing campaign email for campaign: {}", campaignName);
-        
-        EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, 
+        logger.debug("Queuing campaign email for campaign: {}", campaignName);
+
+        EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body,
                                          EmailQueue.EmailType.CAMPAIGN_EMAIL);
         email.setCampaignId(campaignId);
         email.setCampaignName(campaignName);
         email.setScheduledDate(LocalDateTime.now());
-        
+
         return emailQueueRepository.save(email);
     }
 
     /**
      * Schedule email for future sending
      */
-    public EmailQueue scheduleEmail(String recipientEmail, String recipientName, String subject, 
+    public EmailQueue scheduleEmail(String recipientEmail, String recipientName, String subject,
                                   String body, EmailQueue.EmailType emailType, LocalDateTime scheduledDate) {
-        logger.info("Scheduling email to: {} for: {}", recipientEmail, scheduledDate);
-        
+        logger.debug("Scheduling {} email to: {} for: {}", emailType, recipientEmail, scheduledDate);
+
         EmailQueue email = new EmailQueue(recipientEmail, recipientName, subject, body, emailType);
         email.setScheduledDate(scheduledDate);
         email.setStatus(EmailQueue.EmailStatus.SCHEDULED);
-        
+
         return emailQueueRepository.save(email);
     }
 
-    /**
-     * Process email queue - scheduled method that runs every minute
-     */
-    @Scheduled(fixedRate = 60000) // Run every minute
-    @Async
-    public void processEmailQueue() {
-        logger.debug("Processing email queue...");
-        
-        List<EmailQueue> emailsToSend = emailQueueRepository.findEmailsReadyToSend(LocalDateTime.now());
-        
-        if (!emailsToSend.isEmpty()) {
-            logger.info("Found {} emails ready to send", emailsToSend.size());
-            
-            for (EmailQueue email : emailsToSend) {
-                try {
-                    sendEmail(email);
-                } catch (Exception e) {
-                    logger.error("Error processing email ID: {}", email.getId(), e);
-                }
-            }
-        }
-    }
+
 
     /**
-     * Send individual email
+     * Send individual email - DEPRECATED, use ThreadSafeEmailProcessor instead
      */
-    @Async
+    @Transactional
     public void sendEmail(EmailQueue email) {
-        logger.info("Sending email ID: {} to: {}", email.getId(), email.getRecipientEmail());
+        logger.debug("Sending email ID: {} to: {} (via legacy method)", email.getId(), email.getRecipientEmail());
         
         try {
             // Update status to processing
             email.setStatus(EmailQueue.EmailStatus.PROCESSING);
             emailQueueRepository.save(email);
             
-            // Create and send email
+            // Create and send email (if mail sender is available)
+            if (mailSender == null) {
+                logger.warn("JavaMailSender not available - email will be marked as failed: {}", email.getSubject());
+                email.setStatus(EmailQueue.EmailStatus.FAILED);
+                email.setErrorMessage("JavaMailSender not configured");
+                emailQueueRepository.save(email);
+                return; // Method has void return type
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            
+
             helper.setTo(email.getRecipientEmail());
             helper.setSubject(email.getSubject());
             helper.setText(email.getBody(), true); // true = HTML content
             helper.setFrom(fromEmail);
-            
+
             mailSender.send(message);
             
             // Update status to sent
@@ -330,14 +343,14 @@ public class EmailQueueService {
             }
             stats.put("typeCounts", typeCounts);
 
-            // Total counts - using consistent field names expected by templates
-            long totalEmails = emailQueueRepository.count();
-            long pendingEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.PENDING);
-            long sentEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.SENT);
-            long failedEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.FAILED);
-            long processingEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.PROCESSING);
-            long cancelledEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.CANCELLED);
-            long scheduledEmails = emailQueueRepository.countByStatus(EmailQueue.EmailStatus.SCHEDULED);
+            // PERFORMANCE FIX: Calculate counts from status data to avoid 7 additional queries
+            long totalEmails = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+            long pendingEmails = statusCounts.getOrDefault("PENDING", 0L);
+            long sentEmails = statusCounts.getOrDefault("SENT", 0L);
+            long failedEmails = statusCounts.getOrDefault("FAILED", 0L);
+            long processingEmails = statusCounts.getOrDefault("PROCESSING", 0L);
+            long cancelledEmails = statusCounts.getOrDefault("CANCELLED", 0L);
+            long scheduledEmails = statusCounts.getOrDefault("SCHEDULED", 0L);
 
             stats.put("totalEmails", totalEmails);
             stats.put("pendingEmails", pendingEmails);
@@ -384,5 +397,84 @@ public class EmailQueueService {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30); // Keep emails for 30 days
         emailQueueRepository.deleteOldSentEmails(cutoffDate);
         logger.info("Cleaned up old sent emails before: {}", cutoffDate);
+    }
+
+    /**
+     * Generate registration email body using Thymeleaf template
+     */
+    private String generateRegistrationEmailBody(UserRegistration registration) {
+        logger.info("Generating registration email body using Thymeleaf template for registration ID: {}", registration.getId());
+
+        Context context = new Context();
+        context.setVariable("registration", registration);
+        context.setVariable("plan", registration.getPlan());
+        context.setVariable("companyName", companyName);
+        context.setVariable("supportEmail", supportEmail);
+        context.setVariable("registrationNumber", registration.getRegistrationNumber());
+
+        // Add pre-hunt checklist
+        context.setVariable("checklist", getPreHuntChecklist());
+
+        String htmlContent = templateEngine.process("email/registration-confirmation", context);
+        logger.info("Successfully generated registration email body using Thymeleaf template");
+
+        return htmlContent;
+    }
+
+    /**
+     * Generate fallback email body if template processing fails
+     */
+    private String generateFallbackEmailBody(UserRegistration registration) {
+        logger.info("Generating fallback email body for registration ID: {}", registration.getId());
+
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html><head><meta charset='UTF-8'><title>Registration Confirmed</title></head>");
+        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+
+        // Header with corporate colors
+        html.append("<div style='background: linear-gradient(135deg, #2c5aa0 0%, #3182ce 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
+        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Registration Confirmed!</h1>");
+        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Welcome to the Adventure!</p>");
+        html.append("</div>");
+
+        // Content
+        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
+        html.append("<h2 style='color: #2c5aa0; margin-top: 0;'>Hello ").append(registration.getFullName()).append("!</h2>");
+        html.append("<p>Congratulations! Your registration has been confirmed. Here are your details:</p>");
+
+        // Registration Details
+        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2c5aa0;'>");
+        html.append("<h3 style='margin-top: 0; color: #333;'>📋 Registration Details</h3>");
+        html.append("<p><strong>Registration Number:</strong> <span style='background: #2c5aa0; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
+                   .append(registration.getRegistrationNumber()).append("</span></p>");
+        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
+        html.append("<p><strong>Registration Date:</strong> ").append(registration.getRegistrationDate().toLocalDate()).append("</p>");
+        html.append("</div>");
+
+        // Footer
+        html.append("<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;'>");
+        html.append("<p style='color: #6c757d; margin: 0;'>Questions? Contact us at <a href='mailto:").append(supportEmail).append("' style='color: #2c5aa0;'>").append(supportEmail).append("</a></p>");
+        html.append("<p style='color: #6c757d; margin: 5px 0 0 0; font-size: 14px;'>© 2024 ").append(companyName).append(". All rights reserved.</p>");
+        html.append("</div>");
+
+        html.append("</div></div></body></html>");
+
+        return html.toString();
+    }
+
+    /**
+     * Get pre-hunt checklist items
+     */
+    private List<String> getPreHuntChecklist() {
+        return Arrays.asList(
+            "Bring a fully charged mobile phone",
+            "Wear comfortable walking shoes",
+            "Carry a valid photo ID",
+            "Arrive 15 minutes before start time",
+            "Bring a water bottle",
+            "Follow all safety instructions"
+        );
     }
 }

@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
     <title>Manage Plans - Treasure Hunt Adventures Admin</title>
     
     <!-- Bootstrap 5 CSS -->
@@ -105,16 +107,36 @@
                 </a>
             </li>
             <li class="nav-item">
+                <a class="nav-link" href="/admin/images">
+                    <i class="fas fa-images me-2"></i>
+                    Image Management
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/cron">
+                    <i class="fas fa-clock me-2"></i>
+                    Cron Jobs
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/admin/settings">
+                    <i class="fas fa-cog me-2"></i>
+                    Settings
+                </a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link" href="/" target="_blank">
                     <i class="fas fa-external-link-alt me-2"></i>
                     View Website
                 </a>
             </li>
             <li class="nav-item mt-4">
-                <a class="nav-link text-danger" href="/admin/logout">
-                    <i class="fas fa-sign-out-alt me-2"></i>
-                    Logout
-                </a>
+                <form th:action="@{/admin/logout}" method="post" style="display: inline;">
+                    <button type="submit" class="nav-link text-danger btn btn-link p-0 border-0 text-start w-100" style="background: none;">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        Logout
+                    </button>
+                </form>
             </li>
         </ul>
     </nav>
@@ -146,6 +168,40 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
 
+        <!-- Filters and Search -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="statusFilter" class="form-label">Filter by Status</label>
+                        <select id="statusFilter" class="form-select" onchange="filterPlans()">
+                            <option value="">All Plans</option>
+                            <option value="ACTIVE">Active Plans</option>
+                            <option value="INACTIVE">Inactive Plans</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="difficultyFilter" class="form-label">Filter by Difficulty</label>
+                        <select id="difficultyFilter" class="form-select" onchange="filterPlans()">
+                            <option value="">All Difficulties</option>
+                            <option value="BEGINNER">Beginner</option>
+                            <option value="INTERMEDIATE">Intermediate</option>
+                            <option value="ADVANCED">Advanced</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="searchInput" class="form-label">Search Plans</label>
+                        <div class="input-group">
+                            <input type="text" id="searchInput" class="form-control" placeholder="Search by name or description..." onkeyup="filterPlans()">
+                            <button class="btn btn-outline-secondary" type="button" onclick="clearFilters()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Plans Grid -->
         <div class="row g-4">
             <div th:if="${plans.empty}" class="col-12">
@@ -157,7 +213,11 @@
             </div>
             
             <div th:each="plan : ${plans}" class="col-lg-4 col-md-6">
-                <div class="card plan-card h-100">
+                <div class="card plan-card h-100"
+                     th:data-status="${plan.status.name()}"
+                     th:data-difficulty="${plan.difficultyLevel.name()}"
+                     th:data-name="${plan.name}"
+                     th:data-description="${plan.description}">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0" th:text="${plan.name}">Plan Name</h5>
                         <span class="badge" 
@@ -168,22 +228,52 @@
                         <p class="card-text text-muted" th:text="${plan.getTruncatedDescription(100)}">Description...</p>
                         
                         <div class="mb-3">
-                            <small class="text-muted d-block">
-                                <i class="fas fa-signal me-1"></i>
-                                <span th:text="${plan.difficultyLevel}">Difficulty</span>
-                            </small>
-                            <small class="text-muted d-block">
-                                <i class="fas fa-clock me-1"></i>
-                                <span th:text="${plan.durationHours} + ' hours'">Duration</span>
-                            </small>
-                            <small class="text-muted d-block">
-                                <i class="fas fa-users me-1"></i>
-                                <span th:text="${plan.maxParticipants} + ' max participants'">Max participants</span>
-                            </small>
-                            <small class="text-muted d-block">
-                                <i class="fas fa-dollar-sign me-1"></i>
-                                $<span th:text="${#numbers.formatDecimal(plan.priceUsd, 1, 2)}">0.00</span>
-                            </small>
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-signal me-1"></i>
+                                        <span th:text="${plan.difficultyLevel}">Difficulty</span>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-clock me-1"></i>
+                                        <span th:text="${plan.durationHours} + ' hours'">Duration</span>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-users me-1"></i>
+                                        <span th:text="${plan.maxParticipants} + ' total'">Total participants</span>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-user-check me-1 text-success"></i>
+                                        <span th:text="${plan.availableSlots} + ' slots'">Available slots</span>
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-rupee-sign me-1"></i>
+                                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 2)}">0.00</span>
+                                    </small>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-star me-1 text-warning"></i>
+                                        <span th:text="${plan.rating}">4.8</span>/5.0
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-check-circle me-1 text-success"></i>
+                                        <span th:text="${plan.batchesCompleted}">45</span> batches
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-trophy me-1 text-warning"></i>
+                                        ₹<span th:text="${#numbers.formatDecimal(plan.prizeMoney, 1, 0)}">5000</span> prize
+                                    </small>
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-user-friends me-1 text-info"></i>
+                                        <span th:text="${plan.confirmedRegistrationsCount ?: 0}">0</span> confirmed
+                                    </small>
+                                    <small class="text-muted d-block" th:if="${plan.isFeatured}">
+                                        <i class="fas fa-crown me-1 text-warning"></i>
+                                        Featured Plan
+                                    </small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="card-footer bg-transparent">
@@ -207,6 +297,140 @@
         </div>
     </div>
 
+    <!-- Edit Plan Modal -->
+    <div class="modal fade" id="editPlanModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Plan</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editPlanForm">
+                    <div class="modal-body">
+                        <!-- Error Display Area -->
+                        <div id="editFormErrors" class="alert alert-danger d-none" role="alert">
+                            <ul id="editErrorList" class="mb-0"></ul>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="editName" class="form-label">Plan Name *</label>
+                                <input type="text" class="form-control" id="editName" name="name" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editDifficultyLevel" class="form-label">Difficulty Level *</label>
+                                <select class="form-control" id="editDifficultyLevel" name="difficultyLevel" required>
+                                    <option value="">Select Difficulty</option>
+                                    <option value="BEGINNER">Beginner</option>
+                                    <option value="INTERMEDIATE">Intermediate</option>
+                                    <option value="ADVANCED">Advanced</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEventDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="editEventDate" name="eventDate" required>
+                                <div class="form-text">Date when the treasure hunt will start</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editStartTime" class="form-label">Start Time *</label>
+                                <input type="time" class="form-control" id="editStartTime" name="startTime" required>
+                                <div class="form-text">Time when the treasure hunt will start</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEndDate" class="form-label">End Date *</label>
+                                <input type="date" class="form-control" id="editEndDate" name="endDate" required>
+                                <div class="form-text">Date when the treasure hunt will end</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editEndTime" class="form-label">End Time *</label>
+                                <input type="time" class="form-control" id="editEndTime" name="endTime" required>
+                                <div class="form-text">Time when the treasure hunt will end</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editTeamType" class="form-label">Team Type *</label>
+                                <select class="form-control" id="editTeamType" name="teamType" required onchange="toggleEditTeamSize()">
+                                    <option value="">Select Team Type</option>
+                                    <option value="INDIVIDUAL">Individual</option>
+                                    <option value="TEAM">Team</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6" id="editTeamSizeContainer">
+                                <label for="editTeamSize" class="form-label">Team Size *</label>
+                                <input type="number" class="form-control" id="editTeamSize" name="teamSize" min="1" max="10" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editPriceInr" class="form-label">Price (₹) *</label>
+                                <input type="number" class="form-control" id="editPriceInr" name="priceInr" min="0" step="0.01" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editPreviewVideoUrl" class="form-label">Preview Video URL</label>
+                                <input type="url" class="form-control" id="editPreviewVideoUrl" name="previewVideoUrl"
+                                       placeholder="https://www.youtube.com/embed/VIDEO_ID">
+                                <div class="form-text">YouTube embed URL for plan preview</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="editBatchesCompleted" class="form-label">Batches Completed</label>
+                                <input type="number" class="form-control" id="editBatchesCompleted" name="batchesCompleted" min="0" value="0">
+                                <div class="form-text">Number of successfully completed batches</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="editRating" class="form-label">Rating (0.0-5.0)</label>
+                                <input type="number" class="form-control" id="editRating" name="rating" min="0" max="5" step="0.1" value="0.0">
+                                <div class="form-text">Plan rating from 0.0 to 5.0 stars</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="editPrizeMoney" class="form-label">Prize Money (₹) *</label>
+                                <input type="number" class="form-control" id="editPrizeMoney" name="prizeMoney" min="0" step="0.01" required>
+                                <div class="form-text">Prize money in Indian Rupees</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editAvailableSlots" class="form-label">Available Slots *</label>
+                                <input type="number" class="form-control" id="editAvailableSlots" name="availableSlots" min="0" required>
+                                <div class="form-text">Number of slots available for registration</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editRegistrationDeadline" class="form-label">Registration Deadline</label>
+                                <input type="date" class="form-control" id="editRegistrationDeadline" name="registrationDeadline">
+                                <div class="form-text">Last date for registration (leave empty for open registration)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="editDiscountEnabled" name="discountEnabled">
+                                    <label class="form-check-label" for="editDiscountEnabled">
+                                        Enable Discount
+                                    </label>
+                                </div>
+                                <div class="mt-2" id="editDiscountPercentageContainer" style="display: none;">
+                                    <label for="editDiscountPercentage" class="form-label">Discount Percentage</label>
+                                    <input type="number" class="form-control" id="editDiscountPercentage" name="discountPercentage"
+                                           min="0" max="100" step="0.01" placeholder="0.00">
+                                    <div class="form-text">Discount percentage (0-100%)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="editMaxParticipants" class="form-label">Max Participants (Admin Only) *</label>
+                                <input type="number" class="form-control" id="editMaxParticipants" name="maxParticipants" min="1" required>
+                                <div class="form-text">Maximum participants (not shown to public)</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="editDescription" class="form-label">Description *</label>
+                                <textarea class="form-control" id="editDescription" name="description" rows="4" required></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            Update Plan
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Create Plan Modal -->
     <div class="modal fade" id="createPlanModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
@@ -215,8 +439,13 @@
                     <h5 class="modal-title">Create New Plan</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <form th:action="@{/admin/plans}" method="post" th:object="${newPlan}">
+                <form id="createPlanForm" th:object="${newPlan}">
                     <div class="modal-body">
+                        <!-- Error Display Area -->
+                        <div id="createFormErrors" class="alert alert-danger d-none" role="alert">
+                            <ul id="createErrorList" class="mb-0"></ul>
+                        </div>
+
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="name" class="form-label">Plan Name *</label>
@@ -232,16 +461,28 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label for="durationHours" class="form-label">Duration (Hours) *</label>
-                                <input type="number" class="form-control" id="durationHours" th:field="*{durationHours}" min="1" max="24" required>
+                                <label for="eventDate" class="form-label">Start Date *</label>
+                                <input type="date" class="form-control" id="eventDate" th:field="*{eventDate}" required>
+                                <div class="form-text">Date when the treasure hunt will start</div>
                             </div>
                             <div class="col-md-6">
-                                <label for="maxParticipants" class="form-label">Max Participants *</label>
-                                <input type="number" class="form-control" id="maxParticipants" th:field="*{maxParticipants}" min="1" max="100" required>
+                                <label for="startTime" class="form-label">Start Time *</label>
+                                <input type="time" class="form-control" id="startTime" th:field="*{startTime}" required>
+                                <div class="form-text">Time when the treasure hunt will start</div>
                             </div>
                             <div class="col-md-6">
-                                <label for="priceUsd" class="form-label">Price (USD) *</label>
-                                <input type="number" class="form-control" id="priceUsd" th:field="*{priceUsd}" step="0.01" min="0" required>
+                                <label for="endDate" class="form-label">End Date *</label>
+                                <input type="date" class="form-control" id="endDate" th:field="*{endDate}" required>
+                                <div class="form-text">Date when the treasure hunt will end</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="endTime" class="form-label">End Time *</label>
+                                <input type="time" class="form-control" id="endTime" th:field="*{endTime}" required>
+                                <div class="form-text">Time when the treasure hunt will end</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="priceInr" class="form-label">Price (₹) *</label>
+                                <input type="number" class="form-control" id="priceInr" th:field="*{priceInr}" step="0.01" min="0" required>
                             </div>
                             <div class="col-md-6">
                                 <label for="status" class="form-label">Status *</label>
@@ -249,6 +490,50 @@
                                     <option value="ACTIVE">Active</option>
                                     <option value="INACTIVE">Inactive</option>
                                 </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="batchesCompleted" class="form-label">Batches Completed</label>
+                                <input type="number" class="form-control" id="batchesCompleted" th:field="*{batchesCompleted}" min="0" value="0">
+                                <div class="form-text">Number of successfully completed batches</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="rating" class="form-label">Rating (0.0-5.0)</label>
+                                <input type="number" class="form-control" id="rating" th:field="*{rating}" min="0" max="5" step="0.1" value="0.0">
+                                <div class="form-text">Plan rating from 0.0 to 5.0 stars</div>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="prizeMoney" class="form-label">Prize Money (₹) *</label>
+                                <input type="number" class="form-control" id="prizeMoney" th:field="*{prizeMoney}" min="0" step="0.01" required>
+                                <div class="form-text">Prize money in Indian Rupees</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="registrationDeadline" class="form-label">Registration Deadline</label>
+                                <input type="date" class="form-control" id="registrationDeadline" th:field="*{registrationDeadline}">
+                                <div class="form-text">Last date for registration (leave empty for open registration)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check form-switch mt-4">
+                                    <input class="form-check-input" type="checkbox" id="discountEnabled" th:field="*{discountEnabled}">
+                                    <label class="form-check-label" for="discountEnabled">
+                                        Enable Discount
+                                    </label>
+                                </div>
+                                <div class="mt-2" id="discountPercentageContainer" style="display: none;">
+                                    <label for="discountPercentage" class="form-label">Discount Percentage</label>
+                                    <input type="number" class="form-control" id="discountPercentage" th:field="*{discountPercentage}"
+                                           min="0" max="100" step="0.01" placeholder="0.00">
+                                    <div class="form-text">Discount percentage (0-100%)</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="availableSlots" class="form-label">Available Slots *</label>
+                                <input type="number" class="form-control" id="availableSlots" th:field="*{availableSlots}" min="0" required>
+                                <div class="form-text">Number of slots available for registration</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="maxParticipantsAdmin" class="form-label">Max Participants (Admin Only) *</label>
+                                <input type="number" class="form-control" id="maxParticipantsAdmin" th:field="*{maxParticipants}" min="1" required>
+                                <div class="form-text">Maximum participants (not shown to public)</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="teamType" class="form-label">Team Type *</label>
@@ -261,6 +546,13 @@
                                 <label for="teamSize" class="form-label">Team Size *</label>
                                 <input type="number" class="form-control" id="teamSize" th:field="*{teamSize}" min="1" max="10" value="1" required>
                                 <div class="form-text">Number of players per team (1 for individual)</div>
+                            </div>
+
+                            <div class="col-12">
+                                <label for="previewVideoUrl" class="form-label">Preview Video URL</label>
+                                <input type="url" class="form-control" id="previewVideoUrl" th:field="*{previewVideoUrl}"
+                                       placeholder="https://www.youtube.com/embed/VIDEO_ID">
+                                <div class="form-text">YouTube embed URL for plan preview (optional)</div>
                             </div>
                             <div class="col-12">
                                 <label for="description" class="form-label">Description *</label>
@@ -282,8 +574,53 @@
     
     <script>
         function editPlan(id) {
-            // Implement edit functionality
-            alert('Edit plan functionality - Plan ID: ' + id);
+            // Fetch plan data
+            fetch(`/admin/plans/${id}/edit`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const plan = data.plan;
+
+                        // Populate form fields
+                        document.getElementById('editName').value = plan.name;
+                        document.getElementById('editDifficultyLevel').value = plan.difficultyLevel;
+                        document.getElementById('editEventDate').value = plan.eventDate || '';
+                        document.getElementById('editStartTime').value = plan.startTime || '';
+                        document.getElementById('editEndDate').value = plan.endDate || '';
+                        document.getElementById('editEndTime').value = plan.endTime || '';
+                        document.getElementById('editTeamType').value = plan.teamType;
+                        document.getElementById('editTeamSize').value = plan.teamSize;
+                        document.getElementById('editPriceInr').value = plan.priceInr;
+                        document.getElementById('editPreviewVideoUrl').value = plan.previewVideoUrl || '';
+                        document.getElementById('editBatchesCompleted').value = plan.batchesCompleted || 0;
+                        document.getElementById('editRating').value = plan.rating || 0.0;
+                        document.getElementById('editPrizeMoney').value = plan.prizeMoney || 0;
+                        document.getElementById('editAvailableSlots').value = plan.availableSlots || 0;
+                        document.getElementById('editRegistrationDeadline').value = plan.registrationDeadline || '';
+                        document.getElementById('editDiscountEnabled').checked = plan.discountEnabled || false;
+                        document.getElementById('editDiscountPercentage').value = plan.discountPercentage || 0;
+                        document.getElementById('editDescription').value = plan.description;
+
+                        // Show/hide discount percentage field based on toggle
+                        toggleEditDiscountField();
+
+                        // Store plan ID for form submission
+                        document.getElementById('editPlanForm').dataset.planId = id;
+
+                        // Toggle team size field
+                        toggleEditTeamSize();
+
+                        // Show modal
+                        const modal = new bootstrap.Modal(document.getElementById('editPlanModal'));
+                        modal.show();
+                    } else {
+                        alert('Error loading plan: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('An error occurred while loading the plan.');
+                });
         }
 
         function toggleStatus(id) {
@@ -325,20 +662,352 @@
             }
         }
 
+        function toggleEditTeamSize() {
+            const teamType = document.getElementById('editTeamType').value;
+            const teamSizeInput = document.getElementById('editTeamSize');
+            const teamSizeContainer = document.getElementById('editTeamSizeContainer');
+
+            if (teamType === 'INDIVIDUAL') {
+                teamSizeInput.value = 1;
+                teamSizeInput.readOnly = true;
+                teamSizeContainer.style.opacity = '0.6';
+            } else {
+                teamSizeInput.readOnly = false;
+                if (teamSizeInput.value == 1) {
+                    teamSizeInput.value = 2; // Default team size
+                }
+                teamSizeContainer.style.opacity = '1';
+            }
+        }
+
+        // Get CSRF token
+        function getCSRFToken() {
+            const token = document.querySelector('meta[name="_csrf"]');
+            return token ? token.getAttribute('content') : '';
+        }
+
+        function getCSRFHeader() {
+            const header = document.querySelector('meta[name="_csrf_header"]');
+            return header ? header.getAttribute('content') : 'X-CSRF-TOKEN';
+        }
+
         // Initialize team size toggle on page load
         document.addEventListener('DOMContentLoaded', function() {
             toggleTeamSize();
+
+
         });
 
-        function deletePlan(id) {
-            if (confirm('Are you sure you want to delete this plan? This action cannot be undone.')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = `/admin/plans/${id}/delete`;
-                document.body.appendChild(form);
-                form.submit();
+        // Toggle plan status function
+        function toggleStatus(planId) {
+            if (!confirm('Are you sure you want to toggle the status of this plan?')) {
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('_csrf', getCSRFToken());
+
+            fetch(`/admin/plans/${planId}/toggle-status`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error toggling plan status: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while toggling plan status.');
+            });
+        }
+
+        // Filter and search functionality
+        function filterPlans() {
+            const statusFilter = document.getElementById('statusFilter').value.toLowerCase();
+            const difficultyFilter = document.getElementById('difficultyFilter').value.toLowerCase();
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const planCards = document.querySelectorAll('.plan-card');
+
+            planCards.forEach(card => {
+                const status = card.dataset.status?.toLowerCase() || '';
+                const difficulty = card.dataset.difficulty?.toLowerCase() || '';
+                const name = card.dataset.name?.toLowerCase() || '';
+                const description = card.dataset.description?.toLowerCase() || '';
+
+                const statusMatch = !statusFilter || status === statusFilter;
+                const difficultyMatch = !difficultyFilter || difficulty === difficultyFilter;
+                const searchMatch = !searchInput || name.includes(searchInput) || description.includes(searchInput);
+
+                if (statusMatch && difficultyMatch && searchMatch) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('difficultyFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            filterPlans();
+        }
+
+        // Delete plan function with proper modal
+        function deletePlan(planId) {
+            showConfirmModal(
+                'Delete Plan',
+                'Are you sure you want to delete this plan? This action cannot be undone.',
+                'danger',
+                () => {
+                    const formData = new FormData();
+                    formData.append('_csrf', getCSRFToken());
+
+                    fetch(`/admin/plans/${planId}/delete`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            showSuccessToast('Plan deleted successfully');
+                            setTimeout(() => location.reload(), 1500);
+                        } else {
+                            showErrorToast('Error deleting plan: ' + data.message);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showErrorToast('An error occurred while deleting the plan.');
+                    });
+                }
+            );
+        }
+
+        // Handle create form submission
+        document.getElementById('createPlanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+            formData.append('_csrf', getCSRFToken());
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+            submitBtn.disabled = true;
+
+            // Clear previous errors
+            hideFormErrors('create');
+
+            fetch('/admin/plans/create', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and reload page
+                    bootstrap.Modal.getInstance(document.getElementById('createPlanModal')).hide();
+                    location.reload();
+                } else {
+                    // Show validation errors
+                    showFormErrors('create', data.errors || [data.message]);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFormErrors('create', ['An error occurred while creating the plan.']);
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // Enhanced edit form error handling
+        document.getElementById('editPlanForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const planId = this.dataset.planId;
+            const formData = new FormData(this);
+            formData.append('_csrf', getCSRFToken());
+
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
+            submitBtn.disabled = true;
+
+            // Clear previous errors
+            hideFormErrors('edit');
+
+            fetch(`/admin/plans/${planId}/update`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Close modal and reload page
+                    bootstrap.Modal.getInstance(document.getElementById('editPlanModal')).hide();
+                    location.reload();
+                } else {
+                    // Show validation errors
+                    showFormErrors('edit', data.errors || [data.message]);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showFormErrors('edit', ['An error occurred while updating the plan.']);
+            })
+            .finally(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            });
+        });
+
+        // Show form errors
+        function showFormErrors(formType, errors) {
+            const errorContainer = document.getElementById(formType + 'FormErrors');
+            const errorList = document.getElementById(formType + 'ErrorList');
+
+            errorList.innerHTML = '';
+
+            if (Array.isArray(errors)) {
+                errors.forEach(error => {
+                    const li = document.createElement('li');
+                    li.textContent = error;
+                    errorList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = errors;
+                errorList.appendChild(li);
+            }
+
+            errorContainer.classList.remove('d-none');
+            errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Hide form errors
+        function hideFormErrors(formType) {
+            const errorContainer = document.getElementById(formType + 'FormErrors');
+            errorContainer.classList.add('d-none');
+        }
+        // Modal and Toast utilities
+        function showConfirmModal(title, message, type, onConfirm) {
+            const modal = document.getElementById('confirmModal') || createConfirmModal();
+            document.getElementById('confirmModalTitle').textContent = title;
+            document.getElementById('confirmModalMessage').textContent = message;
+
+            const confirmBtn = document.getElementById('confirmModalBtn');
+            confirmBtn.className = `btn btn-${type}`;
+            confirmBtn.onclick = () => {
+                bootstrap.Modal.getInstance(modal).hide();
+                onConfirm();
+            };
+
+            new bootstrap.Modal(modal).show();
+        }
+
+        function createConfirmModal() {
+            const modalHtml = `
+                <div class="modal fade" id="confirmModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="confirmModalTitle">Confirm Action</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <p id="confirmModalMessage">Are you sure?</p>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="button" class="btn btn-danger" id="confirmModalBtn">Confirm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            return document.getElementById('confirmModal');
+        }
+
+        function showSuccessToast(message) {
+            showToast(message, 'success');
+        }
+
+        function showErrorToast(message) {
+            showToast(message, 'danger');
+        }
+
+        function showToast(message, type) {
+            const toastContainer = document.getElementById('toastContainer') || createToastContainer();
+            const toastId = 'toast-' + Date.now();
+
+            const toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toast = new bootstrap.Toast(document.getElementById(toastId));
+            toast.show();
+
+            // Remove toast element after it's hidden
+            document.getElementById(toastId).addEventListener('hidden.bs.toast', () => {
+                document.getElementById(toastId).remove();
+            });
+        }
+
+        function createToastContainer() {
+            const containerHtml = `
+                <div id="toastContainer" class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1055;"></div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', containerHtml);
+            return document.getElementById('toastContainer');
+        }
+
+        // Discount toggle functionality
+        function toggleDiscountField() {
+            const discountEnabled = document.getElementById('discountEnabled').checked;
+            const container = document.getElementById('discountPercentageContainer');
+            container.style.display = discountEnabled ? 'block' : 'none';
+
+            if (!discountEnabled) {
+                document.getElementById('discountPercentage').value = '0';
             }
         }
+
+        function toggleEditDiscountField() {
+            const discountEnabled = document.getElementById('editDiscountEnabled').checked;
+            const container = document.getElementById('editDiscountPercentageContainer');
+            container.style.display = discountEnabled ? 'block' : 'none';
+
+            if (!discountEnabled) {
+                document.getElementById('editDiscountPercentage').value = '0';
+            }
+        }
+
+        // Add event listeners for discount toggles
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('discountEnabled').addEventListener('change', toggleDiscountField);
+            document.getElementById('editDiscountEnabled').addEventListener('change', toggleEditDiscountField);
+
+            // Initialize discount field visibility
+            toggleDiscountField();
+        });
     </script>
 </body>
 </html>

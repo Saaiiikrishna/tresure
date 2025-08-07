@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * Simulates email sending without actually sending emails
  */
 @Service
-@ConditionalOnProperty(name = "app.email.mock.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "app.email.mock.enabled", havingValue = "true", matchIfMissing = false)
 public class MockEmailService implements JavaMailSender {
     
     private static final Logger logger = LoggerFactory.getLogger(MockEmailService.class);

@@ -78,8 +78,8 @@ public class RegistrationController {
                 return ResponseEntity.badRequest().body(response);
             }
 
-            // Validate file uploads
-            String fileValidationError = validateFileUploads(photoFile, idFile, medicalFile);
+            // Validate file uploads with conditional medical certificate logic
+            String fileValidationError = validateFileUploads(photoFile, idFile, medicalFile, registration.getMedicalConsentGiven());
             if (fileValidationError != null) {
                 logger.warn("File validation error: {}", fileValidationError);
                 response.put("success", false);
@@ -207,15 +207,14 @@ public class RegistrationController {
     }
 
     /**
-     * Validate file uploads
+     * Validate file uploads with conditional medical certificate logic
      * @param photoFile Photo file
      * @param idFile ID document file
      * @param medicalFile Medical certificate file
+     * @param medicalConsentGiven Whether medical consent was given
      * @return Error message if validation fails, null if valid
      */
-    private String validateFileUploads(MultipartFile photoFile, MultipartFile idFile, MultipartFile medicalFile) {
-        // Temporarily disable file validation for testing email functionality
-        /*
+    private String validateFileUploads(MultipartFile photoFile, MultipartFile idFile, MultipartFile medicalFile, Boolean medicalConsentGiven) {
         // Check if all required files are provided
         if (photoFile == null || photoFile.isEmpty()) {
             return "Passport photo is required";
@@ -225,40 +224,35 @@ public class RegistrationController {
             return "Government ID document is required";
         }
 
-        if (medicalFile == null || medicalFile.isEmpty()) {
-            return "Medical certificate is required";
+        // Conditional medical certificate validation
+        if (medicalConsentGiven == null || !medicalConsentGiven) {
+            // If medical consent is NOT given, medical certificate is MANDATORY
+            if (medicalFile == null || medicalFile.isEmpty()) {
+                return "Medical certificate is required when medical consent is not given";
+            }
         }
-        */
+        // If medical consent IS given, medical certificate is OPTIONAL (no validation needed)
 
-        // Temporarily disable file size validation for testing email functionality
-        /*
-        // Validate file sizes (basic check - detailed validation in FileStorageService)
-        if (photoFile.getSize() > 2 * 1024 * 1024) { // 2MB
-            return "Photo file size must not exceed 2MB";
-        }
+        // File size validation is handled in FileStorageService with configurable limits
+        // This ensures consistent validation across the application
 
-        if (idFile.getSize() > 5 * 1024 * 1024) { // 5MB
-            return "ID document file size must not exceed 5MB";
-        }
-
-        if (medicalFile.getSize() > 5 * 1024 * 1024) { // 5MB
-            return "Medical certificate file size must not exceed 5MB";
-        }
-        */
-
-        // Temporarily disable file type validation for testing email functionality
-        /*
-        // Validate file types (basic check)
+        // Validate file types
         String photoContentType = photoFile.getContentType();
-        if (photoContentType == null || !photoContentType.startsWith("image/")) {
+        if (photoContentType == null || !photoContentType.toLowerCase().startsWith("image/")) {
             return "Photo must be an image file (JPG, JPEG, PNG)";
         }
 
-        String medicalContentType = medicalFile.getContentType();
-        if (medicalContentType == null || !"application/pdf".equals(medicalContentType)) {
-            return "Medical certificate must be a PDF file";
+        String idContentType = idFile.getContentType();
+        if (idContentType == null || !(idContentType.equalsIgnoreCase("application/pdf") || idContentType.toLowerCase().startsWith("image/"))) {
+            return "ID document must be an image or PDF file";
         }
-        */
+
+        if (medicalConsentGiven == null || !medicalConsentGiven) {
+            String medicalContentType = medicalFile.getContentType();
+            if (medicalContentType == null || !"application/pdf".equalsIgnoreCase(medicalContentType)) {
+                return "Medical certificate must be a PDF file";
+            }
+        }
 
         return null; // All validations passed
     }
@@ -315,12 +309,35 @@ public class RegistrationController {
                 return ResponseEntity.badRequest().body(response);
             }
 
+            // Validate file uploads with conditional medical certificate logic
+            String fileValidationError = validateFileUploads(photoFile, idFile, medicalFile, registrationData.getMedicalConsentGiven());
+            if (fileValidationError != null) {
+                logger.warn("File validation error in team registration: {}", fileValidationError);
+                response.put("success", false);
+                response.put("message", fileValidationError);
+                return ResponseEntity.badRequest().body(response);
+            }
+
             // Validate team registration data
             if (!registrationData.isValidTeamRegistration()) {
                 logger.warn("Invalid team registration data");
                 response.put("success", false);
                 response.put("message", "Invalid team registration data. Please check team size and member information.");
                 return ResponseEntity.badRequest().body(response);
+            }
+
+            // Validate emergency contact requirements for team members
+            for (int i = 0; i < registrationData.getMembers().size(); i++) {
+                TeamMemberDTO member = registrationData.getMembers().get(i);
+                boolean isTeamLeader = i == 0; // First member is team leader
+                boolean isIndividualRegistration = false; // This is team registration
+
+                if (!member.validateEmergencyContacts(isTeamLeader, isIndividualRegistration)) {
+                    logger.warn("Emergency contact validation failed for team member {}", i + 1);
+                    response.put("success", false);
+                    response.put("message", "Emergency contact information is required for the team leader.");
+                    return ResponseEntity.badRequest().body(response);
+                }
             }
 
             // Get the treasure hunt plan
@@ -367,9 +384,25 @@ public class RegistrationController {
                 teamMember.setGender(memberDTO.getGender());
                 teamMember.setEmail(memberDTO.getEmail());
                 teamMember.setPhoneNumber(memberDTO.getPhoneNumber());
-                teamMember.setEmergencyContactName(memberDTO.getEmergencyContactName());
-                teamMember.setEmergencyContactPhone(memberDTO.getEmergencyContactPhone());
+
+                // Only set emergency contacts if they are provided (required for team leader, optional for members)
+                if (memberDTO.getEmergencyContactName() != null && !memberDTO.getEmergencyContactName().trim().isEmpty()) {
+                    teamMember.setEmergencyContactName(memberDTO.getEmergencyContactName());
+                }
+                if (memberDTO.getEmergencyContactPhone() != null && !memberDTO.getEmergencyContactPhone().trim().isEmpty()) {
+                    teamMember.setEmergencyContactPhone(memberDTO.getEmergencyContactPhone());
+                }
+
+                // Set bio if provided
+                if (memberDTO.getBio() != null && !memberDTO.getBio().trim().isEmpty()) {
+                    teamMember.setBio(memberDTO.getBio());
+                }
+
                 teamMember.setMemberPosition(i + 1); // 1-based position
+
+                // Set medical consent - all team members inherit team leader's consent
+                teamMember.setMedicalConsentGiven(registrationData.getMedicalConsentGiven());
+
                 teamMember.setRegistration(registration);
                 teamMembers.add(teamMember);
             }
@@ -383,7 +416,7 @@ public class RegistrationController {
 
             response.put("success", true);
             response.put("message", "Team registration submitted successfully! You will receive a confirmation email shortly.");
-            response.put("registrationNumber", "TH-" + savedRegistration.getId());
+            response.put("registrationNumber", savedRegistration.getRegistrationNumber());
             response.put("teamName", savedRegistration.getTeamName());
             response.put("teamSize", savedRegistration.getTeamSize());
 

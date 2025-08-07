@@ -5,62 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registration Received - Treasure Hunt Adventures</title>
     <style>
+        /* Professional Corporate Email Styling */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
-            color: #333;
+            color: #333333;
             background-color: #f8f9fa;
             margin: 0;
             padding: 0;
+            font-size: 16px;
         }
-        .container {
+
+        .email-container {
             max-width: 600px;
             margin: 0 auto;
             background-color: #ffffff;
             border-radius: 8px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            animation: slideIn 0.5s ease-out;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .header {
-            background: linear-gradient(135deg, #2c5aa0 0%, #3d6bb3 100%);
-            color: white;
+
+        .email-header {
+            background: linear-gradient(135deg, #2c5aa0 0%, #f8c146 100%);
             padding: 30px 20px;
             text-align: center;
-            position: relative;
-            overflow: hidden;
         }
-        .header::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.1), transparent);
-            animation: shimmer 3s infinite;
-        }
-        @keyframes shimmer {
-            0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
-            100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
-        }
-        .header h1 {
+
+        .email-header h1 {
+            color: #ffffff;
             margin: 0;
-            font-size: 28px;
-            font-weight: 700;
-            position: relative;
-            z-index: 1;
+            font-size: 24px;
+            font-weight: bold;
         }
-        .header .subtitle {
-            margin: 10px 0 0 0;
+
+        .email-header .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 5px 0 0 0;
             font-size: 16px;
+        }
+        .email-body {
+            padding: 30px 20px;
+        }
+
+        .greeting {
+            font-size: 20px;
+            font-weight: bold;
+            color: #2c5aa0;
+            margin-bottom: 20px;
+        }
+
+        .application-id-box {
+            background: linear-gradient(135deg, #2c5aa0 0%, #f8c146 100%);
+            color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 25px 0;
+            box-shadow: 0 4px 10px rgba(44, 90, 160, 0.3);
+        }
+
+        .application-id-box .label {
+            font-size: 14px;
             opacity: 0.9;
-            position: relative;
-            z-index: 1;
+            margin-bottom: 5px;
+        }
+
+        .application-id-box .id-number {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .plan-details {
+            background-color: #f8f9fa;
+            border-left: 4px solid #2c5aa0;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .plan-details h3 {
+            color: #2c5aa0;
+            margin-top: 0;
+            font-size: 18px;
         }
         .content {
             padding: 30px 20px;
@@ -288,26 +316,26 @@
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="email-container">
         <!-- Header -->
-        <div class="header">
+        <div class="email-header">
             <h1>🗺️ Treasure Hunt Adventures</h1>
             <p class="subtitle">Registration Received</p>
         </div>
 
         <!-- Content -->
-        <div class="content">
+        <div class="email-body">
             <div class="greeting">
                 Hello <span th:text="${registration.fullName}">Adventurer</span>! 🎉
             </div>
 
             <p>Thank you for registering for our exciting treasure hunt adventure! We have successfully received your application and are thrilled about your interest in joining us.</p>
 
-            <!-- Registration Information -->
-            <div class="registration-info">
-                <div class="registration-number" th:text="${registrationNumber}">TH-000001</div>
-                <p><strong>Your Registration Number</strong></p>
-                <p>Please keep this number for your records and bring it with you on the day of your adventure.</p>
+            <!-- Application ID Box -->
+            <div class="application-id-box">
+                <div class="label">Your Application ID</div>
+                <div class="id-number" th:text="${registrationNumber}">TH-2408-IND-000101</div>
+                <p style="margin: 10px 0 0 0; font-size: 14px; opacity: 0.9;">Please keep this number for your records</p>
             </div>
 
             <!-- Under Review Notice -->
@@ -398,8 +426,8 @@
             <div class="contact-info">
                 <h4>📞 Need Help?</h4>
                 <p><strong>Email:</strong> <span th:text="${supportEmail}">support@treasurehuntadventures.com</span></p>
-                <p><strong>Phone:</strong> +91 98765 43210</p>
-                <p><strong>Hours:</strong> Monday - Friday, 9:00 AM - 6:00 PM IST</p>
+                <p><strong>Phone:</strong> <span th:text="${contactPhone}">+91 98765 43210</span></p>
+                <p><strong>Hours:</strong> <span th:text="${businessHours}">Monday - Friday, 9:00 AM - 6:00 PM IST</span></p>
             </div>
 
             <p>We're excited about your interest in joining our treasure hunt adventure! Our team will carefully review your application and get back to you soon.</p>

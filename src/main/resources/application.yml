@@ -1,8 +1,12 @@
 spring:
   application:
     name: treasure-hunt-registration
-  
-  # Database Configuration (H2 for development)
+
+  # Default to production profile for security
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:production}
+
+  # Database Configuration (H2 for development only - production uses PostgreSQL)
   datasource:
     url: jdbc:h2:mem:treasure_hunt_db;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     username: sa
@@ -19,7 +23,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         dialect: org.hibernate.dialect.H2Dialect
@@ -27,10 +31,10 @@ spring:
         jdbc:
           time_zone: UTC
 
-  # H2 Console (for development)
+  # H2 Console (for development only)
   h2:
     console:
-      enabled: true
+      enabled: ${H2_CONSOLE_ENABLED:false}
       path: /h2-console
   
   # Thymeleaf Configuration
@@ -41,12 +45,12 @@ spring:
     encoding: UTF-8
     mode: HTML
   
-  # Mail Configuration
+  # Mail Configuration - REQUIRES ENVIRONMENT VARIABLES
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${GMAIL_USERNAME:tresurhunting@gmail.com}
-    password: ${GMAIL_PASSWORD:kweh zjts ijoz qrfr}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -54,48 +58,93 @@ spring:
           starttls:
             enable: true
             required: true
-          connectiontimeout: 10000
-          timeout: 10000
-          writetimeout: 10000
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:10000}
+          timeout: ${MAIL_TIMEOUT:10000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:10000}
           ssl:
-            trust: smtp.gmail.com
+            trust: ${MAIL_HOST:smtp.gmail.com}
   
   # File Upload Configuration
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 15MB
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE:50MB}  # Configurable via environment
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE:60MB}  # Configurable via environment
       enabled: true
       file-size-threshold: 2KB
       location: ${java.io.tmpdir}
 
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_POOL_SIZE:2}
+        max-size: ${ASYNC_MAX_POOL_SIZE:5}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:100}
+      thread-name-prefix: async-
+
 # Custom Application Properties
 app:
   file-storage:
-    upload-dir: uploads/documents
-    max-photo-size: 2097152  # 2MB in bytes
-    max-document-size: 5242880  # 5MB in bytes
-    allowed-photo-types: image/jpeg,image/jpg,image/png
-    allowed-document-types: application/pdf,image/jpeg,image/jpg
+    upload-dir: ${FILE_UPLOAD_DIR:uploads/documents}
+    image-dir: ${IMAGE_UPLOAD_DIR:uploads/images}
+    max-photo-size: ${MAX_PHOTO_SIZE:2097152}  # 2MB in bytes for registration photos
+    max-document-size: ${MAX_DOCUMENT_SIZE:5242880}  # 5MB in bytes for documents
+    max-image-size: ${MAX_IMAGE_SIZE:5242880}  # 5MB in bytes for admin image uploads
+    max-video-size: ${MAX_VIDEO_SIZE:52428800}  # 50MB in bytes for admin video uploads
+    allowed-photo-types: ${ALLOWED_PHOTO_TYPES:image/jpeg,image/jpg,image/png}
+    allowed-document-types: ${ALLOWED_DOCUMENT_TYPES:application/pdf,image/jpeg,image/jpg}
   
   email:
-    from: ${GMAIL_USERNAME:tresurhunting@gmail.com}
-    support: ${APP_EMAIL_SUPPORT:tresurhunting@gmail.com}
-    company-name: ${APP_EMAIL_COMPANY_NAME:Treasure Hunt Adventures}
+    from: ${MAIL_FROM_ADDRESS}
+    from-name: ${MAIL_FROM_NAME:Treasure Hunt - MySillyDreams}
+    support: ${MAIL_SUPPORT_ADDRESS}
+    company-name: ${COMPANY_NAME:Treasure Hunt Adventures}
     mock:
-      enabled: ${APP_EMAIL_MOCK_ENABLED:false}  # Use real Gmail SMTP
-  
+      enabled: false  # Disabled - Use real Gmail SMTP
+
   security:
     admin:
-      username: ${ADMIN_USERNAME:admin}
-      password: ${ADMIN_PASSWORD:admin123}
+      username: ${ADMIN_USERNAME}
+      password: ${ADMIN_PASSWORD}
+      session-timeout-minutes: ${ADMIN_SESSION_TIMEOUT:30}
+    session:
+      max-concurrent-sessions: ${MAX_CONCURRENT_SESSIONS:1}
+      prevent-login: ${PREVENT_LOGIN_ON_MAX_SESSIONS:true}
+      timeout-minutes: ${SESSION_TIMEOUT:30}
+
+  business:
+    min-participant-age: ${MIN_PARTICIPANT_AGE:18}
+    max-team-size: ${MAX_TEAM_SIZE:6}
+    min-team-size: ${MIN_TEAM_SIZE:2}
+    registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
+    allow-cancellation: ${ALLOW_CANCELLATION:true}
+    cancellation-deadline-hours: ${CANCELLATION_DEADLINE_HOURS:48}
+
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    interval-seconds: ${MONITORING_INTERVAL:300}
+
+  cleanup:
+    temp-file-retention-hours: ${CLEANUP_TEMP_FILE_RETENTION_HOURS:24}
+    log-retention-days: ${CLEANUP_LOG_RETENTION_DAYS:30}
 
 # Logging Configuration
 logging:
   level:
-    com.treasurehunt: DEBUG
-    org.springframework.security: DEBUG
-    org.springframework.mail: DEBUG
+    com.treasurehunt: INFO
+    org.springframework.security: WARN
+    org.springframework.mail: INFO
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
@@ -104,9 +153,36 @@ logging:
 
 # Server Configuration
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
   servlet:
     context-path: /
   error:
-    include-message: always
-    include-binding-errors: always
+    include-message: ${INCLUDE_ERROR_MESSAGE:never}
+    include-binding-errors: ${INCLUDE_BINDING_ERRORS:never}
+    include-stacktrace: never
+    include-exception: false
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      show-components: always
+    info:
+      enabled: true
+  info:
+    env:
+      enabled: true
+
+# Graceful Shutdown Configuration
+spring.lifecycle.timeout-per-shutdown-phase: 30s

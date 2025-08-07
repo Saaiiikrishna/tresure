@@ -24,7 +24,7 @@
                     </tr>
                     <tr>
                         <td><strong>Price:</strong></td>
-                        <td>$<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span></td>
+                        <td>₹<span th:text="${#numbers.formatDecimal(registration.plan.priceInr, 1, 2)}">0.00</span></td>
                     </tr>
                     <tr>
                         <td><strong>Registration Date:</strong></td>
@@ -39,7 +39,7 @@
                                   th:text="${registration.status}">Status</span>
                         </td>
                     </tr>
-                    <tr th:if="${registration.teamRegistration}">
+                    <tr th:if="${registration.isTeamRegistration()}">
                         <td><strong>Team Name:</strong></td>
                         <td th:text="${registration.teamName}">Team Name</td>
                     </tr>
@@ -49,14 +49,14 @@
                 <h6 class="text-primary mb-3">
                     <i class="fas fa-file-alt me-2"></i>Uploaded Documents
                 </h6>
-                <div th:if="${!#lists.isEmpty(documents)}">
+                <div th:if="${documents != null and !#lists.isEmpty(documents)}">
                     <div th:each="document : ${documents}" class="mb-2">
                         <div class="card card-body py-2">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <i class="fas fa-file me-2" 
-                                       th:classappend="${document.image} ? 'text-primary' : 
-                                                       (${document.pdf} ? 'text-danger' : 'text-secondary')"></i>
+                                    <i class="fas fa-file me-2"
+                                       th:classappend="${document.isImage()} ? 'text-primary' :
+                                                       (${document.isPdf()} ? 'text-danger' : 'text-secondary')"></i>
                                     <strong th:text="${document.documentType}">Document Type</strong>
                                     <br>
                                     <small class="text-muted">
@@ -65,11 +65,11 @@
                                     </small>
                                 </div>
                                 <div class="btn-group btn-group-sm">
-                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/view'}" 
+                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/view'}"
                                        target="_blank" class="btn btn-outline-primary" title="View">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/download'}" 
+                                    <a th:href="@{'/admin/documents/' + ${document.id} + '/download'}"
                                        class="btn btn-outline-secondary" title="Download">
                                         <i class="fas fa-download"></i>
                                     </a>
@@ -78,7 +78,7 @@
                         </div>
                     </div>
                 </div>
-                <div th:if="${#lists.isEmpty(documents)}" class="text-muted">
+                <div th:if="${documents == null or #lists.isEmpty(documents)}" class="text-muted">
                     <i class="fas fa-inbox me-2"></i>No documents uploaded
                 </div>
             </div>
@@ -92,15 +92,15 @@
                 </h6>
                 
                 <!-- Team Registration -->
-                <div th:if="${isTeamRegistration}">
+                <div th:if="${isTeamRegistration and teamMembers != null and !#lists.isEmpty(teamMembers)}">
                     <div th:each="member, iterStat : ${teamMembers}" class="card mb-3">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <div>
-                                <span class="badge me-2" 
-                                      th:classappend="${member.teamLeader} ? 'bg-warning text-dark' : 'bg-secondary'"
+                                <span class="badge me-2"
+                                      th:classappend="${member.isTeamLeader()} ? 'bg-warning text-dark' : 'bg-secondary'"
                                       th:text="${iterStat.index + 1}"></span>
                                 <strong th:text="${member.fullName}">Member Name</strong>
-                                <span th:if="${member.teamLeader}" class="badge bg-warning text-dark ms-2">Team Leader</span>
+                                <span th:if="${member.isTeamLeader()}" class="badge bg-warning text-dark ms-2">Team Leader</span>
                             </div>
                         </div>
                         <div class="card-body">
@@ -138,18 +138,47 @@
                                         <tr>
                                             <td><strong>Medical Consent:</strong></td>
                                             <td>
-                                                <span class="badge" 
-                                                      th:classappend="${registration.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
-                                                      th:text="${registration.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
+                                                <span class="badge"
+                                                      th:classappend="${member.medicalConsentGiven != null and member.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
+                                                      th:text="${member.medicalConsentGiven != null and member.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${member.bio != null and !#strings.isEmpty(member.bio)}">
+                                            <td><strong>Bio:</strong></td>
+                                            <td>
+                                                <div class="bio-text" style="max-height: 100px; overflow-y: auto; font-size: 0.9em;">
+                                                    <span th:text="${member.bio}">Member bio...</span>
+                                                </div>
                                             </td>
                                         </tr>
                                     </table>
                                 </div>
                             </div>
+                            <!-- Bio section for team members (full width if present) -->
+                            <div th:if="${member.bio != null and !#strings.isEmpty(member.bio)}" class="row mt-3">
+                                <div class="col-12">
+                                    <h6 class="text-muted mb-2">
+                                        <i class="fas fa-user-edit me-1"></i>Bio
+                                    </h6>
+                                    <div class="card bg-light">
+                                        <div class="card-body py-2">
+                                            <p class="mb-0 text-muted" style="font-size: 0.9em;" th:text="${member.bio}">Member bio...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Team Registration with No Members Loaded (Error Case) -->
+                <div th:if="${isTeamRegistration and (teamMembers == null or #lists.isEmpty(teamMembers))}" class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Team Registration Detected</strong> but team member details could not be loaded.
+                    <br>
+                    <small class="text-muted">Team Name: <span th:text="${registration.teamName}">Unknown</span></small>
+                </div>
+
                 <!-- Individual Registration -->
                 <div th:unless="${isTeamRegistration}" class="card">
                     <div class="card-header">
@@ -193,12 +222,25 @@
                                     <tr>
                                         <td><strong>Medical Consent:</strong></td>
                                         <td>
-                                            <span class="badge" 
-                                                  th:classappend="${registration.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
-                                                  th:text="${registration.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
+                                            <span class="badge"
+                                                  th:classappend="${registration.medicalConsentGiven != null and registration.medicalConsentGiven} ? 'bg-success' : 'bg-danger'"
+                                                  th:text="${registration.medicalConsentGiven != null and registration.medicalConsentGiven} ? 'Given' : 'Not Given'">Status</span>
                                         </td>
                                     </tr>
                                 </table>
+                            </div>
+                        </div>
+                        <!-- Bio section for individual registration (full width if present) -->
+                        <div th:if="${registration.bio != null and !#strings.isEmpty(registration.bio)}" class="row mt-3">
+                            <div class="col-12">
+                                <h6 class="text-muted mb-2">
+                                    <i class="fas fa-user-edit me-1"></i>Bio
+                                </h6>
+                                <div class="card bg-light">
+                                    <div class="card-body py-2">
+                                        <p class="mb-0 text-muted" style="font-size: 0.9em;" th:text="${registration.bio}">Participant bio...</p>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

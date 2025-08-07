@@ -35,10 +35,13 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/")
                 .setCachePeriod(86400);
 
-        // Uploaded files (if serving directly - for development only)
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:uploads/")
-                .setCachePeriod(3600);
+        // Serve robots.txt
+        registry.addResourceHandler("/robots.txt")
+                .addResourceLocations("classpath:/static/")
+                .setCachePeriod(86400);
+
+        // REMOVED: Direct file serving for security
+        // Files are now served through secure controller with authorization checks
     }
 
     /**

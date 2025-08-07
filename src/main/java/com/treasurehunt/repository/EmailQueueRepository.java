@@ -4,10 +4,14 @@ import com.treasurehunt.entity.EmailQueue;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.LockModeType;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,6 +28,14 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
            "(e.status = 'PENDING' OR (e.status = 'SCHEDULED' AND e.scheduledDate <= :now)) " +
            "ORDER BY e.priority ASC, e.createdDate ASC")
     List<EmailQueue> findEmailsReadyToSend(@Param("now") LocalDateTime now);
+
+    /**
+     * Find emails ready to be sent with pagination
+     */
+    @Query("SELECT e FROM EmailQueue e WHERE " +
+           "(e.status = 'PENDING' OR (e.status = 'SCHEDULED' AND e.scheduledDate <= :now)) " +
+           "ORDER BY e.priority ASC, e.createdDate ASC")
+    List<EmailQueue> findEmailsReadyToSend(@Param("now") LocalDateTime now, Pageable pageable);
 
     /**
      * Find emails by status
@@ -56,10 +68,18 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
     List<EmailQueue> findByCampaignIdStartingWithOrderByCreatedDateDesc(String campaignIdPrefix);
 
     /**
-     * Find failed emails that can be retried
+     * PERFORMANCE FIX: Find failed emails that can be retried with optimized query and limit
      */
-    @Query("SELECT e FROM EmailQueue e WHERE e.status = 'FAILED' AND e.retryCount < e.maxRetryAttempts")
+    @Query("SELECT e FROM EmailQueue e WHERE e.status = 'FAILED' AND e.retryCount < e.maxRetryAttempts ORDER BY e.priority DESC, e.createdDate ASC")
     List<EmailQueue> findFailedEmailsForRetry();
+
+    /**
+     * PERFORMANCE FIX: Find failed emails for retry with limit to prevent large result sets
+     * @param limit Maximum number of emails to retry
+     * @return List of failed emails eligible for retry
+     */
+    @Query(value = "SELECT * FROM email_queue WHERE status = 'FAILED' AND retry_count < max_retry_attempts ORDER BY priority DESC, created_date ASC LIMIT :limit", nativeQuery = true)
+    List<EmailQueue> findFailedEmailsForRetryWithLimit(@Param("limit") int limit);
 
     /**
      * Count emails by status
@@ -75,6 +95,20 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
      * Count emails by campaign ID
      */
     long countByCampaignId(String campaignId);
+
+    /**
+     * Find emails ready to send with pessimistic locking
+     * Prevents concurrent processing of the same emails
+     * @param now Current timestamp
+     * @param pageable Pagination parameters
+     * @return List of emails ready to send
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT e FROM EmailQueue e WHERE " +
+           "e.status = 'PENDING' AND " +
+           "e.scheduledDate <= :now " +
+           "ORDER BY e.scheduledDate ASC, e.id ASC")
+    List<EmailQueue> findEmailsReadyToSendWithLock(@Param("now") LocalDateTime now, Pageable pageable);
 
     /**
      * Find emails created between dates
@@ -140,6 +174,8 @@ public interface EmailQueueRepository extends JpaRepository<EmailQueue, Long> {
     /**
      * Delete old emails (cleanup)
      */
+    @Modifying
+    @Transactional
     @Query("DELETE FROM EmailQueue e WHERE e.createdDate < :cutoffDate AND e.status = 'SENT'")
     void deleteOldSentEmails(@Param("cutoffDate") LocalDateTime cutoffDate);
 

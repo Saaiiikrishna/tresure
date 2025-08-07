@@ -9,8 +9,8 @@ public class TeamMemberDTO {
     private String fullName;
 
     @NotNull(message = "Age is required")
-    @Min(value = 16, message = "Minimum age is 16")
-    @Max(value = 100, message = "Maximum age is 100")
+    @Min(value = 18, message = "Minimum age is 18")
+    @Max(value = 65, message = "Maximum age is 65")
     private Integer age;
 
     @NotBlank(message = "Gender is required")
@@ -25,19 +25,22 @@ public class TeamMemberDTO {
     @Pattern(regexp = "^[+]?[0-9\\s\\-\\(\\)]{10,20}$", message = "Please provide a valid phone number")
     private String phoneNumber;
 
-    @NotBlank(message = "Emergency contact name is required")
-    @Size(min = 2, max = 100, message = "Emergency contact name must be between 2 and 100 characters")
+    // Emergency contact fields - only required for individual registrations and team leaders
+    // Note: Validation is conditional - only applied when fields are not empty
+    @Size(max = 100, message = "Emergency contact name must not exceed 100 characters")
     private String emergencyContactName;
 
-    @NotBlank(message = "Emergency contact phone is required")
-    @Pattern(regexp = "^[+]?[0-9\\s\\-\\(\\)]{10,20}$", message = "Please provide a valid emergency contact phone")
+    @Pattern(regexp = "^$|^[+]?[0-9\\s\\-\\(\\)]{10,20}$", message = "Please provide a valid emergency contact phone")
     private String emergencyContactPhone;
+
+    @Size(max = 2000, message = "Bio must not exceed 2000 characters")
+    private String bio;
 
     // Constructors
     public TeamMemberDTO() {}
 
-    public TeamMemberDTO(String fullName, Integer age, String gender, String email, 
-                        String phoneNumber, String emergencyContactName, String emergencyContactPhone) {
+    public TeamMemberDTO(String fullName, Integer age, String gender, String email,
+                        String phoneNumber, String emergencyContactName, String emergencyContactPhone, String bio) {
         this.fullName = fullName;
         this.age = age;
         this.gender = gender;
@@ -45,6 +48,7 @@ public class TeamMemberDTO {
         this.phoneNumber = phoneNumber;
         this.emergencyContactName = emergencyContactName;
         this.emergencyContactPhone = emergencyContactPhone;
+        this.bio = bio;
     }
 
     // Getters and setters
@@ -102,5 +106,34 @@ public class TeamMemberDTO {
 
     public void setEmergencyContactPhone(String emergencyContactPhone) {
         this.emergencyContactPhone = emergencyContactPhone;
+    }
+
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
+    /**
+     * Validate emergency contact fields based on member position
+     * @param isTeamLeader true if this is the team leader (first member)
+     * @param isIndividualRegistration true if this is an individual registration
+     * @return true if validation passes
+     */
+    public boolean validateEmergencyContacts(boolean isTeamLeader, boolean isIndividualRegistration) {
+        // Emergency contacts are required for individual registrations and team leaders
+        if (isIndividualRegistration || isTeamLeader) {
+            return emergencyContactName != null && !emergencyContactName.trim().isEmpty() &&
+                   emergencyContactPhone != null && !emergencyContactPhone.trim().isEmpty() &&
+                   emergencyContactName.trim().length() >= 2; // Minimum length check
+        }
+        // For team members (non-leaders), emergency contacts are optional
+        // But if provided, they should be valid
+        if (emergencyContactName != null && !emergencyContactName.trim().isEmpty()) {
+            return emergencyContactName.trim().length() >= 2;
+        }
+        return true;
     }
 }

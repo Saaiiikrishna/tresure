@@ -133,7 +133,7 @@
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; font-weight: bold;">Plan Price:</td>
-                    <td style="padding: 8px 0;">$<span th:text="${#numbers.formatDecimal(registration.plan.priceUsd, 1, 2)}">0.00</span></td>
+                    <td style="padding: 8px 0;">₹<span th:text="${#numbers.formatDecimal(registration.plan.priceInr, 1, 2)}">0.00</span></td>
                 </tr>
                 <tr>
                     <td style="padding: 8px 0; font-weight: bold;">Registration Date:</td>
@@ -232,7 +232,7 @@
         <!-- Quick Actions -->
         <div style="text-align: center; margin: 30px 0;">
             <h3 style="color: #007bff;">Quick Actions</h3>
-            <a href="http://localhost:8080/admin/registrations" class="btn">
+            <a th:href="@{'/admin/registrations'}" class="btn">
                 📋 View All Registrations
             </a>
             <a th:href="@{'/admin/registrations/' + ${registration.id}}" class="btn btn-success">

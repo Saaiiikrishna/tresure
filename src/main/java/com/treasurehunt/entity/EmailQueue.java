@@ -11,7 +11,14 @@ import java.time.LocalDateTime;
  * Maps to email_queue table in database
  */
 @Entity
-@Table(name = "email_queue")
+@Table(name = "email_queue",
+       indexes = {
+           @Index(name = "idx_email_status", columnList = "status"),
+           @Index(name = "idx_email_scheduled_date", columnList = "scheduled_date"),
+           @Index(name = "idx_email_status_scheduled", columnList = "status, scheduled_date"),
+           @Index(name = "idx_email_registration_id", columnList = "registration_id"),
+           @Index(name = "idx_email_type", columnList = "email_type")
+       })
 public class EmailQueue {
 
     @Id
@@ -64,6 +71,9 @@ public class EmailQueue {
     @Column(name = "sent_date")
     private LocalDateTime sentDate;
 
+    @Column(name = "last_attempt_date")
+    private LocalDateTime lastAttemptDate;
+
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
@@ -100,6 +110,7 @@ public class EmailQueue {
     public enum EmailStatus {
         PENDING,
         PROCESSING,
+        SENDING,
         SENT,
         FAILED,
         CANCELLED,
@@ -193,5 +204,22 @@ public class EmailQueue {
 
     public boolean isScheduled() {
         return scheduledDate != null && scheduledDate.isAfter(LocalDateTime.now());
+    }
+
+    // Additional methods needed by ThreadSafeEmailProcessor
+    public int getAttemptCount() {
+        return retryCount;
+    }
+
+    public void setAttemptCount(int attemptCount) {
+        this.retryCount = attemptCount;
+    }
+
+    public LocalDateTime getLastAttemptDate() {
+        return lastAttemptDate;
+    }
+
+    public void setLastAttemptDate(LocalDateTime lastAttemptDate) {
+        this.lastAttemptDate = lastAttemptDate;
     }
 }

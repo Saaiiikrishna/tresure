@@ -7,10 +7,11 @@
 window.currentStep = 1;
 window.selectedPlan = null;
 
+let formListenersInitialized = false;
+let progressListenersInitialized = false;
+
 // Robust step navigation functions
 window.showStepRobust = function(step) {
-    console.log('showStepRobust called with step:', step);
-
     // Hide all steps
     const allSteps = document.querySelectorAll('.form-step');
     allSteps.forEach(stepEl => {
@@ -23,13 +24,11 @@ window.showStepRobust = function(step) {
     if (targetStep) {
         targetStep.classList.remove('d-none');
         targetStep.classList.add('fade-in');
-        console.log('Step', step, 'is now visible');
 
         // Setup file uploads for step 2
         if (step === 2) {
             setTimeout(() => {
                 setupFileUploads();
-                console.log('File uploads setup for step 2');
             }, 200);
         }
     } else {
@@ -46,21 +45,15 @@ window.showStepRobust = function(step) {
     }
 
     window.currentStep = step;
-    console.log('window.currentStep set to:', window.currentStep);
 };
 
 window.nextStepRobust = function() {
-    console.log('nextStepRobust called, currentStep:', window.currentStep);
-
     // Ensure currentStep is set
     if (typeof window.currentStep === 'undefined' || window.currentStep === null) {
         window.currentStep = 1;
-        console.log('currentStep was undefined, set to 1');
     }
 
     if (window.currentStep === 1) {
-        console.log('🔍 Validating Step 1 for dynamic form...');
-
         // Check if this is a team form or individual form
         const teamNameField = document.getElementById('teamName');
         const isTeamForm = teamNameField !== null;
@@ -69,13 +62,12 @@ window.nextStepRobust = function() {
         const memberForms = document.querySelectorAll('.member-form');
         const totalMembers = memberForms.length;
 
-        console.log(`Form type: ${isTeamForm ? 'Team' : 'Individual'}, Members: ${totalMembers}`);
-
         // Validate team name if it's a team form
         if (isTeamForm) {
             const teamName = teamNameField.value?.trim();
             if (!teamName || teamName.length < 3) {
                 alert('Please enter a valid team name (minimum 3 characters).');
+                teamNameField.focus();
                 return;
             }
         }
@@ -90,6 +82,12 @@ window.nextStepRobust = function() {
             const gender = document.getElementById(`gender_${i}`)?.value;
             const email = document.getElementById(`email_${i}`)?.value?.trim();
             const phoneNumber = document.getElementById(`phoneNumber_${i}`)?.value?.trim();
+
+            // Emergency contact fields are only required for individual registrations or team leaders (member 1)
+            const isIndividualRegistration = totalMembers === 1;
+            const isTeamLeader = i === 1;
+            const requiresEmergencyContact = isIndividualRegistration || isTeamLeader;
+
             const emergencyContactName = document.getElementById(`emergencyContactName_${i}`)?.value?.trim();
             const emergencyContactPhone = document.getElementById(`emergencyContactPhone_${i}`)?.value?.trim();
 
@@ -99,41 +97,83 @@ window.nextStepRobust = function() {
                 gender: !!gender,
                 email: !!email,
                 phoneNumber: !!phoneNumber,
+                requiresEmergencyContact,
                 emergencyContactName: !!emergencyContactName,
                 emergencyContactPhone: !!emergencyContactPhone
             });
 
-            if (!fullName || !age || !gender || gender === '' || !email || !phoneNumber || !emergencyContactName || !emergencyContactPhone) {
+            // Check basic required fields for all members
+            if (!fullName || !age || !gender || gender === '' || !email || !phoneNumber) {
                 allMembersValid = false;
                 invalidMemberNumber = i;
+                console.log(`❌ Member ${i} missing basic required fields`);
+                break;
+            }
+
+            // Check emergency contact fields only if required
+            if (requiresEmergencyContact && (!emergencyContactName || !emergencyContactPhone)) {
+                allMembersValid = false;
+                invalidMemberNumber = i;
+                console.log(`❌ Member ${i} missing required emergency contact fields`);
                 break;
             }
 
             // Additional validation
             const ageNum = parseInt(age);
             if (isNaN(ageNum) || ageNum < 18 || ageNum > 65) {
+                console.log(`❌ Member ${i} age validation failed: ${age}`);
                 alert(`Member ${i}: Age must be between 18 and 65.`);
+                document.getElementById(`age_${i}`)?.focus();
                 return;
             }
 
             // Phone validation
             const phoneRegex = /^[6-9][0-9]{9}$/;
-            if (!phoneRegex.test(phoneNumber) || !phoneRegex.test(emergencyContactPhone)) {
-                alert(`Member ${i}: Please enter valid 10-digit Indian mobile numbers.`);
+            if (!phoneRegex.test(phoneNumber)) {
+                console.log(`❌ Member ${i} phone validation failed: ${phoneNumber}`);
+                alert(`Member ${i}: Please enter a valid 10-digit Indian mobile number.`);
+                document.getElementById(`phoneNumber_${i}`)?.focus();
+                return;
+            }
+
+            // Emergency contact phone validation (only if required)
+            if (requiresEmergencyContact && emergencyContactPhone && !phoneRegex.test(emergencyContactPhone)) {
+                console.log(`❌ Member ${i} emergency phone validation failed: ${emergencyContactPhone}`);
+                alert(`Member ${i}: Please enter a valid emergency contact number.`);
+                document.getElementById(`emergencyContactPhone_${i}`)?.focus();
                 return;
             }
 
             // Email validation
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(email)) {
+                console.log(`❌ Member ${i} email validation failed: ${email}`);
                 alert(`Member ${i}: Please enter a valid email address.`);
+                document.getElementById(`email_${i}`)?.focus();
                 return;
             }
+
+            console.log(`✅ Member ${i} validation passed`)
         }
 
         if (!allMembersValid) {
             const memberType = totalMembers > 1 ? `Team Member ${invalidMemberNumber}` : 'Personal information';
-            alert(`Please complete all required fields for ${memberType}.`);
+            const errorMessage = `Please complete all required fields for ${memberType}.`;
+            console.log('❌ Step 1 validation failed:', errorMessage);
+            alert(errorMessage);
+
+            // Focus on the first invalid field
+            const firstInvalidField = document.getElementById(`fullName_${invalidMemberNumber}`) ||
+                                    document.getElementById(`age_${invalidMemberNumber}`) ||
+                                    document.getElementById(`gender_${invalidMemberNumber}`) ||
+                                    document.getElementById(`email_${invalidMemberNumber}`) ||
+                                    document.getElementById(`phoneNumber_${invalidMemberNumber}`) ||
+                                    document.getElementById(`emergencyContactName_${invalidMemberNumber}`) ||
+                                    document.getElementById(`emergencyContactPhone_${invalidMemberNumber}`);
+
+            if (firstInvalidField) {
+                firstInvalidField.focus();
+            }
             return;
         }
 
@@ -142,13 +182,37 @@ window.nextStepRobust = function() {
     }
 };
 
-// Debug function removed for production
+// Production-ready file upload tracking
+const uploadedFiles = new Map(); // Using Map for better performance and memory management
 
-let uploadedFiles = {
-    photo: null,
-    id: null,
-    medical: null
-};
+/**
+ * Show error notification to user
+ * @param {string} message Error message to display
+ */
+function showErrorNotification(message) {
+    // Create or update error notification
+    let errorDiv = document.getElementById('error-notification');
+    if (!errorDiv) {
+        errorDiv = document.createElement('div');
+        errorDiv.id = 'error-notification';
+        errorDiv.className = 'alert alert-danger alert-dismissible fade show position-fixed';
+        errorDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 400px;';
+        document.body.appendChild(errorDiv);
+    }
+
+    errorDiv.innerHTML = `
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    // Auto-hide after 5 seconds
+    setTimeout(() => {
+        if (errorDiv && errorDiv.parentNode) {
+            errorDiv.remove();
+        }
+    }, 5000);
+}
 
 // DOM Content Loaded
 document.addEventListener('DOMContentLoaded', function() {
@@ -243,17 +307,20 @@ function setupSmoothScrolling() {
 }
 
 /**
- * Load plans from API
+ * Load plans from API with proper error handling
  */
 async function loadPlans() {
     try {
         const response = await fetch('/api/plans');
-        if (response.ok) {
-            const plans = await response.json();
-            updatePlanCards(plans);
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+        const plans = await response.json();
+        updatePlanCards(plans);
     } catch (error) {
         console.error('Error loading plans:', error);
+        // Show user-friendly error message
+        showErrorNotification('Unable to load adventure plans. Please refresh the page.');
     }
 }
 
@@ -328,6 +395,11 @@ async function handleRegistrationClick(event) {
             teamSize: parseInt(button.dataset.teamSize) || 1
         };
 
+        // Initialize modal persistence for this plan
+        if (window.modalPersistence) {
+            window.modalPersistence.init(planId);
+        }
+
         loadRegistrationForm();
         showModal('registrationModal');
     }
@@ -339,12 +411,50 @@ async function handleRegistrationClick(event) {
 function handlePreviewClick(event) {
     const button = event.target.closest('.preview-btn');
     const planId = button.dataset.planId;
-    
-    // Load preview video (placeholder URL)
-    const videoUrl = `https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1`;
-    document.getElementById('previewVideo').src = videoUrl;
-    
-    showModal('videoModal');
+
+    console.log('Preview button clicked for plan ID:', planId);
+
+    // Fetch plan details to get video URL
+    fetch(`/api/plans/${planId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch plan details');
+            }
+            return response.json();
+        })
+        .then(plan => {
+            let videoUrl = plan.previewVideoUrl;
+
+            // If no preview video URL is set, use default
+            if (!videoUrl || videoUrl.trim() === '') {
+                videoUrl = 'https://www.youtube.com/embed/dQw4w9WgXcQ';
+            }
+
+            // Add autoplay parameter if not already present
+            if (videoUrl.includes('youtube.com') && !videoUrl.includes('autoplay=')) {
+                videoUrl += videoUrl.includes('?') ? '&autoplay=1' : '?autoplay=1';
+            }
+
+            console.log('Loading video URL:', videoUrl);
+            document.getElementById('previewVideo').src = videoUrl;
+
+            // Update modal title with plan name
+            const modalTitle = document.querySelector('#videoModal .modal-title');
+            if (modalTitle) {
+                modalTitle.textContent = `${plan.name} - Preview`;
+            }
+
+            showModal('videoModal');
+        })
+        .catch(error => {
+            console.error('Error fetching plan details:', error);
+
+            // Fallback to default video
+            const defaultVideoUrl = 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1';
+            document.getElementById('previewVideo').src = defaultVideoUrl;
+
+            showModal('videoModal');
+        });
 }
 
 /**
@@ -450,6 +560,10 @@ function generateStep1Content(isTeamBased, teamSize) {
  * Generate member form for team or individual registration
  */
 function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) {
+    const isTeamLeader = memberNumber === 1;
+    const isIndividualRegistration = totalMembers === 1;
+    const showEmergencyContacts = isIndividualRegistration || isTeamLeader;
+
     const memberTitle = totalMembers > 1 ?
         `<h6 class="mb-3 text-primary d-flex align-items-center">
             <span class="badge bg-primary me-2">${memberNumber}</span>
@@ -458,7 +572,7 @@ function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) 
 
     return `
         ${showMemberTitle ? memberTitle : ''}
-        <div class="member-form border rounded p-3 mb-4" data-member="${memberNumber}" style="background-color: #f8f9fa;">
+        <div class="member-form border rounded p-3 mb-4" data-member="${memberNumber}">
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="fullName_${memberNumber}" class="form-label">Full Name *</label>
@@ -502,6 +616,17 @@ function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) 
                     </div>
 
                 </div>
+                <div class="col-12">
+                    <label for="bio_${memberNumber}" class="form-label">Tell us about yourself</label>
+                    <textarea class="form-control" id="bio_${memberNumber}" name="members[${memberNumber-1}].bio"
+                              rows="3" maxlength="2000"
+                              placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!"
+                              oninput="updateCharacterCount(${memberNumber})"></textarea>
+                    <div class="form-text">
+                        <span id="charCount_${memberNumber}">0</span>/2000 characters
+                    </div>
+                </div>
+                ${showEmergencyContacts ? `
                 <div class="col-md-6">
                     <label for="emergencyContactName_${memberNumber}" class="form-label">Emergency Contact Name *</label>
                     <input type="text" class="form-control" id="emergencyContactName_${memberNumber}"
@@ -519,9 +644,40 @@ function generateMemberForm(memberNumber, totalMembers, showMemberTitle = true) 
                     </div>
 
                 </div>
+                ` : `
+                <div class="col-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Note:</strong> Emergency contact information is only required for individual registrations and team leaders.
+                        As a team member, this information is optional.
+                    </div>
+                </div>
+                `}
             </div>
         </div>
     `;
+}
+
+/**
+ * Update character count for bio field
+ */
+function updateCharacterCount(memberNumber) {
+    const bioField = document.getElementById(`bio_${memberNumber}`);
+    const charCountElement = document.getElementById(`charCount_${memberNumber}`);
+
+    if (bioField && charCountElement) {
+        const currentLength = bioField.value.length;
+        charCountElement.textContent = currentLength;
+
+        // Change color based on character count
+        if (currentLength > 1800) {
+            charCountElement.style.color = '#dc3545'; // Red when approaching limit
+        } else if (currentLength > 1500) {
+            charCountElement.style.color = '#fd7e14'; // Orange when getting close
+        } else {
+            charCountElement.style.color = '#6c757d'; // Default gray
+        }
+    }
 }
 
 /**
@@ -654,14 +810,17 @@ function loadRegistrationForm() {
                             </div>
                             <input type="file" id="idFile" name="idFile" accept="application/pdf,image/jpeg,image/jpg" style="display: none;" onchange="handleFileUpload(this, 'id', 5)">
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label">Medical Certificate <small class="text-danger">(Required - PDF only, max 5MB)</small></label>
-                            <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('medicalFile').click();">
+                        <div class="col-md-4" id="medicalCertificateContainer">
+                            <label class="form-label" id="medicalCertificateLabel">Medical Certificate <small class="text-danger" id="medicalCertificateRequired">(Required - PDF only, max 5MB)</small></label>
+                            <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('medicalFile').click();" id="medicalFileUploadArea">
                                 <i class="fas fa-file-medical fs-2 text-muted mb-2"></i>
-                                <p class="mb-2">Click to upload or drag & drop</p>
+                                <p class="mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
                                 <div id="medicalFileInfo" class="file-info d-none"></div>
                             </div>
                             <input type="file" id="medicalFile" name="medicalFile" accept="application/pdf" style="display: none;" onchange="handleFileUpload(this, 'medical', 5)">
+                            <div class="form-text mt-2" id="medicalCertificateHelperText">
+                                Medical certificate is required unless medical consent is given above.
+                            </div>
                         </div>
                     </div>
 
@@ -693,8 +852,12 @@ function loadRegistrationForm() {
             if (medicalConsent) {
                 medicalConsent.addEventListener('change', function() {
                     console.log('🏥 Medical consent changed:', this.checked);
+                    toggleMedicalCertificateUpload(this.checked);
                     checkFormCompletion();
                 });
+
+                // Initialize the state based on current checkbox value
+                toggleMedicalCertificateUpload(medicalConsent.checked);
                 console.log('✅ Medical consent listener attached');
             }
         }, 1000);
@@ -998,58 +1161,45 @@ const updateTeamProgress = debounce(function() {
     memberForms.forEach((memberForm, index) => {
         const memberNumber = index + 1;
 
-        // Get required fields for this member
-        const requiredFields = [
-            `fullName_${memberNumber}`,
-            `age_${memberNumber}`,
-            `gender_${memberNumber}`,
-            `email_${memberNumber}`,
-            `phoneNumber_${memberNumber}`,
-            `emergencyContactName_${memberNumber}`,
-            `emergencyContactPhone_${memberNumber}`
-        ];
+        // Get all input fields within this member form that have the 'required' attribute
+        const requiredFields = memberForm.querySelectorAll('input[required], select[required]');
 
-        // Check if all required fields are filled (simplified validation)
+        // Check if all required fields are filled (dynamic validation)
         let memberComplete = true;
         let filledFields = 0;
+        const totalRequiredFields = requiredFields.length;
 
-        requiredFields.forEach(fieldId => {
-            const field = document.getElementById(fieldId);
-            if (field) {
-                const value = (field.value || '').trim();
-                if (value && value !== '') {
-                    filledFields++;
+        requiredFields.forEach(field => {
+            const value = (field.value || '').trim();
+            if (value && value !== '') {
+                filledFields++;
 
-                    // Basic validation for specific fields
-                    if (fieldId.includes('age')) {
-                        const age = parseInt(value);
-                        if (isNaN(age) || age < 18 || age > 65) {
-                            memberComplete = false;
-                        }
-                    } else if (fieldId.includes('phoneNumber') || fieldId.includes('emergencyContactPhone')) {
-                        // More lenient phone validation - just check if it's 10 digits
-                        if (value.length !== 10 || !/^\d+$/.test(value)) {
-                            memberComplete = false;
-                        }
-                    } else if (fieldId.includes('email')) {
-                        // Basic email validation
-                        if (!value.includes('@') || !value.includes('.')) {
-                            memberComplete = false;
-                        }
+                // Basic validation for specific field types
+                if (field.type === 'number' && field.name.includes('age')) {
+                    const age = parseInt(value);
+                    if (isNaN(age) || age < 18 || age > 65) {
+                        memberComplete = false;
                     }
-                } else {
-                    memberComplete = false;
+                } else if (field.type === 'tel' || field.name.includes('phoneNumber') || field.name.includes('emergencyContactPhone')) {
+                    // More lenient phone validation - just check if it's 10 digits
+                    if (value.length !== 10 || !/^\d+$/.test(value)) {
+                        memberComplete = false;
+                    }
+                } else if (field.type === 'email' || field.name.includes('email')) {
+                    // Basic email validation
+                    if (!value.includes('@') || !value.includes('.')) {
+                        memberComplete = false;
+                    }
                 }
             } else {
-                console.log(`Field not found: ${fieldId}`);
                 memberComplete = false;
             }
         });
 
-        console.log(`Member ${memberNumber}: ${filledFields}/${requiredFields.length} fields filled, complete: ${memberComplete}`);
+        console.log(`Member ${memberNumber}: ${filledFields}/${totalRequiredFields} required fields filled, complete: ${memberComplete}`);
 
-        // Member is complete if all fields are filled and valid
-        if (memberComplete && filledFields === requiredFields.length) {
+        // Member is complete if all required fields are filled and valid
+        if (memberComplete && filledFields === totalRequiredFields) {
             completedMembers++;
 
             // Add visual indicator to completed member form
@@ -1134,6 +1284,9 @@ const updateTeamProgress = debounce(function() {
  * Attach event listeners for progress tracking
  */
 function attachProgressEventListeners() {
+    if (progressListenersInitialized) return;
+    progressListenersInitialized = true;
+
     const form = document.getElementById('registrationForm');
     if (!form) {
         console.log('❌ Registration form not found for progress listeners');
@@ -1144,16 +1297,9 @@ function attachProgressEventListeners() {
     console.log(`📝 Attaching progress listeners to ${inputs.length} form inputs`);
 
     inputs.forEach((input, index) => {
-        // Remove existing listeners to avoid duplicates
-        input.removeEventListener('input', handleProgressUpdate);
-        input.removeEventListener('change', handleProgressUpdate);
-        input.removeEventListener('blur', handleProgressUpdate);
-
-        // Add new listeners
         input.addEventListener('input', handleProgressUpdate);
         input.addEventListener('change', handleProgressUpdate);
         input.addEventListener('blur', handleProgressUpdate);
-
         console.log(`✅ Listeners attached to ${input.id || input.name || 'unnamed field'}`);
     });
 }
@@ -1170,6 +1316,9 @@ function handleProgressUpdate(event) {
  * Setup form event listeners
  */
 function setupFormEventListeners() {
+    if (formListenersInitialized) return;
+    formListenersInitialized = true;
+
     const form = document.getElementById('registrationForm');
     if (form) {
         form.addEventListener('submit', handleFormSubmit);
@@ -1335,6 +1484,81 @@ function setupFileUploads() {
 
 
 /**
+ * Toggle medical certificate upload field based on medical consent
+ * @param {boolean} consentGiven - Whether medical consent is given
+ */
+function toggleMedicalCertificateUpload(consentGiven) {
+    console.log('🏥 Toggling medical certificate upload, consent given:', consentGiven);
+
+    const container = document.getElementById('medicalCertificateContainer');
+    const label = document.getElementById('medicalCertificateLabel');
+    const requiredText = document.getElementById('medicalCertificateRequired');
+    const uploadArea = document.getElementById('medicalFileUploadArea');
+    const uploadText = document.getElementById('medicalFileUploadText');
+    const helperText = document.getElementById('medicalCertificateHelperText');
+    const fileInput = document.getElementById('medicalFile');
+
+    if (!container) {
+        console.log('Medical certificate container not found');
+        return;
+    }
+
+    if (consentGiven) {
+        // Consent given - make upload optional
+        container.style.opacity = '0.6';
+        uploadArea.style.cursor = 'not-allowed';
+        uploadArea.onclick = null;
+
+        if (requiredText) {
+            requiredText.innerHTML = '(Optional - PDF only, max 5MB)';
+            requiredText.className = 'text-muted';
+        }
+
+        if (uploadText) {
+            uploadText.textContent = 'Medical certificate not required (consent given)';
+        }
+
+        if (helperText) {
+            helperText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Medical consent given - certificate upload is optional.';
+            helperText.className = 'form-text mt-2 text-success';
+        }
+
+        if (fileInput) {
+            fileInput.required = false;
+            fileInput.disabled = true;
+        }
+
+        console.log('✅ Medical certificate upload disabled (consent given)');
+    } else {
+        // Consent not given - make upload required
+        container.style.opacity = '1';
+        uploadArea.style.cursor = 'pointer';
+        uploadArea.onclick = function() { document.getElementById('medicalFile').click(); };
+
+        if (requiredText) {
+            requiredText.innerHTML = '(Required - PDF only, max 5MB)';
+            requiredText.className = 'text-danger';
+        }
+
+        if (uploadText) {
+            uploadText.textContent = 'Click to upload or drag & drop';
+        }
+
+        if (helperText) {
+            helperText.innerHTML = '<i class="fas fa-exclamation-triangle text-warning me-1"></i>Medical certificate is required unless medical consent is given above.';
+            helperText.className = 'form-text mt-2 text-warning';
+        }
+
+        if (fileInput) {
+            fileInput.required = true;
+            fileInput.disabled = false;
+        }
+
+        console.log('✅ Medical certificate upload enabled (consent not given)');
+    }
+}
+
+/**
  * Check if form is complete - simplified and reliable
  */
 function checkFormCompletion() {
@@ -1374,10 +1598,12 @@ function checkFormCompletion() {
         medical: medicalUploaded
     });
 
+    // Medical certificate requirement depends on consent
+    const medicalRequirementMet = medicalConsent || medicalUploaded;
+
     // All requirements must be met
-    const allDocumentsUploaded = photoUploaded && idUploaded && medicalUploaded;
-    // For testing: allow submission with just medical consent
-    const formComplete = medicalConsent; // && allDocumentsUploaded;
+    const allDocumentsUploaded = photoUploaded && idUploaded && medicalRequirementMet;
+    const formComplete = medicalConsent && allDocumentsUploaded;
 
     // Enable/disable submit button
     submitBtn.disabled = !formComplete;
@@ -1510,6 +1736,11 @@ async function handleFormSubmit(event) {
         console.log('📋 Server response:', result);
 
         if (response.ok && result.success) {
+            // Clear saved form data on successful submission
+            if (window.modalPersistence) {
+                window.modalPersistence.markAsSubmitted();
+            }
+
             showEnhancedSuccessModal(result, isTeamRegistration);
             hideModal('registrationModal');
         } else {
@@ -1552,14 +1783,20 @@ async function submitTeamRegistration(form) {
 
     // Extract member data
     for (let i = 1; i <= memberForms.length; i++) {
+        const isTeamLeader = i === 1;
+        const emergencyContactNameEl = document.getElementById(`emergencyContactName_${i}`);
+        const emergencyContactPhoneEl = document.getElementById(`emergencyContactPhone_${i}`);
+
         const member = {
             fullName: document.getElementById(`fullName_${i}`)?.value?.trim(),
             age: parseInt(document.getElementById(`age_${i}`)?.value),
             gender: document.getElementById(`gender_${i}`)?.value,
             email: document.getElementById(`email_${i}`)?.value?.trim(),
             phoneNumber: document.getElementById(`phoneNumber_${i}`)?.value?.trim(),
-            emergencyContactName: document.getElementById(`emergencyContactName_${i}`)?.value?.trim(),
-            emergencyContactPhone: document.getElementById(`emergencyContactPhone_${i}`)?.value?.trim()
+            bio: document.getElementById(`bio_${i}`)?.value?.trim() || '',
+            // Only include emergency contacts for team leader or if fields exist (individual registration)
+            emergencyContactName: emergencyContactNameEl ? emergencyContactNameEl.value?.trim() : '',
+            emergencyContactPhone: emergencyContactPhoneEl ? emergencyContactPhoneEl.value?.trim() : ''
         };
 
         members.push(member);
@@ -1595,8 +1832,9 @@ async function submitTeamRegistration(form) {
         formData.append(`members[${index}].gender`, member.gender);
         formData.append(`members[${index}].email`, member.email);
         formData.append(`members[${index}].phoneNumber`, member.phoneNumber);
-        formData.append(`members[${index}].emergencyContactName`, member.emergencyContactName);
-        formData.append(`members[${index}].emergencyContactPhone`, member.emergencyContactPhone);
+        formData.append(`members[${index}].emergencyContactName`, member.emergencyContactName || '');
+        formData.append(`members[${index}].emergencyContactPhone`, member.emergencyContactPhone || '');
+        formData.append(`members[${index}].bio`, member.bio || '');
     });
 
     // Add file uploads
@@ -1634,6 +1872,7 @@ async function submitIndividualRegistration(form) {
     formData.append('gender', document.getElementById('gender_1')?.value);
     formData.append('email', document.getElementById('email_1')?.value?.trim());
     formData.append('phoneNumber', document.getElementById('phoneNumber_1')?.value?.trim());
+    formData.append('bio', document.getElementById('bio_1')?.value?.trim() || '');
     formData.append('emergencyContactName', document.getElementById('emergencyContactName_1')?.value?.trim());
     formData.append('emergencyContactPhone', document.getElementById('emergencyContactPhone_1')?.value?.trim());
     formData.append('medicalConsentGiven', document.getElementById('medicalConsent')?.checked || false);
@@ -1867,7 +2106,31 @@ function populateParticipantDetails() {
  * Print registration details
  */
 function printRegistration() {
-    window.print();
+    // Ensure the success modal is visible
+    const successModal = document.getElementById('successModal');
+    if (!successModal || !successModal.classList.contains('show')) {
+        console.warn('Success modal is not visible, cannot print');
+        showAlert('Please ensure the registration confirmation is displayed before printing.', 'warning');
+        return;
+    }
+
+    // Add a print-specific class to help with styling
+    document.body.classList.add('printing');
+
+    // Small delay to ensure styles are applied
+    setTimeout(() => {
+        try {
+            window.print();
+        } catch (error) {
+            console.error('Print failed:', error);
+            showAlert('Print failed. Please try again or use your browser\'s print function.', 'danger');
+        } finally {
+            // Remove the print class after printing
+            setTimeout(() => {
+                document.body.classList.remove('printing');
+            }, 1000);
+        }
+    }, 100);
 }
 
 /**

@@ -33,8 +33,8 @@ public class EnvironmentConfig {
                 // Only set if not already set as system property
                 if (System.getProperty(key) == null) {
                     System.setProperty(key, value);
-                    logger.debug("Loaded environment variable: {} = {}", key, 
-                        key.toLowerCase().contains("password") ? "***" : value);
+                    // Never log environment variable values for security
+                    logger.debug("Loaded environment variable: {} = ***SECURED***", key);
                 }
             });
             

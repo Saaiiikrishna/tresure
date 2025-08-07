@@ -31,6 +31,9 @@ public class EmailService {
     @Value("${app.email.from}")
     private String fromEmail;
 
+    @Value("${app.email.from-name}")
+    private String fromName;
+
     @Value("${app.email.support}")
     private String supportEmail;
 
@@ -55,9 +58,18 @@ public class EmailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            // Set email properties
-            helper.setFrom(fromEmail);
-            helper.setTo(registration.getEmail());
+            // Set email properties with validation and display name
+            String cleanFrom = validateAndCleanEmail(fromEmail);
+            String cleanTo = validateAndCleanEmail(registration.getEmail());
+
+            if (cleanFrom == null || cleanTo == null) {
+                logger.error("Invalid email addresses - From: {}, To: {}", fromEmail, registration.getEmail());
+                return CompletableFuture.failedFuture(new MessagingException("Invalid email addresses"));
+            }
+
+            String formattedFrom = formatEmailWithName(cleanFrom, fromName);
+            helper.setFrom(formattedFrom);
+            helper.setTo(cleanTo);
             helper.setSubject("Registration Received for " + registration.getPlan().getName());
 
             // Create email content using Thymeleaf template
@@ -67,11 +79,19 @@ public class EmailService {
             context.setVariable("companyName", companyName);
             context.setVariable("supportEmail", supportEmail);
             context.setVariable("registrationNumber", registration.getRegistrationNumber());
-            
+
             // Add pre-hunt checklist
             context.setVariable("checklist", getPreHuntChecklist());
 
+            logger.info("=== PROCESSING EMAIL TEMPLATE ===");
+            logger.info("Template: email/registration-confirmation");
+            logger.info("Registration ID: {}", registration.getId());
+            logger.info("Plan: {}", registration.getPlan().getName());
+
             String htmlContent = templateEngine.process("email/registration-confirmation", context);
+
+            // Log template processing completion without content for security
+            logger.info("=== EMAIL TEMPLATE PROCESSING COMPLETE ===");
             helper.setText(htmlContent, true);
 
             // Send email
@@ -393,5 +413,99 @@ public class EmailService {
             logger.error("Failed to send cancellation email to: {}", registration.getEmail(), e);
             throw new RuntimeException("Failed to send cancellation email", e);
         }
+    }
+
+    /**
+     * Send email with basic parameters (used by ThreadSafeEmailProcessor)
+     * @param to Recipient email
+     * @param subject Email subject
+     * @param body Email body
+     * @param from Sender email
+     * @return true if sent successfully, false otherwise
+     */
+    public boolean sendEmail(String to, String subject, String body, String from) {
+        try {
+            // Validate and clean email addresses
+            String cleanTo = validateAndCleanEmail(to);
+            String cleanFrom = validateAndCleanEmail(from != null ? from : fromEmail);
+
+            if (cleanTo == null || cleanFrom == null) {
+                logger.error("Invalid email addresses - To: {}, From: {}", to, from);
+                return false;
+            }
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setTo(cleanTo);
+            helper.setSubject(subject);
+            helper.setText(body, true); // true indicates HTML content
+
+            // Use display name only if using the default from email
+            String formattedFrom = (from == null || from.equals(fromEmail)) ?
+                formatEmailWithName(cleanFrom, fromName) : cleanFrom;
+            helper.setFrom(formattedFrom);
+
+            mailSender.send(message);
+            logger.info("Successfully sent email to: {}", to);
+            return true;
+
+        } catch (MessagingException e) {
+            logger.error("Failed to send email to: {}", to, e);
+            return false;
+        }
+    }
+
+    /**
+     * Validate and clean email address to prevent parsing errors
+     * @param email Email address to validate
+     * @return Cleaned email address or null if invalid
+     */
+    private String validateAndCleanEmail(String email) {
+        if (email == null || email.trim().isEmpty()) {
+            return null;
+        }
+
+        // Remove any extra whitespace and potential formatting issues
+        String cleanEmail = email.trim();
+
+        // Basic email validation regex
+        String emailRegex = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$";
+        if (!cleanEmail.matches(emailRegex)) {
+            logger.warn("Invalid email format: {}", email);
+            return null;
+        }
+
+        // Check for common formatting issues that cause "Extra route-addr" errors
+        if (cleanEmail.contains("<") || cleanEmail.contains(">") ||
+            cleanEmail.contains("\"") || cleanEmail.contains("\\")) {
+            logger.warn("Email contains invalid characters: {}", email);
+            return null;
+        }
+
+        return cleanEmail;
+    }
+
+    /**
+     * Format email address with display name
+     * @param email Email address
+     * @param name Display name
+     * @return Formatted email address with display name
+     */
+    private String formatEmailWithName(String email, String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return email;
+        }
+        return String.format("\"%s\" <%s>", name.trim(), email);
+    }
+
+    /**
+     * Cleanup method for application shutdown
+     */
+    @javax.annotation.PreDestroy
+    public void cleanup() {
+        logger.info("EmailService cleanup initiated");
+        // Any cleanup operations if needed (e.g., cancel pending async operations)
+        logger.info("EmailService cleanup completed");
     }
 }

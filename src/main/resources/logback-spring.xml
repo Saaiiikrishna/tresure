@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Define log file location -->
+    <property name="LOG_FILE" value="${LOG_FILE:-logs/treasure-hunt}"/>
+    <property name="LOG_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    
+    <!-- Console appender for development -->
+    <springProfile name="!production">
+        <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+            </encoder>
+        </appender>
+        
+        <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
+        </root>
+        
+        <!-- Debug level for our application in development -->
+        <logger name="com.treasurehunt" level="DEBUG"/>
+    </springProfile>
+    
+    <!-- Production logging configuration -->
+    <springProfile name="production">
+        <!-- File appender for production -->
+        <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_FILE}.log</file>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_FILE}.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>100MB</maxFileSize>
+                <maxHistory>30</maxHistory>
+                <totalSizeCap>3GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+        
+        <!-- Error file appender for production -->
+        <appender name="ERROR_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+            <file>${LOG_FILE}-error.log</file>
+            <filter class="ch.qos.logback.classic.filter.LevelFilter">
+                <level>ERROR</level>
+                <onMatch>ACCEPT</onMatch>
+                <onMismatch>DENY</onMismatch>
+            </filter>
+            <encoder>
+                <pattern>${LOG_PATTERN}</pattern>
+            </encoder>
+            <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+                <fileNamePattern>${LOG_FILE}-error.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+                <maxFileSize>50MB</maxFileSize>
+                <maxHistory>60</maxHistory>
+                <totalSizeCap>1GB</totalSizeCap>
+            </rollingPolicy>
+        </appender>
+        
+        <!-- Async appender for better performance -->
+        <appender name="ASYNC_FILE" class="ch.qos.logback.classic.AsyncAppender">
+            <appender-ref ref="FILE"/>
+            <queueSize>512</queueSize>
+            <discardingThreshold>0</discardingThreshold>
+            <includeCallerData>false</includeCallerData>
+        </appender>
+        
+        <appender name="ASYNC_ERROR_FILE" class="ch.qos.logback.classic.AsyncAppender">
+            <appender-ref ref="ERROR_FILE"/>
+            <queueSize>256</queueSize>
+            <discardingThreshold>0</discardingThreshold>
+            <includeCallerData>true</includeCallerData>
+        </appender>
+        
+        <!-- Production root logger -->
+        <root level="WARN">
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_ERROR_FILE"/>
+        </root>
+        
+        <!-- Application-specific logging -->
+        <logger name="com.treasurehunt" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_ERROR_FILE"/>
+        </logger>
+        
+        <!-- Security logging -->
+        <logger name="org.springframework.security" level="WARN" additivity="false">
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_ERROR_FILE"/>
+        </logger>
+        
+        <!-- Database logging - minimal in production -->
+        <logger name="org.hibernate" level="WARN"/>
+        <logger name="org.springframework.orm" level="WARN"/>
+        
+        <!-- Email logging -->
+        <logger name="org.springframework.mail" level="INFO" additivity="false">
+            <appender-ref ref="ASYNC_FILE"/>
+            <appender-ref ref="ASYNC_ERROR_FILE"/>
+        </logger>
+    </springProfile>
+    
+    <!-- Silence noisy loggers -->
+    <logger name="org.apache.catalina" level="WARN"/>
+    <logger name="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" level="WARN"/>
+    <logger name="org.springframework.boot.actuate" level="WARN"/>
+
+    <!-- FIXED: Completely disable Azure telemetry logging -->
+    <logger name="com.azure.monitor" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline" level="OFF"/>
+    <logger name="com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline.TelemetryPipeline" level="OFF"/>
+</configuration>

@@ -3,6 +3,7 @@ package com.treasurehunt.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -14,7 +15,14 @@ import java.util.List;
  * Maps to user_registrations table in PostgreSQL database
  */
 @Entity
-@Table(name = "user_registrations")
+@Table(name = "user_registrations",
+       indexes = {
+           @Index(name = "idx_registration_email", columnList = "email"),
+           @Index(name = "idx_registration_status", columnList = "status"),
+           @Index(name = "idx_registration_plan_id", columnList = "plan_id"),
+           @Index(name = "idx_registration_date", columnList = "registration_date"),
+           @Index(name = "idx_registration_application_id", columnList = "application_id", unique = true)
+       })
 public class UserRegistration {
 
     @Id
@@ -64,6 +72,10 @@ public class UserRegistration {
     @Column(name = "emergency_contact_phone", nullable = false)
     private String emergencyContactPhone;
 
+    @Size(max = 2000, message = "Bio must not exceed 2000 characters")
+    @Column(name = "bio", length = 2000)
+    private String bio;
+
     @NotNull(message = "Medical consent must be given")
     @Column(name = "medical_consent_given", nullable = false)
     private Boolean medicalConsentGiven = false;
@@ -76,11 +88,18 @@ public class UserRegistration {
     @Column(name = "status", nullable = false, length = 20)
     private RegistrationStatus status = RegistrationStatus.PENDING;
 
+    @Column(name = "application_id", unique = true, length = 50)
+    private String applicationId;
+
     @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<UploadedDocument> documents = new ArrayList<>();
 
-    @OneToMany(mappedBy = "registration", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "registration",
+               cascade = CascadeType.ALL,
+               fetch = FetchType.LAZY,
+               orphanRemoval = true) // Remove team members when registration is deleted
+    @BatchSize(size = 10) // Optimize batch loading for team members
     @JsonIgnore
     private List<TeamMember> teamMembers = new ArrayList<>();
 
@@ -156,8 +175,11 @@ public class UserRegistration {
     public void setDocuments(List<UploadedDocument> documents) { this.documents = documents; }
 
     // Helper methods
+    /**
+     * Get the persisted application ID or a placeholder if not yet generated.
+     */
     public String getRegistrationNumber() {
-        return String.format("TH-%06d", id);
+        return applicationId != null ? applicationId : "TH-PENDING";
     }
 
     public boolean hasRequiredDocuments() {
@@ -168,7 +190,9 @@ public class UserRegistration {
         boolean hasMedical = documents.stream()
                 .anyMatch(doc -> doc.getDocumentType() == UploadedDocument.DocumentType.MEDICAL_CERTIFICATE);
 
-        return hasPhoto && hasId && hasMedical;
+        boolean medicalRequired = medicalConsentGiven == null || !medicalConsentGiven;
+
+        return hasPhoto && hasId && (!medicalRequired || hasMedical);
     }
 
     // Getters and setters for new fields
@@ -188,6 +212,14 @@ public class UserRegistration {
         this.teamName = teamName;
     }
 
+    public String getBio() {
+        return bio;
+    }
+
+    public void setBio(String bio) {
+        this.bio = bio;
+    }
+
     public boolean isTeamRegistration() {
         // Use team name as primary indicator to avoid lazy loading issues
         return teamName != null && !teamName.trim().isEmpty();
@@ -202,5 +234,83 @@ public class UserRegistration {
                 .filter(TeamMember::isTeamLeader)
                 .findFirst()
                 .orElse(null);
+    }
+
+    // ===== BIDIRECTIONAL RELATIONSHIP HELPER METHODS =====
+
+    /**
+     * Add a team member to this registration (bidirectional helper)
+     * @param teamMember Team member to add
+     */
+    public void addTeamMember(TeamMember teamMember) {
+        if (teamMember != null) {
+            teamMembers.add(teamMember);
+            teamMember.setRegistration(this);
+        }
+    }
+
+    /**
+     * Remove a team member from this registration (bidirectional helper)
+     * @param teamMember Team member to remove
+     */
+    public void removeTeamMember(TeamMember teamMember) {
+        if (teamMember != null) {
+            teamMembers.remove(teamMember);
+            teamMember.setRegistration(null);
+        }
+    }
+
+    /**
+     * Add a document to this registration (bidirectional helper)
+     * @param document Document to add
+     */
+    public void addDocument(UploadedDocument document) {
+        if (document != null) {
+            documents.add(document);
+            document.setRegistration(this);
+        }
+    }
+
+    /**
+     * Remove a document from this registration (bidirectional helper)
+     * @param document Document to remove
+     */
+    public void removeDocument(UploadedDocument document) {
+        if (document != null) {
+            documents.remove(document);
+            document.setRegistration(null);
+        }
+    }
+
+    /**
+     * Check if all required documents are uploaded
+     * @return true if all required documents are present
+     */
+    public boolean hasAllRequiredDocuments() {
+        return hasRequiredDocuments();
+    }
+
+    /**
+     * Get team member by position
+     * @param position Member position (1 = leader, 2+ = members)
+     * @return Team member at position, or null if not found
+     */
+    public TeamMember getTeamMemberByPosition(int position) {
+        return teamMembers.stream()
+                .filter(member -> member.getMemberPosition() != null && member.getMemberPosition() == position)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Get application ID (alias for applicationId field)
+     * @return Application ID
+     */
+    public String getApplicationId() {
+        return this.applicationId;
+    }
+
+    public void setApplicationId(String applicationId) {
+        this.applicationId = applicationId;
     }
 }

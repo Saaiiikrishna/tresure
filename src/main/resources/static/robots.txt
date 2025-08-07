@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+
+# Treasure Hunt Application
+# Allow all crawlers to access public content
+# Disallow access to admin and sensitive areas
+Disallow: /admin/
+Disallow: /api/admin/
+Disallow: /actuator/
+Disallow: /uploads/
+Disallow: /error/
+
+# Sitemap location (if you have one)
+# Sitemap: https://yourdomain.com/sitemap.xml

@@ -34,6 +34,7 @@ public class FileStorageService {
     private static final Logger logger = LoggerFactory.getLogger(FileStorageService.class);
 
     private final UploadedDocumentRepository documentRepository;
+    private final SecureFileValidationService fileValidationService;
     private final Path fileStorageLocation;
 
     // File size limits
@@ -51,8 +52,10 @@ public class FileStorageService {
     private String allowedDocumentTypes;
 
     public FileStorageService(UploadedDocumentRepository documentRepository,
+                             SecureFileValidationService fileValidationService,
                              @Value("${app.file-storage.upload-dir:uploads/documents}") String uploadDir) {
         this.documentRepository = documentRepository;
+        this.fileValidationService = fileValidationService;
         this.fileStorageLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
         
         try {
@@ -90,9 +93,28 @@ public class FileStorageService {
         Path registrationDir = this.fileStorageLocation.resolve(registration.getId().toString());
         Files.createDirectories(registrationDir);
 
-        // Store file
+        // Store file with proper resource management and error handling
         Path targetLocation = registrationDir.resolve(storedFilename);
-        Files.copy(file.getInputStream(), targetLocation, StandardCopyOption.REPLACE_EXISTING);
+        try (var inputStream = file.getInputStream()) {
+            Files.copy(inputStream, targetLocation, StandardCopyOption.REPLACE_EXISTING);
+            logger.debug("File successfully written to: {}", targetLocation);
+        } catch (IOException e) {
+            logger.error("Failed to store file {} for registration {}: {}",
+                        originalFilename, registration.getId(), e.getMessage());
+
+            // Clean up partially written file if it exists
+            try {
+                if (Files.exists(targetLocation)) {
+                    Files.delete(targetLocation);
+                    logger.debug("Cleaned up partially written file: {}", targetLocation);
+                }
+            } catch (IOException cleanupException) {
+                logger.warn("Could not clean up partially written file {}: {}",
+                           targetLocation, cleanupException.getMessage());
+            }
+
+            throw new IOException("Failed to store file: " + originalFilename, e);
+        }
 
         // Create document entity
         UploadedDocument document = new UploadedDocument(
@@ -186,39 +208,22 @@ public class FileStorageService {
      * @throws IllegalArgumentException if validation fails
      */
     private void validateFile(MultipartFile file, UploadedDocument.DocumentType documentType) {
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null) {
-            throw new IllegalArgumentException("File content type is unknown");
-        }
-
-        // Validate file size
-        long maxSize = getMaxSizeForDocumentType(documentType);
-        if (file.getSize() > maxSize) {
-            throw new IllegalArgumentException(
-                String.format("File size exceeds maximum allowed size of %d bytes", maxSize));
-        }
-
-        // Validate content type
-        Set<String> allowedTypes = getAllowedTypesForDocumentType(documentType);
-        if (!allowedTypes.contains(contentType.toLowerCase())) {
-            throw new IllegalArgumentException(
-                String.format("File type %s is not allowed for %s", contentType, documentType));
-        }
-
-        // Validate file extension
-        String originalFilename = file.getOriginalFilename();
-        if (originalFilename == null || originalFilename.trim().isEmpty()) {
-            throw new IllegalArgumentException("File name is required");
-        }
-
-        String extension = FilenameUtils.getExtension(originalFilename).toLowerCase();
-        if (!isValidExtensionForDocumentType(extension, documentType)) {
-            throw new IllegalArgumentException(
-                String.format("File extension .%s is not allowed for %s", extension, documentType));
+        try {
+            // Use comprehensive security validation
+            switch (documentType) {
+                case PHOTO:
+                    fileValidationService.validateFile(file, SecureFileValidationService.FileType.PHOTO);
+                    break;
+                case ID_DOCUMENT:
+                case MEDICAL_CERTIFICATE:
+                    fileValidationService.validateFile(file, SecureFileValidationService.FileType.DOCUMENT);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Unknown document type: " + documentType);
+            }
+        } catch (SecurityException e) {
+            logger.error("File validation failed for {}: {}", file.getOriginalFilename(), e.getMessage());
+            throw new IllegalArgumentException("File validation failed: " + e.getMessage(), e);
         }
     }
 
@@ -325,5 +330,16 @@ public class FileStorageService {
         }
 
         throw new IOException("Physical file not found: " + filename);
+    }
+
+    /**
+     * Cleanup method for application shutdown
+     * Ensures all resources are properly released
+     */
+    @javax.annotation.PreDestroy
+    public void cleanup() {
+        logger.info("FileStorageService cleanup initiated");
+        // Any cleanup operations if needed
+        logger.info("FileStorageService cleanup completed");
     }
 }

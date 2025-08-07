@@ -1,0 +1,357 @@
+# Production Configuration for Treasure Hunt Application
+# All configuration values are externalized to environment variables
+
+spring:
+  application:
+    name: treasure-hunt-registration
+    insights:
+      enabled: false
+
+  # PRODUCTION FIX: Completely disable all Azure services to prevent telemetry errors
+  cloud:
+    azure:
+      application-insights:
+        enabled: false
+        connection-string: ""
+      active-directory:
+        enabled: false
+      cosmos:
+        enabled: false
+      storage:
+        enabled: false
+
+  # FIXED: Disable Azure Monitor OpenTelemetry to prevent telemetry pipeline errors
+  azure:
+    monitor:
+      opentelemetry:
+        enabled: false
+    application-insights:
+      enabled: false
+  # Database Configuration - Azure PostgreSQL for production
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=require&useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:8}
+      connection-timeout: ${DB_CONNECTION_TIMEOUT:30000}
+      idle-timeout: ${DB_IDLE_TIMEOUT:600000}
+      max-lifetime: ${DB_MAX_LIFETIME:1800000}
+      leak-detection-threshold: ${DB_LEAK_DETECTION:60000}
+      # Azure PostgreSQL specific settings
+      connection-test-query: SELECT 1
+      validation-timeout: 5000
+      auto-commit: false  # CRITICAL: Must be false for Spring transaction management
+      # PERFORMANCE FIX: Enhanced connection pool settings
+      initialization-fail-timeout: 30000
+      keepalive-time: 300000
+      connection-init-sql: SELECT 1
+      # Aggressive connection management
+      register-mbeans: true
+
+  # Thymeleaf Configuration - Production settings
+  thymeleaf:
+    cache: true
+    check-template: true
+    check-template-location: true
+    enabled: true
+    encoding: UTF-8
+    mode: HTML
+    prefix: classpath:/templates/
+    suffix: .html
+    servlet:
+      content-type: text/html
+      produce-partial-output-while-processing: false
+
+  # JPA/Hibernate Configuration - Production settings
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO}
+    show-sql: false
+    properties:
+      hibernate:
+        # FIXED: Removed explicit dialect - Hibernate auto-detects PostgreSQL
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+          batch_size: 100  # PERFORMANCE: Increased batch size for faster operations
+          # PERFORMANCE FIX: Add query timeout to prevent hanging queries
+          fetch_size: 200
+          lob:
+            non_contextual_creation: true
+        order_inserts: true
+        order_updates: true
+        batch_versioned_data: true
+        temp:
+          use_jdbc_metadata_defaults: false
+        connection:
+          provider_disables_autocommit: true
+        # PERFORMANCE FIX: Query optimization settings
+        query:
+          plan_cache_max_size: 2048
+          plan_parameter_metadata_max_size: 128
+        # PERFORMANCE FIX: Statement caching
+        statement_cache:
+          size: 50
+        # PRODUCTION FIX: Disable second-level cache to prevent JCacheRegionFactory errors
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
+    # FIXED: Removed redundant database-platform - auto-detected
+    open-in-view: false
+    defer-datasource-initialization: true
+    generate-ddl: true
+    # Connection management
+
+
+  # Transaction Configuration
+  transaction:
+    rollback-on-commit-failure: true
+    default-timeout: 30
+
+  # H2 Console - DISABLED in production
+  h2:
+    console:
+      enabled: false
+
+  # Mail Configuration - Use environment variables
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT}
+          timeout: ${MAIL_TIMEOUT}
+          writetimeout: ${MAIL_WRITE_TIMEOUT}
+          ssl:
+            trust: ${MAIL_HOST}
+
+  # File Upload Configuration - Production limits
+  servlet:
+    multipart:
+      max-file-size: ${UPLOAD_MAX_FILE_SIZE}
+      max-request-size: ${UPLOAD_MAX_REQUEST_SIZE}
+      enabled: true
+      file-size-threshold: 2KB
+      location: ${java.io.tmpdir}
+
+  # PERFORMANCE FIX: Enhanced Cache Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=5000,expireAfterWrite=60m,expireAfterAccess=30m,recordStats
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages,registrationStatistics,planStatistics,emailTemplates
+
+  # Jackson Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    time-zone: UTC
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: ${ASYNC_CORE_POOL_SIZE:2}
+        max-size: ${ASYNC_MAX_POOL_SIZE:5}
+        queue-capacity: ${ASYNC_QUEUE_CAPACITY:100}
+      thread-name-prefix: async-
+
+  # Security Configuration
+  security:
+    require-ssl: ${REQUIRE_SSL}
+    enabled: true
+
+# PRODUCTION FIX: Consolidated Management Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        exclude: "*"
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+  endpoint:
+    health:
+      enabled: false
+      show-details: ${ACTUATOR_HEALTH_DETAILS}
+      show-components: always
+      probes:
+        enabled: true
+    info:
+      enabled: true
+    metrics:
+      enabled: true
+      export:
+        prometheus:
+          enabled: ${PROMETHEUS_ENABLED}
+  metrics:
+    export:
+      azure-monitor:
+        enabled: false
+  server:
+    port: ${MANAGEMENT_PORT:-1}  # Disable separate management port in production
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: simple
+
+# Custom Application Properties
+app:
+  file-storage:
+    upload-dir: ${FILE_UPLOAD_DIR}
+    image-dir: ${IMAGE_UPLOAD_DIR:uploads/images}
+    temp-dir: ${TEMP_UPLOAD_DIR:uploads/temp}
+    max-photo-size: ${MAX_PHOTO_SIZE}
+    max-document-size: ${MAX_DOCUMENT_SIZE}
+    max-image-size: ${MAX_IMAGE_SIZE}
+    max-video-size: ${MAX_VIDEO_SIZE}
+    allowed-photo-types: ${ALLOWED_PHOTO_TYPES}
+    allowed-document-types: ${ALLOWED_DOCUMENT_TYPES}
+
+  email:
+    from: ${MAIL_FROM_ADDRESS}
+    from-name: ${MAIL_FROM_NAME:Treasure Hunt - MySillyDreams}
+    support: ${MAIL_SUPPORT_ADDRESS}
+    company-name: ${COMPANY_NAME}
+    mock-enabled: false
+    retry-attempts: ${EMAIL_RETRY_ATTEMPTS:3}
+    retry-delay-ms: ${EMAIL_RETRY_DELAY:5000}
+
+  security:
+    admin:
+      username: ${ADMIN_USERNAME}
+      password: ${ADMIN_PASSWORD}
+      session-timeout-minutes: ${ADMIN_SESSION_TIMEOUT:30}
+    session:
+      max-concurrent-sessions: ${MAX_CONCURRENT_SESSIONS:1}
+      prevent-login: ${PREVENT_LOGIN_ON_MAX_SESSIONS:true}
+      timeout-minutes: ${SESSION_TIMEOUT:30}
+    file-security:
+      virus-scan-enabled: ${VIRUS_SCAN_ENABLED:false}
+      max-scan-size-bytes: ${MAX_SCAN_SIZE:10485760}
+      quarantine-enabled: ${QUARANTINE_ENABLED:false}
+      quarantine-dir: ${QUARANTINE_DIR:quarantine}
+
+  performance:
+    cache:
+      enabled: ${CACHE_ENABLED:true}
+      treasure-hunt-plans-ttl-seconds: ${PLANS_CACHE_TTL:300}
+      featured-plan-ttl-seconds: ${FEATURED_PLAN_CACHE_TTL:600}
+      app-settings-ttl-seconds: ${APP_SETTINGS_CACHE_TTL:1800}
+    database:
+      max-pool-size: ${DB_POOL_MAX_SIZE}
+      min-idle: ${DB_POOL_MIN_IDLE}
+      connection-timeout-ms: ${DB_CONNECTION_TIMEOUT}
+      idle-timeout-ms: ${DB_IDLE_TIMEOUT}
+    async:
+      email-core-pool-size: ${EMAIL_CORE_POOL_SIZE:2}
+      email-max-pool-size: ${EMAIL_MAX_POOL_SIZE:4}
+      email-queue-capacity: ${EMAIL_QUEUE_CAPACITY:100}
+      email-keep-alive-seconds: ${EMAIL_KEEP_ALIVE:60}
+
+  business:
+    min-participant-age: ${MIN_PARTICIPANT_AGE:18}
+    max-team-size: ${MAX_TEAM_SIZE:100}
+    min-team-size: ${MIN_TEAM_SIZE:2}
+    registration-timeout-hours: ${REGISTRATION_TIMEOUT_HOURS:24}
+    allow-cancellation: ${ALLOW_CANCELLATION:true}
+    cancellation-deadline-hours: ${CANCELLATION_DEADLINE_HOURS:48}
+
+  monitoring:
+    enabled: ${MONITORING_ENABLED:true}
+    interval-seconds: ${MONITORING_INTERVAL:300}
+    memory-warning-threshold: ${MEMORY_WARNING_THRESHOLD:80}
+    memory-critical-threshold: ${MEMORY_CRITICAL_THRESHOLD:90}
+    thread-warning-threshold: ${THREAD_WARNING_THRESHOLD:100}
+    thread-critical-threshold: ${THREAD_CRITICAL_THRESHOLD:200}
+
+  cleanup:
+    temp-file-retention-hours: ${CLEANUP_TEMP_FILE_RETENTION_HOURS:24}
+    log-retention-days: ${CLEANUP_LOG_RETENTION_DAYS:30}
+
+  # Application Information
+  name: ${APP_NAME:Treasure Hunt Application}
+  version: ${APP_VERSION:1.0.0}
+  description: ${APP_DESCRIPTION:A comprehensive treasure hunt registration and management system}
+
+# Logging Configuration - Production appropriate
+logging:
+  level:
+    root: INFO
+    com.treasurehunt: INFO  # CRITICAL: Changed from DEBUG to prevent sensitive data exposure
+    org.springframework.security: INFO
+    org.springframework.mail: INFO
+    org.hibernate: INFO
+    org.springframework.web: INFO
+    org.springframework.boot: INFO
+    org.springframework.context: INFO
+    org.springframework.beans: INFO
+    org.postgresql: INFO
+    com.zaxxer.hikari: INFO
+    # FIXED: Completely disable Azure telemetry warnings in production
+    com.azure.monitor.opentelemetry.autoconfigure.implementation.pipeline.TelemetryPipeline: OFF
+    com.azure.monitor: OFF
+    com.azure: OFF
+    # Additional Azure telemetry silencing
+    com.azure.core: OFF
+    com.azure.identity: OFF
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+  file:
+    name: ${LOG_FILE_PATH:logs/treasure-hunt.log}
+    max-size: ${LOG_MAX_SIZE:10MB}
+    max-history: ${LOG_MAX_HISTORY:30}
+
+# Server Configuration - Production hardened
+server:
+  port: ${SERVER_PORT}
+  servlet:
+    context-path: /
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+    whitelabel:
+      enabled: false  # Disable default error page
+    path: /error
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+    min-response-size: 1024
+  # HTTPS/SSL Configuration for cloud deployment
+  forward-headers-strategy: framework
+  use-forward-headers: true
+  tomcat:
+    # Performance settings for high load
+    max-threads: ${TOMCAT_MAX_THREADS:200}
+    min-spare-threads: ${TOMCAT_MIN_THREADS:10}
+    max-connections: ${TOMCAT_MAX_CONNECTIONS:8192}
+    connection-timeout: ${TOMCAT_CONNECTION_TIMEOUT:20000}
+    accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+    # HTTPS configuration
+    remoteip:
+      remote-ip-header: x-forwarded-for
+      protocol-header: x-forwarded-proto
+      protocol-header-https-value: https
+  http2:
+    enabled: ${HTTP2_ENABLED}
+
+# Actuator Configuration - Secured for production monitoring
+
+# Graceful Shutdown Configuration
+spring.lifecycle.timeout-per-shutdown-phase: 30s

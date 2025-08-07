@@ -2,6 +2,7 @@ package com.treasurehunt.service;
 
 import com.treasurehunt.entity.EmailCampaign;
 import com.treasurehunt.entity.EmailQueue;
+import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.repository.EmailCampaignRepository;
 import com.treasurehunt.repository.UserRegistrationRepository;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.UUID;
@@ -122,24 +124,54 @@ public class EmailCampaignService {
             int emailsQueued = 0;
             for (UserRegistration recipient : recipients) {
                 try {
+                    String recipientEmail;
+                    String recipientName;
+
+                    // For team registrations, send email to team leader
+                    if (recipient.isTeamRegistration()) {
+                        // Load team members separately to avoid MultipleBagFetchException
+                        UserRegistration teamRegistration = registrationRepository.findByIdWithTeamMembers(recipient.getId())
+                            .orElse(recipient);
+
+                        TeamMember teamLeader = teamRegistration.getTeamMembers().stream()
+                            .filter(TeamMember::isTeamLeader)
+                            .findFirst()
+                            .orElse(null);
+
+                        if (teamLeader != null) {
+                            recipientEmail = teamLeader.getEmail();
+                            recipientName = teamLeader.getFullName();
+                            logger.debug("Sending team campaign email to team leader: {} for team: {}",
+                                recipientEmail, teamRegistration.getTeamName());
+                        } else {
+                            logger.warn("No team leader found for team registration ID: {}, skipping", recipient.getId());
+                            continue;
+                        }
+                    } else {
+                        // For individual registrations, use the registration email
+                        recipientEmail = recipient.getEmail();
+                        recipientName = recipient.getFullName();
+                        logger.debug("Sending individual campaign email to: {}", recipientEmail);
+                    }
+
                     // Personalize email content
                     String personalizedSubject = personalizeContent(campaign.getSubject(), recipient);
                     String personalizedBody = personalizeContent(campaign.getBody(), recipient);
-                    
+
                     // Queue the email
                     EmailQueue queuedEmail = emailQueueService.queueCampaignEmail(
-                        recipient.getEmail(),
-                        recipient.getFullName(),
+                        recipientEmail,
+                        recipientName,
                         personalizedSubject,
                         personalizedBody,
                         campaignTrackingId,
                         campaign.getName()
                     );
-                    
+
                     // Set priority from campaign
                     queuedEmail.setPriority(campaign.getPriority());
                     emailsQueued++;
-                    
+
                 } catch (Exception e) {
                     logger.error("Error queuing email for recipient: {}", recipient.getEmail(), e);
                 }
@@ -212,19 +244,33 @@ public class EmailCampaignService {
      * Get recipients based on target audience
      */
     private List<UserRegistration> getRecipients(String targetAudience) {
+        logger.debug("Getting recipients for target audience: {}", targetAudience);
+
         if (targetAudience == null || targetAudience.equals("ALL")) {
             return registrationRepository.findAll();
         }
-        
+
         switch (targetAudience) {
             case "INDIVIDUAL_REGISTRATIONS":
-                return registrationRepository.findByTeamNameIsNull();
+                List<UserRegistration> individualRegistrations = registrationRepository.findByTeamNameIsNull();
+                logger.debug("Found {} individual registrations", individualRegistrations.size());
+                return individualRegistrations;
+
             case "TEAM_REGISTRATIONS":
-                return registrationRepository.findByTeamNameIsNotNull();
+                // For team registrations, we only want to send one email per team (to team leader)
+                // Each team registration record represents one team, so we get all team registrations
+                List<UserRegistration> teamRegistrations = registrationRepository.findByTeamNameIsNotNull();
+                logger.debug("Found {} team registrations", teamRegistrations.size());
+                return teamRegistrations;
+
             case "RECENT_REGISTRATIONS":
                 LocalDateTime oneWeekAgo = LocalDateTime.now().minusDays(7);
-                return registrationRepository.findByRegistrationDateAfter(oneWeekAgo);
+                List<UserRegistration> recentRegistrations = registrationRepository.findByRegistrationDateAfter(oneWeekAgo);
+                logger.debug("Found {} recent registrations", recentRegistrations.size());
+                return recentRegistrations;
+
             default:
+                logger.warn("Unknown target audience: {}, returning all registrations", targetAudience);
                 return registrationRepository.findAll();
         }
     }
@@ -250,6 +296,17 @@ public class EmailCampaignService {
     }
 
     /**
+     * PERFORMANCE FIX: Get campaign by ID
+     * @param id Campaign ID
+     * @return Optional campaign
+     */
+    @Transactional(readOnly = true)
+    public Optional<EmailCampaign> getCampaignById(Long id) {
+        logger.debug("Fetching campaign with ID: {}", id);
+        return campaignRepository.findById(id);
+    }
+
+    /**
      * Get campaigns by status
      */
     public List<EmailCampaign> getCampaignsByStatus(EmailCampaign.CampaignStatus status) {
@@ -261,29 +318,66 @@ public class EmailCampaignService {
      */
     public Map<String, Object> getCampaignStatistics() {
         Map<String, Object> stats = new HashMap<>();
-        
-        // Count by status
-        Map<String, Long> statusCounts = new HashMap<>();
-        List<Object[]> statusStats = campaignRepository.getCampaignStatisticsByStatus();
-        for (Object[] stat : statusStats) {
-            statusCounts.put(stat[0].toString(), (Long) stat[1]);
+
+        try {
+            // Count by status
+            Map<String, Long> statusCounts = new HashMap<>();
+            try {
+                List<Object[]> statusStats = campaignRepository.getCampaignStatisticsByStatus();
+                for (Object[] stat : statusStats) {
+                    if (stat != null && stat.length >= 2 && stat[0] != null && stat[1] != null) {
+                        statusCounts.put(stat[0].toString(), (Long) stat[1]);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Error getting campaign status statistics", e);
+            }
+            stats.put("statusCounts", statusCounts);
+
+            // Count by type
+            Map<String, Long> typeCounts = new HashMap<>();
+            try {
+                List<Object[]> typeStats = campaignRepository.getCampaignStatisticsByType();
+                for (Object[] stat : typeStats) {
+                    if (stat != null && stat.length >= 2 && stat[0] != null && stat[1] != null) {
+                        typeCounts.put(stat[0].toString(), (Long) stat[1]);
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Error getting campaign type statistics", e);
+            }
+            stats.put("typeCounts", typeCounts);
+
+            // PERFORMANCE FIX: Get total counts from status counts to avoid additional queries
+            try {
+                long totalCampaigns = statusCounts.values().stream().mapToLong(Long::longValue).sum();
+                long activeCampaigns = statusCounts.getOrDefault("SENDING", 0L);
+                long scheduledCampaigns = statusCounts.getOrDefault("SCHEDULED", 0L);
+                long sentCampaigns = statusCounts.getOrDefault("SENT", 0L);
+
+                stats.put("totalCampaigns", totalCampaigns);
+                stats.put("activeCampaigns", activeCampaigns);
+                stats.put("scheduledCampaigns", scheduledCampaigns);
+                stats.put("sentCampaigns", sentCampaigns);
+            } catch (Exception e) {
+                logger.warn("Error calculating campaign counts from status data", e);
+                stats.put("totalCampaigns", 0L);
+                stats.put("activeCampaigns", 0L);
+                stats.put("scheduledCampaigns", 0L);
+                stats.put("sentCampaigns", 0L);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error getting campaign statistics", e);
+            // Return empty stats to prevent template errors
+            stats.put("statusCounts", new HashMap<>());
+            stats.put("typeCounts", new HashMap<>());
+            stats.put("totalCampaigns", 0L);
+            stats.put("activeCampaigns", 0L);
+            stats.put("scheduledCampaigns", 0L);
+            stats.put("sentCampaigns", 0L);
         }
-        stats.put("statusCounts", statusCounts);
-        
-        // Count by type
-        Map<String, Long> typeCounts = new HashMap<>();
-        List<Object[]> typeStats = campaignRepository.getCampaignStatisticsByType();
-        for (Object[] stat : typeStats) {
-            typeCounts.put(stat[0].toString(), (Long) stat[1]);
-        }
-        stats.put("typeCounts", typeCounts);
-        
-        // Total counts
-        stats.put("totalCampaigns", campaignRepository.count());
-        stats.put("activeCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENDING));
-        stats.put("scheduledCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SCHEDULED));
-        stats.put("sentCampaigns", campaignRepository.countByStatus(EmailCampaign.CampaignStatus.SENT));
-        
+
         return stats;
     }
 

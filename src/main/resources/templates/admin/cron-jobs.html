@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="_csrf" th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>Cron Jobs Management - Admin Panel</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link href="/css/admin.css" rel="stylesheet">
+    
+    <style>
+        .cron-status-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+        }
+        .cleanup-log {
+            font-size: 0.9em;
+        }
+        .status-badge {
+            font-size: 0.8em;
+        }
+        .stats-card {
+            transition: transform 0.2s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav class="col-md-3 col-lg-2 d-md-block bg-dark sidebar">
+                <div class="position-sticky pt-3">
+                    <div class="text-center mb-4">
+                        <h5 class="text-white">Admin Panel</h5>
+                    </div>
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/admin">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/admin/plans">
+                                <i class="fas fa-map me-2"></i>
+                                Plans
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/admin/registrations">
+                                <i class="fas fa-users me-2"></i>
+                                Registrations
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/admin/images">
+                                <i class="fas fa-images me-2"></i>
+                                Image Management
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white active" href="/admin/cron">
+                                <i class="fas fa-clock me-2"></i>
+                                Cron Jobs
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-white" href="/admin/settings">
+                                <i class="fas fa-cog me-2"></i>
+                                Settings
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link text-white" href="/" target="_blank">
+                                <i class="fas fa-external-link-alt me-2"></i>
+                                View Site
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <form th:action="@{/admin/logout}" method="post" style="display: inline;">
+                                <button type="submit" class="nav-link text-white btn btn-link p-0 border-0 text-start w-100" style="background: none;">
+                                    <i class="fas fa-sign-out-alt me-2"></i>
+                                    Logout
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-clock me-2"></i>Cron Jobs Management
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-outline-primary me-2" onclick="refreshData()">
+                            <i class="fas fa-sync-alt me-1"></i>Refresh
+                        </button>
+                        <button type="button" class="btn btn-warning" onclick="triggerManualCleanup()">
+                            <i class="fas fa-broom me-1"></i>Manual Cleanup
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error/Success Messages -->
+                <div id="alertContainer"></div>
+
+                <!-- Cron Job Status -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card cron-status-card">
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <i class="fas fa-cogs me-2"></i>File Cleanup Job Status
+                                </h5>
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                                            <h6>Schedule</h6>
+                                            <p class="mb-0">Weekly<br><small>Sundays at 2:00 AM</small></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-clock fa-2x mb-2"></i>
+                                            <h6>Retention</h6>
+                                            <p class="mb-0">15 Days<br><small>For completed events</small></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                            <h6>Status</h6>
+                                            <p class="mb-0">Active<br><small>Automated cleanup enabled</small></p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-history fa-2x mb-2"></i>
+                                            <h6>Last Run</h6>
+                                            <p class="mb-0" id="lastRunInfo">
+                                                <span th:if="${cleanupLogs != null and !cleanupLogs.isEmpty()}" 
+                                                      th:text="${#temporals.format(cleanupLogs[0].startTime, 'MMM dd, HH:mm')}">Never</span>
+                                                <span th:if="${cleanupLogs == null or cleanupLogs.isEmpty()}">Never</span>
+                                                <br>
+                                                <small>
+                                                    <span th:if="${cleanupLogs != null and !cleanupLogs.isEmpty()}" 
+                                                          th:class="${cleanupLogs[0].success ? 'text-success' : 'text-danger'}"
+                                                          th:text="${cleanupLogs[0].success ? 'Success' : 'Failed'}">-</span>
+                                                    <span th:if="${cleanupLogs == null or cleanupLogs.isEmpty()}">-</span>
+                                                </small>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Statistics Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-tasks fa-2x text-primary mb-2"></i>
+                                <h5 class="card-title">Total Cleanups</h5>
+                                <p class="card-text fs-4" th:text="${totalCleanups ?: 0}">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-check fa-2x text-success mb-2"></i>
+                                <h5 class="card-title">Successful</h5>
+                                <p class="card-text fs-4" th:text="${successfulCleanups ?: 0}">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-trash fa-2x text-warning mb-2"></i>
+                                <h5 class="card-title">Files Deleted</h5>
+                                <p class="card-text fs-4" th:text="${totalFilesDeleted ?: 0}">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stats-card">
+                            <div class="card-body text-center">
+                                <i class="fas fa-hdd fa-2x text-info mb-2"></i>
+                                <h5 class="card-title">Space Freed</h5>
+                                <p class="card-text fs-4" th:text="${totalSpaceFreed != null ? #numbers.formatDecimal(totalSpaceFreed, 1, 2) + ' MB' : '0 MB'}">0 MB</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Storage Statistics -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-chart-bar me-2"></i>Current Storage Usage
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 border rounded">
+                                            <i class="fas fa-hdd fa-2x text-primary mb-2"></i>
+                                            <h6>Total Storage</h6>
+                                            <p class="fs-5 mb-0" th:text="${storageStats != null ? #numbers.formatDecimal(storageStats.totalStorageUsedMB, 1, 2) + ' MB' : '0 MB'}">0 MB</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 border rounded">
+                                            <i class="fas fa-file-image fa-2x text-success mb-2"></i>
+                                            <h6>Images</h6>
+                                            <p class="fs-5 mb-0" th:text="${storageStats != null ? #numbers.formatDecimal(storageStats.imageStorageUsedMB, 1, 2) + ' MB' : '0 MB'}">0 MB</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="text-center p-3 border rounded">
+                                            <i class="fas fa-file-alt fa-2x text-warning mb-2"></i>
+                                            <h6>Documents</h6>
+                                            <p class="fs-5 mb-0" th:text="${storageStats != null ? #numbers.formatDecimal(storageStats.documentStorageUsedMB, 1, 2) + ' MB' : '0 MB'}">0 MB</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cleanup Logs -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-history me-2"></i>Cleanup Activity Log
+                                </h5>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadCleanupLogs()">
+                                    <i class="fas fa-sync-alt me-1"></i>Refresh Logs
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="cleanup-logs-container">
+                                    <div th:if="${cleanupLogs != null and !cleanupLogs.isEmpty()}">
+                                        <div th:each="log : ${cleanupLogs}" class="cleanup-log border-bottom py-3">
+                                            <div class="d-flex justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center mb-2">
+                                                        <span th:class="${log.success ? 'badge bg-success status-badge me-2' : 'badge bg-danger status-badge me-2'}" 
+                                                              th:text="${log.success ? 'SUCCESS' : 'FAILED'}">Status</span>
+                                                        <span class="fw-bold" th:text="${log.message}">Cleanup message</span>
+                                                    </div>
+                                                    <div class="row" th:if="${log.success}">
+                                                        <div class="col-md-3">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-file-alt me-1"></i>
+                                                                Documents: <span th:text="${log.documentsDeleted}">0</span>
+                                                            </small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-unlink me-1"></i>
+                                                                Orphaned: <span th:text="${log.orphanedFilesDeleted}">0</span>
+                                                            </small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-image me-1"></i>
+                                                                Images: <span th:text="${log.imagesDeleted}">0</span>
+                                                            </small>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <small class="text-muted">
+                                                                <i class="fas fa-hdd me-1"></i>
+                                                                Space: <span th:text="${#numbers.formatDecimal(log.totalSpaceFreedMB, 1, 2)}">0</span> MB
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="text-end">
+                                                    <small class="text-muted" th:text="${#temporals.format(log.startTime, 'MMM dd, yyyy HH:mm')}">Date</small>
+                                                    <br>
+                                                    <small class="text-muted" th:if="${log.endTime != null}">
+                                                        Duration: <span th:text="${T(java.time.Duration).between(log.startTime, log.endTime).toSeconds()}">0</span>s
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div th:if="${cleanupLogs == null or cleanupLogs.isEmpty()}" class="text-center text-muted py-4">
+                                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                                        <p class="mb-0">No cleanup activity recorded yet.</p>
+                                        <small>The first cleanup will run on Sunday at 2:00 AM, or you can trigger a manual cleanup above.</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Get CSRF token
+        const csrfTokenElement = document.querySelector('meta[name="_csrf"]');
+        const csrfHeaderElement = document.querySelector('meta[name="_csrf_header"]');
+        const csrfToken = csrfTokenElement ? csrfTokenElement.getAttribute('content') : null;
+        const csrfHeader = csrfHeaderElement ? csrfHeaderElement.getAttribute('content') : null;
+
+        // Trigger manual cleanup
+        function triggerManualCleanup() {
+            if (!confirm('This will clean up old files and free storage space. Continue?')) {
+                return;
+            }
+
+            showLoading('Running manual cleanup...');
+
+            const cleanupHeaders = {};
+            if (csrfToken && csrfHeader) {
+                cleanupHeaders[csrfHeader] = csrfToken;
+            }
+
+            fetch('/admin/cron/cleanup/manual', {
+                method: 'POST',
+                headers: cleanupHeaders
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading();
+                if (data.success) {
+                    showAlert(`Cleanup completed successfully!<br>
+                              Files deleted: ${data.filesDeleted}<br>
+                              Space freed: ${data.spaceFreedMB.toFixed(2)} MB`, 'success');
+                    setTimeout(() => location.reload(), 2000);
+                } else {
+                    showAlert('Cleanup failed: ' + data.message, 'danger');
+                }
+            })
+            .catch(error => {
+                hideLoading();
+                showAlert('Cleanup failed: ' + error.message, 'danger');
+            });
+        }
+
+        // Load cleanup logs
+        function loadCleanupLogs() {
+            const logHeaders = {};
+            if (csrfToken && csrfHeader) {
+                logHeaders[csrfHeader] = csrfToken;
+            }
+
+            fetch('/admin/cron/cleanup/logs', {
+                method: 'GET',
+                headers: logHeaders
+            })
+            .then(response => response.json())
+            .then(logs => {
+                updateCleanupLogsDisplay(logs);
+            })
+            .catch(error => {
+                console.error('Error loading cleanup logs:', error);
+                showAlert('Error loading cleanup logs: ' + error.message, 'danger');
+            });
+        }
+
+        // Update cleanup logs display
+        function updateCleanupLogsDisplay(logs) {
+            const container = document.getElementById('cleanup-logs-container');
+            
+            if (logs.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-info-circle fa-2x mb-3"></i>
+                        <p class="mb-0">No cleanup activity recorded yet.</p>
+                        <small>The first cleanup will run on Sunday at 2:00 AM, or you can trigger a manual cleanup above.</small>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            logs.forEach(log => {
+                const statusBadge = log.success ? 
+                    '<span class="badge bg-success status-badge me-2">SUCCESS</span>' : 
+                    '<span class="badge bg-danger status-badge me-2">FAILED</span>';
+                
+                const date = new Date(log.startTime).toLocaleDateString('en-US', { 
+                    month: 'short', day: 'numeric', year: 'numeric', 
+                    hour: '2-digit', minute: '2-digit' 
+                });
+
+                const duration = log.endTime ? 
+                    Math.round((new Date(log.endTime) - new Date(log.startTime)) / 1000) : 0;
+                
+                html += `
+                    <div class="cleanup-log border-bottom py-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    ${statusBadge}
+                                    <span class="fw-bold">${log.message}</span>
+                                </div>
+                                ${log.success ? `
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-file-alt me-1"></i>
+                                                Documents: ${log.documentsDeleted}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-unlink me-1"></i>
+                                                Orphaned: ${log.orphanedFilesDeleted}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-image me-1"></i>
+                                                Images: ${log.imagesDeleted}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-hdd me-1"></i>
+                                                Space: ${log.totalSpaceFreedMB.toFixed(2)} MB
+                                            </small>
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">${date}</small>
+                                <br>
+                                <small class="text-muted">Duration: ${duration}s</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // Refresh all data
+        function refreshData() {
+            showLoading('Refreshing data...');
+            setTimeout(() => location.reload(), 1000);
+        }
+
+        // Utility functions
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertHtml = `
+                <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            alertContainer.innerHTML = alertHtml;
+            
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                const alert = alertContainer.querySelector('.alert');
+                if (alert) {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }
+            }, 5000);
+        }
+
+        function showLoading(message) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-info" role="alert">
+                    <i class="fas fa-spinner fa-spin me-2"></i>${message}
+                </div>
+            `;
+        }
+
+        function hideLoading() {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = '';
+        }
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            loadCleanupLogs();
+        }, 30000);
+    </script>
+</body>
+</html>
