@@ -178,6 +178,27 @@ public class HomeController {
     }
 
     /**
+     * Get registration form fragment
+     * @param planId Plan ID
+     * @param model Thymeleaf model
+     * @return HTML fragment for the registration form
+     */
+    @GetMapping("/register/form/{planId}")
+    public String getRegistrationForm(@PathVariable Long planId, Model model) {
+        logger.debug("Fetching registration form for plan ID: {}", planId);
+        try {
+            TreasureHuntPlan plan = planService.getPlanById(planId)
+                    .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
+            model.addAttribute("plan", plan);
+            return "fragments/registration-form :: form";
+        } catch (Exception e) {
+            logger.error("Error fetching registration form for plan ID: {}", planId, e);
+            // You can return an error fragment here if you have one
+            return "fragments/registration-form :: error";
+        }
+    }
+
+    /**
      * REST API endpoint to get a specific plan by ID
      * @param id Plan ID
      * @return JSON response with plan details

@@ -13,14 +13,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -126,8 +124,8 @@ public class RegistrationService {
                 fileStorageService.storeFile(medicalFile, savedRegistration, UploadedDocument.DocumentType.MEDICAL_CERTIFICATE);
             }
 
-            // Queue confirmation emails using the new email queue system
-            queueRegistrationConfirmationEmails(savedRegistration);
+            // Queue confirmation emails using the new unified approach
+            queueConfirmationEmails(savedRegistration);
 
             // Queue admin notification
             queueAdminNotificationEmail(savedRegistration);
@@ -139,20 +137,33 @@ public class RegistrationService {
             // Rollback: delete registration if file processing fails
             logger.error("Failed to process files for registration ID {}, rolling back: {}",
                         savedRegistration.getId(), e.getMessage());
-
-            // Perform rollback in separate transaction to ensure it completes
             performRegistrationRollback(savedRegistration);
             throw new RuntimeException("Registration failed due to file processing error", e);
-
         } catch (Exception e) {
             // Rollback: delete registration for any other unexpected errors
             logger.error("Unexpected error during registration creation for ID {}, rolling back: {}",
                         savedRegistration.getId(), e.getMessage());
-
-            // Perform rollback in separate transaction to ensure it completes
             performRegistrationRollback(savedRegistration);
             throw new RuntimeException("Registration failed due to unexpected error", e);
         }
+    }
+
+    private void queueConfirmationEmails(UserRegistration registration) {
+        if (registration.isTeamRegistration()) {
+            for (TeamMember member : registration.getTeamMembers()) {
+                String body = emailService.createTeamMemberConfirmationBody(registration, member);
+                emailQueueService.queueEmail(member.getEmail(), member.getFullName(), "Registration Confirmed - " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+            }
+        } else {
+            String body = emailService.createRegistrationConfirmationBody(registration);
+            emailQueueService.queueEmail(registration.getEmail(), registration.getFullName(), "Registration Received for " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+        }
+    }
+
+    private void queueAdminNotificationEmail(UserRegistration registration) {
+        String body = emailService.createAdminNotificationBody(registration);
+        String subject = "📋 New Registration: " + (registration.isTeamRegistration() ? registration.getTeamName() : registration.getFullName());
+        emailQueueService.queueEmail(supportEmail, "Treasure Hunt Admin", subject, body, EmailQueue.EmailType.ADMIN_NOTIFICATION);
     }
 
 
@@ -288,12 +299,8 @@ public class RegistrationService {
         UserRegistration registration = registrationRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Registration not found with ID: " + id));
 
-        UserRegistration.RegistrationStatus oldStatus = registration.getStatus();
         registration.setStatus(newStatus);
-        UserRegistration savedRegistration = registrationRepository.save(registration);
-
-        logger.info("Successfully updated registration status for ID: {}", id);
-        return savedRegistration;
+        return registrationRepository.save(registration);
     }
 
     /**
@@ -389,21 +396,10 @@ public class RegistrationService {
      * @param registration Registration to send confirmations for
      */
     public void sendConfirmationEmails(UserRegistration registration) {
-        logger.info("Sending confirmation emails for registration ID: {}", registration.getId());
-
-        try {
-            // Prepare email data within transaction
-            EmailNotificationService.EmailData emailData =
-                emailNotificationService.prepareConfirmationEmailData(registration.getId());
-
-            // Send emails asynchronously without transaction
-            emailNotificationService.sendConfirmationEmailsAsync(emailData);
-
-            logger.info("Initiated confirmation emails for registration ID: {}", registration.getId());
-
-        } catch (Exception e) {
-            logger.error("Error initiating confirmation emails for registration ID: {}", registration.getId(), e);
-        }
+        logger.info("Initiating confirmation emails for registration ID: {}", registration.getId());
+        EmailNotificationService.EmailData emailData = emailNotificationService.prepareEmailData(registration.getId());
+        // This method is now empty, as the initial confirmation is sent on creation.
+        // This could be used for a "resend confirmation" feature in the future.
     }
 
     /**
@@ -412,21 +408,9 @@ public class RegistrationService {
      * @param registration Registration to send cancellation for
      */
     public void sendCancellationEmail(UserRegistration registration) {
-        logger.info("Sending cancellation email for registration ID: {}", registration.getId());
-
-        try {
-            // Prepare email data within transaction
-            EmailNotificationService.EmailData emailData =
-                emailNotificationService.prepareCancellationEmailData(registration.getId());
-
-            // Send email asynchronously without transaction
-            emailNotificationService.sendCancellationEmailAsync(emailData);
-
-            logger.info("Initiated cancellation email for registration ID: {}", registration.getId());
-
-        } catch (Exception e) {
-            logger.error("Error initiating cancellation email for registration ID: {}", registration.getId(), e);
-        }
+        logger.info("Initiating cancellation email for registration ID: {}", registration.getId());
+        EmailNotificationService.EmailData emailData = emailNotificationService.prepareEmailData(registration.getId());
+        emailNotificationService.sendCancellationEmailAsync(emailData);
     }
 
     /**
@@ -569,514 +553,6 @@ public class RegistrationService {
         public long getPendingCount() { return pendingCount; }
         public long getConfirmedCount() { return confirmedCount; }
         public long getCancelledCount() { return cancelledCount; }
-    }
-
-    /**
-     * Queue registration confirmation emails using the email queue system
-     */
-    private void queueRegistrationConfirmationEmails(UserRegistration registration) {
-        logger.info("Queuing registration confirmation emails for registration ID: {}", registration.getId());
-
-        try {
-            if (registration.isTeamRegistration()) {
-                // Queue registration received emails for all team members
-                for (TeamMember member : registration.getTeamMembers()) {
-                    String subject = "Registration Received for " + registration.getPlan().getName();
-                    String body = buildTeamMemberConfirmationEmail(registration, member);
-
-                    emailQueueService.queueRegistrationEmail(
-                        createUserRegistrationFromTeamMember(registration, member),
-                        subject,
-                        body,
-                        EmailQueue.EmailType.REGISTRATION_CONFIRMATION
-                    );
-                }
-
-                logger.info("Queued registration confirmation emails for {} team members", registration.getTeamMembers().size());
-            } else {
-                // Queue registration confirmation email for individual participant
-                logger.info("Queuing registration confirmation email for individual registration");
-
-                String subject = "Registration Received for " + registration.getPlan().getName();
-
-                // Queue the email using the proper email queue system
-                emailQueueService.queueRegistrationEmail(
-                    registration,
-                    subject,
-                    null, // Let EmailQueueService generate the body using EmailService
-                    EmailQueue.EmailType.REGISTRATION_CONFIRMATION
-                );
-
-                logger.info("Successfully queued individual registration confirmation email for: {}", registration.getEmail());
-            }
-        } catch (Exception e) {
-            logger.error("Error queuing confirmation emails for registration ID: {}", registration.getId(), e);
-        }
-    }
-
-    /**
-     * Queue application approval emails when admin approves registration
-     */
-    private void queueApplicationApprovalEmails(UserRegistration registration) {
-        logger.info("Queuing application approval emails for registration ID: {}", registration.getId());
-
-        try {
-            if (registration.isTeamRegistration()) {
-                // Queue approval emails for all team members
-                for (TeamMember member : registration.getTeamMembers()) {
-                    String subject = "Application Approved - " + registration.getPlan().getName() + " Team Participation Confirmed";
-                    String body = buildTeamMemberApprovalEmail(registration, member);
-
-                    emailQueueService.queueRegistrationEmail(
-                        createUserRegistrationFromTeamMember(registration, member),
-                        subject,
-                        body,
-                        EmailQueue.EmailType.APPLICATION_APPROVAL
-                    );
-                }
-
-                logger.info("Queued approval emails for {} team members", registration.getTeamMembers().size());
-            } else {
-                // Queue approval email for individual participant
-                String subject = "Application Approved - " + registration.getPlan().getName() + " Participation Confirmed";
-                String body = buildApplicationApprovalEmail(registration);
-
-                emailQueueService.queueRegistrationEmail(
-                    registration,
-                    subject,
-                    body,
-                    EmailQueue.EmailType.APPLICATION_APPROVAL
-                );
-
-                logger.info("Queued application approval email for individual registration");
-            }
-        } catch (Exception e) {
-            logger.error("Error queuing approval emails for registration ID: {}", registration.getId(), e);
-        }
-    }
-
-    /**
-     * Queue admin notification email
-     */
-    private void queueAdminNotificationEmail(UserRegistration registration) {
-        logger.info("Queuing admin notification email for registration ID: {}", registration.getId());
-
-        try {
-            String subject = "📋 New Registration: " +
-                (registration.isTeamRegistration() ? registration.getTeamName() : registration.getFullName());
-            String body = buildAdminNotificationEmail(registration);
-
-            // Queue admin notification email using configured support email
-            emailQueueService.queueEmail(
-                getSupportEmail(), // Use configured admin email
-                "Treasure Hunt Admin",
-                subject,
-                body,
-                EmailQueue.EmailType.ADMIN_NOTIFICATION
-            );
-
-            logger.info("Queued admin notification email");
-        } catch (Exception e) {
-            logger.error("Error queuing admin notification email for registration ID: {}", registration.getId(), e);
-        }
-    }
-
-    /**
-     * Queue team cancellation email for team leader
-     */
-    private void queueTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
-        logger.info("Queuing team cancellation email for registration ID: {} to team leader: {}",
-                   registration.getId(), teamLeader.getEmail());
-
-        try {
-            String subject = "Registration Cancelled - " + registration.getPlan().getName();
-            String body = buildTeamCancellationEmail(registration, teamLeader);
-
-            emailQueueService.queueEmail(
-                teamLeader.getEmail(),
-                teamLeader.getFullName(),
-                subject,
-                body,
-                EmailQueue.EmailType.CANCELLATION_EMAIL
-            );
-
-            logger.info("Queued team cancellation email for team leader: {}", teamLeader.getEmail());
-        } catch (Exception e) {
-            logger.error("Error queuing team cancellation email for registration ID: {}", registration.getId(), e);
-        }
-    }
-
-    /**
-     * Queue individual cancellation email
-     */
-    private void queueIndividualCancellationEmail(UserRegistration registration) {
-        logger.info("Queuing individual cancellation email for registration ID: {} to: {}",
-                   registration.getId(), registration.getEmail());
-
-        try {
-            String subject = "Registration Cancelled - " + registration.getPlan().getName();
-            String body = buildIndividualCancellationEmail(registration);
-
-            emailQueueService.queueEmail(
-                registration.getEmail(),
-                registration.getFullName(),
-                subject,
-                body,
-                EmailQueue.EmailType.CANCELLATION_EMAIL
-            );
-
-            logger.info("Queued individual cancellation email for: {}", registration.getEmail());
-        } catch (Exception e) {
-            logger.error("Error queuing individual cancellation email for registration ID: {}", registration.getId(), e);
-        }
-    }
-
-    /**
-     * Build admin notification email content
-     */
-    private String buildAdminNotificationEmail(UserRegistration registration) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html><head><meta charset='UTF-8'><title>New Registration</title></head>");
-        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
-        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
-
-        // Header
-        html.append("<div style='background: #343a40; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;'>");
-        html.append("<h1 style='margin: 0; font-size: 24px;'>📋 New Registration Alert</h1>");
-        html.append("</div>");
-
-        // Content
-        html.append("<div style='background: #f8f9fa; padding: 20px; border-radius: 0 0 8px 8px;'>");
-        html.append("<p>A new registration has been submitted:</p>");
-
-        // Registration Summary
-        html.append("<div style='background: white; padding: 15px; border-radius: 6px; margin: 15px 0;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>Registration Summary</h3>");
-        html.append("<p><strong>Type:</strong> ").append(registration.isTeamRegistration() ? "Team Registration" : "Individual Registration").append("</p>");
-
-        if (registration.isTeamRegistration()) {
-            html.append("<p><strong>Team Name:</strong> ").append(registration.getTeamName()).append("</p>");
-            html.append("<p><strong>Team Size:</strong> ").append(registration.getTeamMembers().size()).append(" members</p>");
-        } else {
-            html.append("<p><strong>Participant:</strong> ").append(registration.getFullName()).append("</p>");
-            html.append("<p><strong>Email:</strong> ").append(registration.getEmail()).append("</p>");
-        }
-
-        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
-        html.append("<p><strong>Registration ID:</strong> ").append(registration.getId()).append("</p>");
-        html.append("<p><strong>Registration Date:</strong> ").append(registration.getRegistrationDate()).append("</p>");
-        html.append("</div>");
-
-        // Action Links
-        html.append("<div style='text-align: center; margin: 20px 0;'>");
-        html.append("<a href='http://localhost:8080/admin/registrations/").append(registration.getId()).append("' ");
-        html.append("style='background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>");
-        html.append("View Registration Details</a>");
-        html.append("</div>");
-
-        html.append("</div></div></body></html>");
-
-        return html.toString();
-    }
-
-    /**
-     * Build team member approval email content
-     */
-    private String buildTeamMemberApprovalEmail(UserRegistration registration, TeamMember member) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html><head><meta charset='UTF-8'><title>Team Application Approved</title></head>");
-        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
-        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
-
-        // Header
-        html.append("<div style='background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
-        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Team Application Approved!</h1>");
-        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Your Team Participation is Confirmed!</p>");
-        html.append("</div>");
-
-        // Content
-        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
-        html.append("<h2 style='color: #28a745; margin-top: 0;'>Hello ").append(member.getFullName()).append("!</h2>");
-        html.append("<p>Congratulations! Your team application has been approved. You and your team <strong>").append(registration.getTeamName()).append("</strong> are all set for an amazing adventure!</p>");
-
-        // Approval Notice
-        html.append("<div style='background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #155724;'>✅ Team Application Approved!</h3>");
-        html.append("<p style='color: #155724; margin: 0;'>Your entire team is confirmed for the treasure hunt!</p>");
-        html.append("</div>");
-
-        // Team Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>👥 Team Details</h3>");
-        html.append("<p><strong>Team Name:</strong> ").append(registration.getTeamName()).append("</p>");
-        html.append("<p><strong>Registration Number:</strong> <span style='background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
-                   .append(generateRegistrationNumber(registration)).append("</span></p>");
-        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
-        html.append("<p><strong>Your Role:</strong> ").append(member.isTeamLeader() ? "👑 Team Leader" : "👤 Team Member").append("</p>");
-        html.append("<p><strong>Team Size:</strong> ").append(registration.getTeamMembers().size()).append(" members</p>");
-        html.append("</div>");
-
-        // Payment Instructions (for team leader)
-        if (member.isTeamLeader()) {
-            html.append("<div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;'>");
-            html.append("<h3 style='margin-top: 0; color: #856404;'>💰 Payment Instructions (Team Leader)</h3>");
-            html.append("<p style='text-align: center; font-size: 24px; font-weight: bold; color: #856404; margin: 15px 0;'>");
-            html.append("₹").append(registration.getPlan().getPriceInr()).append(" per person</p>");
-            html.append("<p style='text-align: center; font-size: 18px; font-weight: bold; color: #856404; margin: 15px 0;'>");
-            html.append("Total for team: ₹").append(registration.getPlan().getPriceInr().multiply(BigDecimal.valueOf(registration.getTeamMembers().size()))).append("</p>");
-            html.append("<div style='background: #f8d7da; padding: 15px; border-radius: 8px; margin: 15px 0; color: #721c24; text-align: center; font-weight: 600;'>");
-            html.append("⚠️ Important: This payment is non-refundable once processed.");
-            html.append("</div>");
-            html.append("<p><strong>Payment Deadline:</strong> Please complete payment within 7 days.</p>");
-            html.append("<p><strong>Payment Methods:</strong> UPI, Bank Transfer, or Online Payment (details will be shared via WhatsApp)</p>");
-            html.append("</div>");
-        } else {
-            html.append("<div style='background: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;'>");
-            html.append("<h3 style='margin-top: 0; color: #0c5460;'>💰 Payment Information</h3>");
-            html.append("<p>Your team leader will handle the payment for the entire team.</p>");
-            html.append("<p><strong>Cost per person:</strong> ₹").append(registration.getPlan().getPriceInr()).append("</p>");
-            html.append("</div>");
-        }
-
-        // Communication Guidelines
-        html.append("<div style='background: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;'>");
-        html.append("<h3 style='margin-top: 0; color: #0c5460;'>📱 Communication Guidelines</h3>");
-        html.append("<p><strong>WhatsApp Group:</strong> All team members will be added for informal communication</p>");
-        html.append("<p><strong>Email:</strong> Official matters will be communicated via email</p>");
-        html.append("</div>");
-
-        // Contact Info
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>📞 Contact Information</h3>");
-        html.append("<p><strong>WhatsApp:</strong> +91 98765 43210</p>");
-        html.append("<p><strong>Email:</strong> treasurehunting@gmail.com</p>");
-        html.append("</div>");
-
-        html.append("<p>Get ready for an unforgettable team adventure! 🏴‍☠️</p>");
-        html.append("<p>Best regards,<br><strong>The Treasure Hunt Adventures Team</strong></p>");
-        html.append("</div></div></body></html>");
-
-        return html.toString();
-    }
-
-    /**
-     * Build team member confirmation email content
-     */
-    private String buildTeamMemberConfirmationEmail(UserRegistration registration, TeamMember member) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html><head><meta charset='UTF-8'><title>Registration Confirmed</title></head>");
-        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
-        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
-
-        // Header
-        html.append("<div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
-        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Registration Confirmed!</h1>");
-        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Welcome to the Adventure!</p>");
-        html.append("</div>");
-
-        // Content
-        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
-        html.append("<h2 style='color: #667eea; margin-top: 0;'>Hello ").append(member.getFullName()).append("!</h2>");
-        html.append("<p>Congratulations! Your team registration has been confirmed. Here are your details:</p>");
-
-        // Registration Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>📋 Registration Details</h3>");
-        html.append("<p><strong>Team Name:</strong> ").append(registration.getTeamName()).append("</p>");
-        html.append("<p><strong>Registration Number:</strong> <span style='background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
-                   .append(generateRegistrationNumber(registration)).append("</span></p>");
-        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
-        html.append("<p><strong>Team Size:</strong> ").append(registration.getTeamMembers().size()).append(" members</p>");
-        html.append("<p><strong>Registration Date:</strong> ").append(registration.getRegistrationDate().toLocalDate()).append("</p>");
-        html.append("</div>");
-
-        // Member Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>👤 Your Details</h3>");
-        html.append("<p><strong>Name:</strong> ").append(member.getFullName()).append("</p>");
-        html.append("<p><strong>Email:</strong> ").append(member.getEmail()).append("</p>");
-        html.append("<p><strong>Phone:</strong> +91 ").append(member.getPhoneNumber()).append("</p>");
-        html.append("<p><strong>Position:</strong> ").append(member.isTeamLeader() ? "Team Leader" : "Team Member").append("</p>");
-        html.append("</div>");
-
-        // What's Next
-        html.append("<div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;'>");
-        html.append("<h3 style='margin-top: 0; color: #856404;'>📅 What's Next?</h3>");
-        html.append("<ul style='margin: 0; padding-left: 20px;'>");
-        html.append("<li>All team members will receive this confirmation email</li>");
-        html.append("<li>We'll send event details and instructions closer to the date</li>");
-        html.append("<li>Please arrive 15 minutes before the scheduled start time</li>");
-        html.append("<li>Bring a valid ID and comfortable walking shoes</li>");
-        html.append("<li>All team members must be present at the start</li>");
-        html.append("</ul>");
-        html.append("</div>");
-
-        // Footer
-        html.append("<div style='text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;'>");
-        html.append("<p style='color: #6c757d; margin: 0;'>Questions? Contact us at <a href='mailto:support@treasurehunt.com' style='color: #667eea;'>support@treasurehunt.com</a></p>");
-        html.append("<p style='color: #6c757d; margin: 5px 0 0 0; font-size: 14px;'>© 2024 Treasure Hunt Adventures. All rights reserved.</p>");
-        html.append("</div>");
-
-        html.append("</div></div></body></html>");
-
-        return html.toString();
-    }
-
-    /**
-     * Build application approval email content
-     */
-    private String buildApplicationApprovalEmail(UserRegistration registration) {
-        StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html><head><meta charset='UTF-8'><title>Application Approved</title></head>");
-        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
-        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
-
-        // Header
-        html.append("<div style='background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0;'>");
-        html.append("<h1 style='margin: 0; font-size: 28px;'>🎉 Application Approved!</h1>");
-        html.append("<p style='margin: 10px 0 0 0; font-size: 18px;'>Your Participation is Confirmed!</p>");
-        html.append("</div>");
-
-        // Content
-        html.append("<div style='background: #f8f9fa; padding: 30px; border-radius: 0 0 10px 10px;'>");
-        html.append("<h2 style='color: #28a745; margin-top: 0;'>Congratulations ").append(registration.getFullName()).append("!</h2>");
-        html.append("<p>We're excited to confirm your participation in our treasure hunt adventure! Your application has been reviewed and approved.</p>");
-
-        // Approval Notice
-        html.append("<div style='background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #155724;'>✅ Your Application Has Been Approved!</h3>");
-        html.append("<p style='color: #155724; margin: 0;'>You're all set for an amazing experience!</p>");
-        html.append("</div>");
-
-        // Plan Details
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #28a745;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>📋 Adventure Details</h3>");
-        html.append("<p><strong>Plan:</strong> ").append(registration.getPlan().getName()).append("</p>");
-        html.append("<p><strong>Registration Number:</strong> <span style='background: #28a745; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace;'>")
-                   .append(generateRegistrationNumber(registration)).append("</span></p>");
-        html.append("<p><strong>Duration:</strong> ").append(registration.getPlan().getDurationHours()).append(" hours</p>");
-        html.append("<p><strong>Difficulty:</strong> ").append(registration.getPlan().getDifficultyLevel()).append("</p>");
-        html.append("</div>");
-
-        // Payment Instructions
-        html.append("<div style='background: #fff3cd; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #ffc107;'>");
-        html.append("<h3 style='margin-top: 0; color: #856404;'>💰 Payment Instructions</h3>");
-        html.append("<p style='text-align: center; font-size: 24px; font-weight: bold; color: #856404; margin: 15px 0;'>");
-        html.append("₹").append(registration.getPlan().getPriceInr()).append(" per person</p>");
-        html.append("<div style='background: #f8d7da; padding: 15px; border-radius: 8px; margin: 15px 0; color: #721c24; text-align: center; font-weight: 600;'>");
-        html.append("⚠️ Important: This payment is non-refundable once processed.");
-        html.append("</div>");
-        html.append("<p><strong>Payment Deadline:</strong> Please complete payment within 7 days.</p>");
-        html.append("<p><strong>Payment Methods:</strong> UPI, Bank Transfer, or Online Payment (details will be shared via WhatsApp)</p>");
-        html.append("</div>");
-
-        // Communication Guidelines
-        html.append("<div style='background: #d1ecf1; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #17a2b8;'>");
-        html.append("<h3 style='margin-top: 0; color: #0c5460;'>📱 Communication Guidelines</h3>");
-        html.append("<p><strong>WhatsApp Group:</strong> You'll be added for informal communication and quick updates</p>");
-        html.append("<p><strong>Email:</strong> Official matters will be communicated via email</p>");
-        html.append("</div>");
-
-        // Contact Info
-        html.append("<div style='background: white; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;'>");
-        html.append("<h3 style='margin-top: 0; color: #333;'>📞 Contact Information</h3>");
-        html.append("<p><strong>WhatsApp:</strong> +91 98765 43210</p>");
-        html.append("<p><strong>Email:</strong> treasurehunting@gmail.com</p>");
-        html.append("</div>");
-
-        html.append("<p>Get ready for an unforgettable adventure! 🏴‍☠️</p>");
-        html.append("<p>Best regards,<br><strong>The Treasure Hunt Adventures Team</strong></p>");
-        html.append("</div></div></body></html>");
-
-        return html.toString();
-    }
-
-    // Removed buildIndividualConfirmationEmail method - now using EmailService with Thymeleaf templates
-
-    /**
-     * Create a UserRegistration object from TeamMember for email purposes
-     */
-    private UserRegistration createUserRegistrationFromTeamMember(UserRegistration teamRegistration, TeamMember member) {
-        UserRegistration memberRegistration = new UserRegistration();
-        memberRegistration.setId(teamRegistration.getId());
-        memberRegistration.setFullName(member.getFullName());
-        memberRegistration.setEmail(member.getEmail());
-        memberRegistration.setPhoneNumber(member.getPhoneNumber());
-        memberRegistration.setAge(member.getAge());
-        // Convert string gender to enum, with fallback to OTHER if invalid
-        try {
-            memberRegistration.setGender(UserRegistration.Gender.valueOf(member.getGender().toUpperCase()));
-        } catch (IllegalArgumentException e) {
-            logger.warn("Invalid gender value '{}' for team member, defaulting to OTHER", member.getGender());
-            memberRegistration.setGender(UserRegistration.Gender.OTHER);
-        }
-        memberRegistration.setTeamName(teamRegistration.getTeamName());
-        memberRegistration.setPlan(teamRegistration.getPlan());
-        memberRegistration.setRegistrationDate(teamRegistration.getRegistrationDate());
-        memberRegistration.setStatus(teamRegistration.getStatus());
-        return memberRegistration;
-    }
-
-    /**
-     * Build team cancellation email body
-     */
-    private String buildTeamCancellationEmail(UserRegistration registration, TeamMember teamLeader) {
-        StringBuilder body = new StringBuilder();
-        body.append("Dear ").append(teamLeader.getFullName()).append(",\n\n");
-        body.append("We regret to inform you that your team registration for \"")
-            .append(registration.getPlan().getName()).append("\" has been cancelled.\n\n");
-        body.append("Registration Details:\n");
-        body.append("- Team Name: ").append(registration.getTeamName()).append("\n");
-        body.append("- Application ID: ").append(generateRegistrationNumber(registration)).append("\n");
-        body.append("- Plan: ").append(registration.getPlan().getName()).append("\n");
-        body.append("- Registration Date: ").append(registration.getRegistrationDate()).append("\n\n");
-        body.append("If you have any questions or concerns, please contact us at ").append(getSupportEmail()).append(".\n\n");
-        body.append("Thank you for your interest in Treasure Hunt Adventures.\n\n");
-        body.append("Best regards,\n");
-        body.append("Treasure Hunt Adventures Team");
-        return body.toString();
-    }
-
-    /**
-     * Build individual cancellation email body
-     */
-    private String buildIndividualCancellationEmail(UserRegistration registration) {
-        StringBuilder body = new StringBuilder();
-        body.append("Dear ").append(registration.getFullName()).append(",\n\n");
-        body.append("We regret to inform you that your registration for \"")
-            .append(registration.getPlan().getName()).append("\" has been cancelled.\n\n");
-        body.append("Registration Details:\n");
-        body.append("- Application ID: ").append(generateRegistrationNumber(registration)).append("\n");
-        body.append("- Plan: ").append(registration.getPlan().getName()).append("\n");
-        body.append("- Registration Date: ").append(registration.getRegistrationDate()).append("\n\n");
-        body.append("If you have any questions or concerns, please contact us at ").append(getSupportEmail()).append(".\n\n");
-        body.append("Thank you for your interest in Treasure Hunt Adventures.\n\n");
-        body.append("Best regards,\n");
-        body.append("Treasure Hunt Adventures Team");
-        return body.toString();
-    }
-
-    /**
-     * Generate registration number for display purposes
-     * Uses the new ApplicationIdService for consistent ID generation
-     */
-    private String generateRegistrationNumber(UserRegistration registration) {
-        try {
-            Long planId = registration.getPlan().getId();
-            if (registration.isTeamRegistration()) {
-                return applicationIdService.generateTeamApplicationId(planId);
-            } else {
-                return applicationIdService.generateIndividualApplicationId(planId);
-            }
-        } catch (Exception e) {
-            logger.warn("Failed to generate application ID using service, falling back to entity method", e);
-            // Fallback to entity's own method
-            return registration.getRegistrationNumber();
-        }
     }
 
     /**

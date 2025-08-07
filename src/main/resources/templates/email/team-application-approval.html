@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Team Application Approved</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 20px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+        .header { background-color: #28a745; color: white; padding: 10px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { padding: 20px; }
+        .footer { text-align: center; font-size: 0.9em; color: #777; margin-top: 20px; }
+        .badge { background-color: #007bff; color: white; padding: 4px 8px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Team Application Approved!</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong th:text="${member.fullName}">Team Member</strong>,</p>
+            <p>
+                Great news! Your team, <strong th:text="${registration.teamName}">Your Team Name</strong>, has been
+                <strong>approved</strong> for the treasure hunt: <strong th:text="${plan.name}">Plan Name</strong>.
+            </p>
+            <p>Your team's registration number is: <span class="badge" th:text="${registration.registrationNumber}">TH-TEAM-000101</span></p>
+            <p>
+                Your team leader, <strong th:text="${teamLeader.fullName}">Team Leader Name</strong>, has been notified and will handle any further steps.
+            </p>
+            <p>Get ready for an exciting adventure! We will be in touch with more details closer to the event date.</p>
+            <p>
+                Best regards,<br>
+                The <span th:text="${companyName}">Treasure Hunt Adventures</span> Team
+            </p>
+        </div>
+        <div class="footer">
+            <p>If you have any questions, please contact our support team at <a th:href="'mailto:' + ${supportEmail}" th:text="${supportEmail}">support@example.com</a>.</p>
+            <p>&copy; <span th:text="${#dates.year(#dates.createNow())}">2024</span> <span th:text="${companyName}">Treasure Hunt Adventures</span>. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
