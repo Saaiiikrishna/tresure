@@ -4,7 +4,7 @@ spring:
     url: jdbc:h2:mem:treasurehunt;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
-    password: 
+    password:
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -15,6 +15,7 @@ spring:
 
   # JPA Configuration
   jpa:
+    open-in-view: false
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: create-drop
@@ -35,7 +36,7 @@ spring:
       path: /h2-console
       settings:
         web-allow-others: true
-  
+
   # Thymeleaf Configuration
   thymeleaf:
     cache: false
@@ -43,7 +44,7 @@ spring:
     suffix: .html
     encoding: UTF-8
     mode: HTML
-  
+
   # Mail Configuration - Development defaults
   mail:
     host: smtp.gmail.com
@@ -62,7 +63,7 @@ spring:
           writetimeout: 10000
           ssl:
             trust: smtp.gmail.com
-  
+
   # File Upload Configuration
   servlet:
     multipart:
@@ -95,13 +96,13 @@ spring:
 # Application Configuration
 app:
   version: 1.0.0-dev
-  
+
   # Security Configuration - Development defaults
   security:
     admin:
       username: ${ADMIN_USERNAME:admin}
       password: ${ADMIN_PASSWORD:admin123}
-  
+
   # File Storage Configuration
   file-storage:
     upload-dir: uploads/documents
@@ -115,27 +116,36 @@ app:
     allowed-image-types: jpg,jpeg,png,gif,webp
     allowed-document-types: pdf,doc,docx,txt
     allowed-photo-types: jpg,jpeg,png
-  
+
   # Resource Management Configuration
   resource-management:
     temp-file-max-age-hours: 24
     cleanup-enabled: true
     cleanup-interval-minutes: 60
     log-retention-days: 7
-  
+
   # Email Configuration
   email:
-    from: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
+    # Keep existing keys used by ApplicationConfigurationManager
+    from-address: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
     from-name: ${MAIL_FROM_NAME:Treasure Hunt - MySillyDreams (DEV)}
-    support: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
+    support-address: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
     company-name: ${COMPANY_NAME:Treasure Hunt Adventures (DEV)}
-    enabled: false # Disable email in dev mode
-  
+    mock-enabled: true
+
+    # Compatibility keys for places expecting 'app.email.from' / 'app.email.support'
+    # These mirror the values above so either style works in dev
+    from: ${MAIL_FROM_ADDRESS:noreply@treasurehunt.dev}
+    support: ${MAIL_SUPPORT_ADDRESS:support@treasurehunt.dev}
+
   # Performance Configuration
   performance:
     monitoring-enabled: true
     metrics-enabled: true
     slow-query-threshold-ms: 1000
+    async:
+      email-batch-size: 25
+
 
 # Server Configuration
 server:
