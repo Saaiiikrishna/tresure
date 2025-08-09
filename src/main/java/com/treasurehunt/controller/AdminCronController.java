@@ -86,29 +86,19 @@ public class AdminCronController {
         Map<String, Object> response = new HashMap<>();
 
         try {
-            // Run cleanup operations
-            FileCleanupService.CleanupResult documentResult = fileCleanupService.cleanupOldRegistrationDocuments();
-            FileCleanupService.CleanupResult orphanedResult = fileCleanupService.cleanupOrphanedFiles();
-            FileCleanupService.CleanupResult imageResult = fileCleanupService.cleanupInactiveImages();
+            // Use consolidated cleanup method to eliminate code duplication
+            FileCleanupService.ComprehensiveCleanupResult result = fileCleanupService.performComprehensiveCleanup();
 
-            int totalFilesDeleted = documentResult.getFilesDeleted() + 
-                                  orphanedResult.getFilesDeleted() + 
-                                  imageResult.getFilesDeleted();
-            
-            long totalSpaceFreed = documentResult.getSpaceFreed() + 
-                                 orphanedResult.getSpaceFreed() + 
-                                 imageResult.getSpaceFreed();
+            response.put("success", result.isSuccess());
+            response.put("message", "Manual " + result.getMessage().toLowerCase());
+            response.put("filesDeleted", result.getTotalFilesDeleted());
+            response.put("spaceFreedMB", result.getTotalSpaceFreedMB());
+            response.put("documentFilesDeleted", result.getDocumentResult().getFilesDeleted());
+            response.put("orphanedFilesDeleted", result.getOrphanedResult().getFilesDeleted());
+            response.put("imageFilesDeleted", result.getImageResult().getFilesDeleted());
 
-            response.put("success", true);
-            response.put("message", "Manual cleanup completed successfully");
-            response.put("filesDeleted", totalFilesDeleted);
-            response.put("spaceFreedMB", totalSpaceFreed / (1024.0 * 1024.0));
-            response.put("documentFilesDeleted", documentResult.getFilesDeleted());
-            response.put("orphanedFilesDeleted", orphanedResult.getFilesDeleted());
-            response.put("imageFilesDeleted", imageResult.getFilesDeleted());
-
-            logger.info("Manual cleanup completed. Files deleted: {}, Space freed: {} MB", 
-                       totalFilesDeleted, totalSpaceFreed / (1024.0 * 1024.0));
+            logger.info("Manual cleanup completed. Files deleted: {}, Space freed: {} MB",
+                       result.getTotalFilesDeleted(), result.getTotalSpaceFreedMB());
 
         } catch (Exception e) {
             logger.error("Error during manual cleanup", e);

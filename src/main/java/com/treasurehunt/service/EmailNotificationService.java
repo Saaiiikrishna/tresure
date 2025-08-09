@@ -12,14 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import jakarta.persistence.EntityNotFoundException;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Service for handling email notifications with proper transaction boundaries.
- * This service prepares the necessary data in a transaction and then queues the email
- * for asynchronous sending by the EmailQueueService.
  */
 @Service
 public class EmailNotificationService {
@@ -40,55 +35,29 @@ public class EmailNotificationService {
     }
 
     /**
-     * Data class for email information, created within a transaction.
-     */
-    public static class EmailData {
-        private final Long registrationId;
-        // Add other fields as needed if you want to pass more detached data
-
-        public EmailData(UserRegistration registration) {
-            this.registrationId = registration.getId();
-        }
-
-        public Long getRegistrationId() { return registrationId; }
-    }
-
-    /**
-     * Prepare email data within a transaction. This can be a generic method.
-     * @param registrationId Registration ID
-     * @return EmailData containing the ID.
-     */
-    @Transactional(readOnly = true)
-    public EmailData prepareEmailData(Long registrationId) {
-        logger.debug("Preparing email data for registration: {}", registrationId);
-        UserRegistration registration = registrationRepository.findById(registrationId)
-            .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + registrationId));
-        return new EmailData(registration);
-    }
-
-
-    /**
-     * Backward-compatibility alias for older callers expecting prepareApprovalEmailData
-     */
-    @Transactional(readOnly = true)
-    public EmailData prepareApprovalEmailData(Long registrationId) {
-        return prepareEmailData(registrationId);
-    }
-
-    /**
      * Send approval emails asynchronously.
-     * @param emailData Data prepared in a transaction
+     * @param registrationId Registration ID
      */
     @Async("emailTaskExecutor")
-    public void sendApprovalEmailsAsync(EmailData emailData) {
-        logger.info("Queuing approval emails for registration: {}", emailData.getRegistrationId());
+    @Transactional(readOnly = true)
+    public void sendApprovalEmailsAsync(Long registrationId) {
+        logger.info("Queuing approval emails for registration: {}", registrationId);
         try {
-            UserRegistration registration = registrationRepository.findByIdWithTeamMembers(emailData.getRegistrationId())
-                .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + emailData.getRegistrationId()));
+            UserRegistration registration = registrationRepository.findByIdWithPlan(registrationId)
+                .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + registrationId));
+
+            // Force initialization of the plan to avoid LazyInitializationException
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers the lazy loading within the transaction
+            }
 
             if (registration.isTeamRegistration()) {
+                // Get team members
+                UserRegistration regWithMembers = registrationRepository.findByIdWithTeamMembers(registrationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + registrationId));
+
                 // Queue email for each team member
-                for (TeamMember member : registration.getTeamMembers()) {
+                for (TeamMember member : regWithMembers.getTeamMembers()) {
                     String body = emailService.createTeamApplicationApprovalBody(registration, member);
                     emailQueueService.queueEmail(
                         member.getEmail(),
@@ -109,27 +78,36 @@ public class EmailNotificationService {
                     EmailQueue.EmailType.APPLICATION_APPROVAL
                 );
             }
-            logger.info("Successfully queued approval emails for registration: {}", emailData.getRegistrationId());
+            logger.info("Successfully queued approval emails for registration: {}", registrationId);
         } catch (Exception e) {
-            logger.error("Error queuing approval emails for registration {}: {}",
-                        emailData.getRegistrationId(), e.getMessage(), e);
+            logger.error("Error queuing approval emails for registration {}: {}", registrationId, e.getMessage(), e);
         }
     }
 
     /**
      * Send cancellation email asynchronously.
-     * @param emailData Data prepared in a transaction
+     * @param registrationId Registration ID
      */
     @Async("emailTaskExecutor")
-    public void sendCancellationEmailAsync(EmailData emailData) {
-        logger.info("Queuing cancellation email for registration: {}", emailData.getRegistrationId());
+    @Transactional(readOnly = true)
+    public void sendCancellationEmailAsync(Long registrationId) {
+        logger.info("Queuing cancellation email for registration: {}", registrationId);
         try {
-            UserRegistration registration = registrationRepository.findByIdWithTeamMembers(emailData.getRegistrationId())
-                .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + emailData.getRegistrationId()));
+            UserRegistration registration = registrationRepository.findByIdWithPlan(registrationId)
+                .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + registrationId));
+
+            // Force initialization of the plan to avoid LazyInitializationException
+            if (registration.getPlan() != null) {
+                registration.getPlan().getName(); // This triggers the lazy loading within the transaction
+            }
 
             if (registration.isTeamRegistration()) {
+                // Get team members
+                UserRegistration regWithMembers = registrationRepository.findByIdWithTeamMembers(registrationId)
+                    .orElseThrow(() -> new EntityNotFoundException("Registration not found: " + registrationId));
+
                 // For teams, only the leader gets the cancellation email
-                TeamMember teamLeader = registration.getTeamMembers().stream()
+                TeamMember teamLeader = regWithMembers.getTeamMembers().stream()
                     .filter(m -> m.getMemberPosition() != null && m.getMemberPosition() == 1)
                     .findFirst()
                     .orElse(null);
@@ -144,7 +122,7 @@ public class EmailNotificationService {
                         EmailQueue.EmailType.CANCELLATION_EMAIL
                     );
                 } else {
-                     logger.warn("Could not find team leader for cancellation email for registration {}", registration.getId());
+                     logger.warn("Could not find team leader for cancellation email for registration {}", registrationId);
                 }
             } else {
                 // Queue email for individual participant
@@ -157,10 +135,9 @@ public class EmailNotificationService {
                     EmailQueue.EmailType.CANCELLATION_EMAIL
                 );
             }
-            logger.info("Successfully queued cancellation email for registration: {}", emailData.getRegistrationId());
+            logger.info("Successfully queued cancellation email for registration: {}", registrationId);
         } catch (Exception e) {
-            logger.error("Error queuing cancellation email for registration {}: {}",
-                        emailData.getRegistrationId(), e.getMessage(), e);
+            logger.error("Error queuing cancellation email for registration {}: {}", registrationId, e.getMessage(), e);
         }
     }
 }

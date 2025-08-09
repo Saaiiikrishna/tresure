@@ -853,10 +853,27 @@ footer hr {
 }
 
 .invalid-feedback {
-    display: block;
+    display: none; /* Hidden by default */
     font-size: 0.875rem;
     color: var(--danger-color);
     margin-top: 0.25rem;
+}
+
+/* Show invalid feedback only when input has is-invalid class */
+.is-invalid ~ .invalid-feedback,
+.form-control.is-invalid + .invalid-feedback,
+.form-select.is-invalid + .invalid-feedback {
+    display: block;
+}
+
+/* Consent checkbox styling - red initially, green when checked */
+#medicalConsent {
+    border: 2px solid #dc3545 !important; /* Red border initially */
+}
+
+#medicalConsent:checked {
+    background-color: #198754 !important; /* Green background when checked */
+    border-color: #198754 !important; /* Green border when checked */
 }
 
 /* Enhanced modal styling for team registration */
@@ -1068,4 +1085,88 @@ footer hr {
     #successModal #teamMembersList .card-body {
         padding: 4px 8px !important;
     }
+}
+
+/* Drag and Drop Styles */
+.upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: var(--border-radius);
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background-color: #e9ecef;
+}
+
+.upload-area.drag-over {
+    border-color: var(--primary-color) !important;
+    background-color: rgba(44, 90, 160, 0.1) !important;
+    transform: scale(1.02);
+}
+
+.upload-area.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background-color: #e9ecef;
+}
+
+.upload-area.disabled:hover {
+    border-color: #dee2e6;
+    background-color: #e9ecef;
+    transform: none;
+}
+
+.upload-icon {
+    font-size: 2rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.upload-text {
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.file-info {
+    margin-top: 0.5rem;
+}
+
+/* Form Validation Styles Enhancement */
+.form-control.is-invalid {
+    border-color: var(--danger-color);
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.form-control.is-valid {
+    border-color: var(--success-color);
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+/* Removed duplicate - using the one above with proper display logic */
+
+.valid-feedback {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--success-color);
+}
+
+/* Character Count Styles */
+.form-text {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+.text-warning {
+    color: var(--warning-color) !important;
+}
+
+.text-danger {
+    color: var(--danger-color) !important;
 }

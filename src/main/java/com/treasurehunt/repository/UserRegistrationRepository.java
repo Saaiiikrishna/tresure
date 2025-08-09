@@ -2,6 +2,8 @@ package com.treasurehunt.repository;
 
 import com.treasurehunt.entity.UserRegistration;
 import com.treasurehunt.entity.TreasureHuntPlan;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -119,13 +121,22 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     List<UserRegistration> findByFullNameContainingIgnoreCaseOrderByRegistrationDateDesc(String name);
 
     /**
-     * FIXED: Find all registrations with plan data (avoiding MultipleBagFetchException)
+     * FIXED: Find all registrations with plan data only (avoiding MultipleBagFetchException)
      * @return List of all registrations with plan data
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.plan " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findAllWithAllData();
+
+    /**
+     * Find all registrations with plan data using pagination (avoiding MultipleBagFetchException)
+     * @param pageable Pagination information
+     * @return Page of registrations with plan data
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan")
+    Page<UserRegistration> findAllWithPlanData(Pageable pageable);
 
     /**
      * NEW: Find all registrations with team members only
@@ -202,11 +213,12 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     List<Object[]> getRegistrationStatisticsByPlan();
 
     /**
-     * Find recent registrations (last N days)
-     * @param daysAgo Number of days ago
-     * @return List of recent registrations
+     * Find recent registrations (last N days) - Fixed to avoid MultipleBagFetchException
+     * @param cutoffDate Cutoff date for recent registrations
+     * @return List of recent registrations with plan data only
      */
-    @Query("SELECT r FROM UserRegistration r " +
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "JOIN FETCH r.plan " +
            "WHERE r.registrationDate >= :cutoffDate " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findRecentRegistrations(@Param("cutoffDate") LocalDateTime cutoffDate);
@@ -232,35 +244,58 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
     List<UserRegistration> findByRegistrationDateAfter(LocalDateTime date);
 
     /**
-     * Find registrations by plan ID
+     * Find registrations by plan ID with plan data eagerly loaded (avoiding MultipleBagFetchException)
      * @param planId Plan ID
      * @return List of registrations for the plan
      */
-    List<UserRegistration> findByPlanIdOrderByRegistrationDateDesc(Long planId);
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "JOIN FETCH r.plan " +
+           "WHERE r.plan.id = :planId " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByPlanIdOrderByRegistrationDateDesc(@Param("planId") Long planId);
 
     /**
-     * Find registrations by plan ID and status
+     * Find registrations by plan ID and status with plan data eagerly loaded (avoiding MultipleBagFetchException)
      * @param planId Plan ID
      * @param status Registration status
      * @return List of registrations matching criteria
      */
-    List<UserRegistration> findByPlanIdAndStatusOrderByRegistrationDateDesc(Long planId, UserRegistration.RegistrationStatus status);
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "JOIN FETCH r.plan " +
+           "WHERE r.plan.id = :planId AND r.status = :status " +
+           "ORDER BY r.registrationDate DESC")
+    List<UserRegistration> findByPlanIdAndStatusOrderByRegistrationDateDesc(@Param("planId") Long planId, @Param("status") UserRegistration.RegistrationStatus status);
 
     /**
-     * Find registration by ID with team members eagerly loaded
+     * Find registration by ID with team members eagerly loaded (avoiding MultipleBagFetchException)
      * @param id Registration ID
      * @return Optional registration with team members
      */
-    @Query("SELECT DISTINCT r FROM UserRegistration r LEFT JOIN FETCH r.teamMembers WHERE r.id = :id")
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.teamMembers " +
+           "WHERE r.id = :id")
     Optional<UserRegistration> findByIdWithTeamMembers(@Param("id") Long id);
 
     /**
-     * Find registration by ID with documents eagerly loaded
+     * Find registration by ID with documents and plan eagerly loaded (avoiding MultipleBagFetchException)
      * @param id Registration ID
-     * @return Optional registration with documents
+     * @return Optional registration with documents and plan
      */
-    @Query("SELECT r FROM UserRegistration r LEFT JOIN FETCH r.documents WHERE r.id = :id")
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "LEFT JOIN FETCH r.documents " +
+           "WHERE r.id = :id")
     Optional<UserRegistration> findByIdWithDocuments(@Param("id") Long id);
+
+    /**
+     * Find registration by ID with plan eagerly loaded (for email processing)
+     * @param id Registration ID
+     * @return Optional registration with plan
+     */
+    @Query("SELECT DISTINCT r FROM UserRegistration r " +
+           "LEFT JOIN FETCH r.plan " +
+           "WHERE r.id = :id")
+    Optional<UserRegistration> findByIdWithPlan(@Param("id") Long id);
 
     /**
      * Count registrations by plan ID and status
@@ -280,26 +315,24 @@ public interface UserRegistrationRepository extends JpaRepository<UserRegistrati
 
 
     /**
-     * Find registrations with team members for a specific plan
+     * Find registrations with team members for a specific plan (avoiding MultipleBagFetchException)
      * Optimized query to prevent N+1 issues
      * @param planId Plan ID
      * @return List of registrations with team members loaded
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.plan " +
            "WHERE r.plan.id = :planId " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findByPlanIdWithTeamMembers(@Param("planId") Long planId);
 
     /**
-     * Find registrations by status with team members eagerly loaded
+     * Find registrations by status with team members eagerly loaded (avoiding MultipleBagFetchException)
      * @param status Registration status
      * @return List of registrations with team members
      */
     @Query("SELECT DISTINCT r FROM UserRegistration r " +
            "LEFT JOIN FETCH r.teamMembers " +
-           "LEFT JOIN FETCH r.plan " +
            "WHERE r.status = :status " +
            "ORDER BY r.registrationDate DESC")
     List<UserRegistration> findByStatusWithTeamMembers(@Param("status") UserRegistration.RegistrationStatus status);

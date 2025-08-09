@@ -59,6 +59,17 @@ public class EnvironmentValidationConfig {
     public void validateRequiredEnvironmentVariables() {
         logger.info("🔍 Validating required environment variables...");
 
+        // Skip validation in development profile
+        String activeProfile = environment.getProperty("spring.profiles.active", "default");
+        if ("dev".equals(activeProfile)) {
+            logger.info("🔧 Development profile detected - skipping environment variable validation");
+            logger.info("📝 Note: In production, ensure these environment variables are set:");
+            logger.info("   - ADMIN_USERNAME, ADMIN_PASSWORD");
+            logger.info("   - MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS, MAIL_SUPPORT_ADDRESS");
+            logger.info("   - DB_PASSWORD (production only)");
+            return;
+        }
+
         List<String> missingVariables = new ArrayList<>();
         List<String> insecureVariables = new ArrayList<>();
 
@@ -87,7 +98,6 @@ public class EnvironmentValidationConfig {
         }
 
         // Validate database configuration (only in production)
-        String activeProfile = environment.getProperty("spring.profiles.active", "default");
         if ("production".equals(activeProfile)) {
             if (!StringUtils.hasText(dbPassword)) {
                 missingVariables.add("DB_PASSWORD");

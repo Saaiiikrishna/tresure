@@ -373,6 +373,44 @@ public class FileCleanupService {
     }
 
     /**
+     * Perform comprehensive cleanup and return consolidated results
+     * This method eliminates code duplication across controllers
+     */
+    public ComprehensiveCleanupResult performComprehensiveCleanup() {
+        logger.info("Starting comprehensive file cleanup...");
+
+        try {
+            // Run all cleanup operations
+            CleanupResult documentResult = cleanupOldRegistrationDocuments();
+            CleanupResult orphanedResult = cleanupOrphanedFiles();
+            CleanupResult imageResult = cleanupInactiveImages();
+
+            int totalFilesDeleted = documentResult.getFilesDeleted() +
+                                  orphanedResult.getFilesDeleted() +
+                                  imageResult.getFilesDeleted();
+
+            long totalSpaceFreed = documentResult.getSpaceFreed() +
+                                 orphanedResult.getSpaceFreed() +
+                                 imageResult.getSpaceFreed();
+
+            logger.info("Comprehensive cleanup completed. Total files deleted: {}, Total space freed: {} bytes",
+                       totalFilesDeleted, totalSpaceFreed);
+
+            return new ComprehensiveCleanupResult(
+                documentResult, orphanedResult, imageResult,
+                totalFilesDeleted, totalSpaceFreed, true, "Cleanup completed successfully"
+            );
+
+        } catch (Exception e) {
+            logger.error("Error during comprehensive cleanup", e);
+            return new ComprehensiveCleanupResult(
+                new CleanupResult(0, 0), new CleanupResult(0, 0), new CleanupResult(0, 0),
+                0, 0, false, "Cleanup failed: " + e.getMessage()
+            );
+        }
+    }
+
+    /**
      * Calculate directory size recursively
      */
     private long calculateDirectorySize(Path directory) {
@@ -406,6 +444,37 @@ public class FileCleanupService {
 
         public int getFilesDeleted() { return filesDeleted; }
         public long getSpaceFreed() { return spaceFreed; }
+    }
+
+    public static class ComprehensiveCleanupResult {
+        private final CleanupResult documentResult;
+        private final CleanupResult orphanedResult;
+        private final CleanupResult imageResult;
+        private final int totalFilesDeleted;
+        private final long totalSpaceFreed;
+        private final boolean success;
+        private final String message;
+
+        public ComprehensiveCleanupResult(CleanupResult documentResult, CleanupResult orphanedResult,
+                                        CleanupResult imageResult, int totalFilesDeleted, long totalSpaceFreed,
+                                        boolean success, String message) {
+            this.documentResult = documentResult;
+            this.orphanedResult = orphanedResult;
+            this.imageResult = imageResult;
+            this.totalFilesDeleted = totalFilesDeleted;
+            this.totalSpaceFreed = totalSpaceFreed;
+            this.success = success;
+            this.message = message;
+        }
+
+        public CleanupResult getDocumentResult() { return documentResult; }
+        public CleanupResult getOrphanedResult() { return orphanedResult; }
+        public CleanupResult getImageResult() { return imageResult; }
+        public int getTotalFilesDeleted() { return totalFilesDeleted; }
+        public long getTotalSpaceFreed() { return totalSpaceFreed; }
+        public boolean isSuccess() { return success; }
+        public String getMessage() { return message; }
+        public double getTotalSpaceFreedMB() { return totalSpaceFreed / (1024.0 * 1024.0); }
     }
 
     public static class CleanupLog {

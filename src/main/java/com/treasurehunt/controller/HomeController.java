@@ -187,13 +187,22 @@ public class HomeController {
     public String getRegistrationForm(@PathVariable Long planId, Model model) {
         logger.debug("Fetching registration form for plan ID: {}", planId);
         try {
-            TreasureHuntPlan plan = planService.getPlanById(planId)
-                    .orElseThrow(() -> new IllegalArgumentException("Plan not found"));
+            Optional<TreasureHuntPlan> planOpt = planService.getPlanById(planId);
+            if (planOpt.isEmpty()) {
+                logger.warn("Plan with ID {} not found", planId);
+                model.addAttribute("error", "Plan not found. Please try again or contact support.");
+                return "fragments/registration-form :: error";
+            }
+
+            TreasureHuntPlan plan = planOpt.get();
+            logger.debug("Found plan: {} (ID: {}, TeamType: {}, TeamSize: {})",
+                        plan.getName(), plan.getId(), plan.getTeamType(), plan.getTeamSize());
+
             model.addAttribute("plan", plan);
             return "fragments/registration-form :: form";
         } catch (Exception e) {
             logger.error("Error fetching registration form for plan ID: {}", planId, e);
-            // You can return an error fragment here if you have one
+            model.addAttribute("error", "Unable to load registration form: " + e.getMessage());
             return "fragments/registration-form :: error";
         }
     }

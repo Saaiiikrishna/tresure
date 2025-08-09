@@ -1,9 +1,9 @@
-<div class="registration-form" th:fragment="form(plan)" xmlns:th="http://www.thymeleaf.org">
+<div class="registration-form" th:fragment="form" xmlns:th="http://www.thymeleaf.org">
     <!-- Progress Steps -->
     <div class="progress-steps mb-4">
         <div class="progress-step active" data-step="1">
             <div class="step-circle">1</div>
-            <div class="step-label" th:text="${plan.teamType.name() == 'TEAM'} ? 'Team Info' : 'Personal Info'">Personal Info</div>
+            <div class="step-label" th:text="${plan.teamType.toString() == 'TEAM'} ? 'Team Info' : 'Personal Info'">Personal Info</div>
         </div>
         <div class="progress-step" data-step="2">
             <div class="step-circle">2</div>
@@ -36,11 +36,11 @@
     <form id="registrationForm" enctype="multipart/form-data">
         <input type="hidden" name="planId" th:value="${plan.id}" />
         <input type="hidden" name="teamSize" th:value="${plan.teamSize}" />
-        <input type="hidden" name="isTeamBased" th:value="${plan.teamType.name() == 'TEAM'}" />
+        <input type="hidden" name="isTeamBased" th:value="${plan.teamType.toString() == 'TEAM'}" />
 
         <!-- Step 1: Team/Personal Information -->
         <div class="form-step" data-step="1">
-            <div th:if="${plan.teamType.name() == 'TEAM'}">
+            <div th:if="${plan.teamType.toString() == 'TEAM'}">
                 <div class="alert alert-info mb-4">
                     <h5 class="alert-heading mb-2"><i class="fas fa-users me-2"></i>Team Registration</h5>
                     <p class="mb-0">This plan requires a team of <strong th:text="${plan.teamSize}"></strong> members. Please provide complete information for each team member below.</p>
@@ -61,15 +61,17 @@
                         <span class="badge bg-secondary" id="teamProgress">0 / <span th:text="${plan.teamSize}"></span> completed</span>
                     </div>
                 </div>
-                <div th:each="i : ${#numbers.sequence(1, plan.teamSize)}" th:include="~{fragments/registration-form :: memberForm(memberNumber=${i}, totalMembers=${plan.teamSize}, showMemberTitle=true)}"></div>
+                <div th:each="i : ${#numbers.sequence(1, plan.teamSize)}" th:with="memberNumber=${i}, totalMembers=${plan.teamSize}, showMemberTitle=true">
+                    <div th:replace="~{fragments/registration-form :: memberForm}"></div>
+                </div>
             </div>
 
-            <div th:if="${plan.teamType.name() != 'TEAM'}">
+            <div th:if="${plan.teamType.toString() != 'TEAM'}">
                  <div class="alert alert-primary mb-4">
                     <h5 class="alert-heading mb-2"><i class="fas fa-user me-2"></i>Individual Registration</h5>
                     <p class="mb-0">This is an individual adventure. Please provide your personal information below.</p>
                 </div>
-                <div th:include="~{fragments/registration-form :: memberForm(memberNumber=1, totalMembers=1, showMemberTitle=false)}"></div>
+                <div th:replace="~{fragments/registration-form :: individualForm}"></div>
             </div>
 
             <div class="text-end mt-4">
@@ -83,7 +85,7 @@
         <div class="form-step d-none" data-step="2">
             <h5 class="mb-3">Document Upload & Medical Consent</h5>
 
-            <div th:if="${plan.teamType.name() == 'TEAM'}" class="alert alert-info mb-4">
+            <div th:if="${plan.teamType.toString() == 'TEAM'}" class="alert alert-info mb-4">
                 <h6><i class="fas fa-info-circle me-2"></i>Team Registration Document Requirements</h6>
                 <p class="mb-0">For team registrations, you only need to upload documents for <strong>ONE team member</strong> (typically the team leader). Individual participant documents for all team members are not required.</p>
             </div>
@@ -114,7 +116,7 @@
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="checkbox" id="medicalConsent" name="medicalConsentGiven" required="required" />
-                            <label class="form-check-label" for="medicalConsent">
+                            <label class="form-check-label consent-label-required" for="medicalConsent">
                                 <strong>I have read, understood, and agree to the medical consent and risk acknowledgment above. *</strong>
                             </label>
                         </div>
@@ -126,27 +128,27 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Passport Photo <small class="text-danger">(Required - JPG, PNG, max 2MB)</small></label>
-                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('photoFile').click();">
-                        <i class="fas fa-camera fs-2 text-muted mb-2"></i>
-                        <p class="mb-2">Click to upload or drag & drop</p>
+                    <div id="photoFileUploadArea" class="upload-area">
+                        <i class="fas fa-camera upload-icon"></i>
+                        <p class="upload-text mb-2">Click to upload or drag & drop</p>
                         <div id="photoFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="photoFile" name="photoFile" accept="image/jpeg,image/jpg,image/png" style="display: none;" onchange="handleFileUpload(this, 'photo', 2)" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Government ID <small class="text-danger">(Required - PDF, JPG, max 5MB)</small></label>
-                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('idFile').click();">
-                        <i class="fas fa-id-card fs-2 text-muted mb-2"></i>
-                        <p class="mb-2">Click to upload or drag & drop</p>
+                    <div id="idFileUploadArea" class="upload-area">
+                        <i class="fas fa-id-card upload-icon"></i>
+                        <p class="upload-text mb-2">Click to upload or drag & drop</p>
                         <div id="idFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="idFile" name="idFile" accept="application/pdf,image/jpeg,image/jpg" style="display: none;" onchange="handleFileUpload(this, 'id', 5)" />
                 </div>
                 <div class="col-md-4" id="medicalCertificateContainer">
                     <label class="form-label" id="medicalCertificateLabel">Medical Certificate <small class="text-danger" id="medicalCertificateRequired">(Required - PDF only, max 5MB)</small></label>
-                    <div class="file-upload-area border rounded p-3 text-center" style="cursor: pointer; min-height: 120px; border: 2px dashed #dee2e6 !important;" onclick="document.getElementById('medicalFile').click();" id="medicalFileUploadArea">
-                        <i class="fas fa-file-medical fs-2 text-muted mb-2"></i>
-                        <p class="mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
+                    <div id="medicalFileUploadArea" class="upload-area">
+                        <i class="fas fa-file-medical upload-icon"></i>
+                        <p class="upload-text mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
                         <div id="medicalFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="medicalFile" name="medicalFile" accept="application/pdf" style="display: none;" onchange="handleFileUpload(this, 'medical', 5)" />
@@ -169,7 +171,7 @@
     </form>
 </div>
 
-<div th:fragment="memberForm(memberNumber, totalMembers, showMemberTitle)" xmlns:th="http://www.thymeleaf.org">
+<div th:fragment="memberForm" xmlns:th="http://www.thymeleaf.org">
     <h6 th:if="${showMemberTitle}" class="mb-3 text-primary d-flex align-items-center">
         <span class="badge bg-primary me-2" th:text="${memberNumber}">1</span>
         <span th:if="${memberNumber == 1}">👑 Team Leader</span>
@@ -179,15 +181,15 @@
         <div class="row g-3">
             <div class="col-md-6">
                 <label th:for="'fullName_' + ${memberNumber}" class="form-label">Full Name *</label>
-                <input type="text" class="form-control" th:id="'fullName_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].fullName'" required="required" maxlength="100" placeholder="Enter full name" />
+                <input type="text" class="form-control" th:id="'fullName_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].fullName'" required="required" maxlength="100" placeholder="Enter full name" />
             </div>
             <div class="col-md-6">
                 <label th:for="'age_' + ${memberNumber}" class="form-label">Age *</label>
-                <input type="number" class="form-control" th:id="'age_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].age'" required="required" min="18" max="65" placeholder="Age (18-65)" />
+                <input type="number" class="form-control" th:id="'age_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].age'" required="required" min="18" max="65" placeholder="Age (18-65)" />
             </div>
             <div class="col-md-6">
                 <label th:for="'gender_' + ${memberNumber}" class="form-label">Gender *</label>
-                <select class="form-select" th:id="'gender_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].gender'" required="required">
+                <select class="form-select" th:id="'gender_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].gender'" required="required">
                     <option value="">Select Gender</option>
                     <option value="MALE">Male</option>
                     <option value="FEMALE">Female</option>
@@ -196,18 +198,18 @@
             </div>
             <div class="col-md-6">
                 <label th:for="'email_' + ${memberNumber}" class="form-label">Email Address *</label>
-                <input type="email" class="form-control" th:id="'email_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].email'" required="required" maxlength="100" placeholder="email@example.com" />
+                <input type="email" class="form-control" th:id="'email_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].email'" required="required" maxlength="100" placeholder="email@example.com" />
             </div>
             <div class="col-md-6">
                 <label th:for="'phoneNumber_' + ${memberNumber}" class="form-label">Phone Number *</label>
                 <div class="input-group">
                     <span class="input-group-text">+91</span>
-                    <input type="tel" class="form-control" th:id="'phoneNumber_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].phoneNumber'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+                    <input type="tel" class="form-control" th:id="'phoneNumber_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].phoneNumber'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
                 </div>
             </div>
             <div class="col-12">
                 <label th:for="'bio_' + ${memberNumber}" class="form-label">Tell us about yourself</label>
-                <textarea class="form-control" th:id="'bio_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].bio'" rows="3" maxlength="2000" placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!" th:attr="oninput='updateCharacterCount(' + ${memberNumber} + ')'"></textarea>
+                <textarea class="form-control" th:id="'bio_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].bio'" rows="3" maxlength="2000" placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!" th:attr="oninput='updateCharacterCount(' + ${memberNumber} + ')'"></textarea>
                 <div class="form-text">
                     <span th:id="'charCount_' + ${memberNumber}">0</span>/2000 characters
                 </div>
@@ -215,13 +217,13 @@
 
             <div th:if="${totalMembers == 1 or memberNumber == 1}" class="col-md-6">
                 <label th:for="'emergencyContactName_' + ${memberNumber}" class="form-label">Emergency Contact Name *</label>
-                <input type="text" class="form-control" th:id="'emergencyContactName_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].emergencyContactName'" required="required" maxlength="100" placeholder="Emergency contact full name" />
+                <input type="text" class="form-control" th:id="'emergencyContactName_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].emergencyContactName'" required="required" maxlength="100" placeholder="Emergency contact full name" />
             </div>
              <div th:if="${totalMembers == 1 or memberNumber == 1}" class="col-12">
                 <label th:for="'emergencyContactPhone_' + ${memberNumber}" class="form-label">Emergency Contact Phone *</label>
                 <div class="input-group">
                     <span class="input-group-text">+91</span>
-                    <input type="tel" class="form-control" th:id="'emergencyContactPhone_' + ${memberNumber}" th:name="'members[' + ${memberNumber-1} + '].emergencyContactPhone'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+                    <input type="tel" class="form-control" th:id="'emergencyContactPhone_' + ${memberNumber}" th:name="'members[' + ${memberNumber - 1} + '].emergencyContactPhone'" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
                 </div>
             </div>
             <div th:if="${totalMembers > 1 and memberNumber > 1}" class="col-12">
@@ -232,4 +234,94 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Individual Registration Form Fragment -->
+<div th:fragment="individualForm" xmlns:th="http://www.thymeleaf.org">
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="fullName" class="form-label">Full Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="fullName" name="fullName" required="required" maxlength="100" placeholder="Enter full name" />
+            <div class="invalid-feedback">Please provide a valid full name.</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="age" class="form-label">Age <span class="text-danger">*</span></label>
+            <input type="number" class="form-control" id="age" name="age" required="required" min="18" max="65" placeholder="Age (18-65)" />
+            <div class="invalid-feedback">Age must be between 18 and 65.</div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="gender" class="form-label">Gender <span class="text-danger">*</span></label>
+            <select class="form-select" id="gender" name="gender" required="required">
+                <option value="">Select Gender</option>
+                <option value="MALE">Male</option>
+                <option value="FEMALE">Female</option>
+                <option value="OTHER">Other</option>
+            </select>
+            <div class="invalid-feedback">Please select your gender.</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="email" class="form-label">Email Address <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" id="email" name="email" required="required" maxlength="100" placeholder="email@example.com" />
+            <div class="invalid-feedback">Please provide a valid email address.</div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="phoneNumber" class="form-label">Phone Number <span class="text-danger">*</span></label>
+            <div class="input-group">
+                <span class="input-group-text">+91</span>
+                <input type="tel" class="form-control" id="phoneNumber" name="phoneNumber" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+            </div>
+            <div class="invalid-feedback">Please provide a valid 10-digit phone number starting with 6-9.</div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-12 mb-3">
+            <label for="bio" class="form-label">About You</label>
+            <textarea class="form-control" id="bio" name="bio" rows="3" maxlength="2000" placeholder="I am a student, love hunting for treasure and fun games. Tell us what you do and why you're excited about this treasure hunt adventure!" oninput="updateCharacterCount('individual')"></textarea>
+            <div class="form-text">
+                <span id="charCount_individual">0</span>/2000 characters
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-6 mb-3">
+            <label for="emergencyContactName" class="form-label">Emergency Contact Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="emergencyContactName" name="emergencyContactName" required="required" maxlength="100" placeholder="Emergency contact full name" />
+            <div class="invalid-feedback">Please provide emergency contact name.</div>
+        </div>
+        <div class="col-md-6 mb-3">
+            <label for="emergencyContactPhone" class="form-label">Emergency Contact Phone <span class="text-danger">*</span></label>
+            <div class="input-group">
+                <span class="input-group-text">+91</span>
+                <input type="tel" class="form-control" id="emergencyContactPhone" name="emergencyContactPhone" required="required" maxlength="10" minlength="10" pattern="[6-9][0-9]{9}" placeholder="9876543210" />
+            </div>
+            <div class="invalid-feedback">Please provide a valid emergency contact phone number.</div>
+        </div>
+    </div>
+</div>
+
+<!-- Error Fragment -->
+<div th:fragment="error" xmlns:th="http://www.thymeleaf.org" class="alert alert-danger">
+    <h5 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        Registration Form Error
+    </h5>
+    <p th:text="${error}" class="mb-0">An error occurred while loading the registration form.</p>
+    <hr>
+    <p class="mb-0">
+        <small>
+            Please try refreshing the page or
+            <a href="/" class="alert-link">return to the home page</a>
+            to select a different plan.
+        </small>
+    </p>
+</div>
+
+<!-- Error Fragment -->
+<div th:fragment="error" class="alert alert-danger" xmlns:th="http://www.thymeleaf.org">
+    <h5><i class="fas fa-exclamation-triangle me-2"></i>Unable to Load Registration Form</h5>
+    <p th:text="${error}" class="mb-0">An error occurred while loading the registration form. Please try again.</p>
 </div>

@@ -232,10 +232,10 @@
         <!-- Quick Actions -->
         <div style="text-align: center; margin: 30px 0;">
             <h3 style="color: #007bff;">Quick Actions</h3>
-            <a th:href="@{'/admin/registrations'}" class="btn">
+            <a th:href="${adminRegistrationsUrl}" class="btn">
                 📋 View All Registrations
             </a>
-            <a th:href="@{'/admin/registrations/' + ${registration.id}}" class="btn btn-success">
+            <a th:href="${registrationDetailsUrl}" class="btn btn-success">
                 👁️ View Details
             </a>
         </div>

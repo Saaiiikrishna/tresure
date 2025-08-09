@@ -14,6 +14,10 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.session.InvalidSessionStrategy;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 /**
  * Spring Security configuration
@@ -51,7 +55,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints - Home and API
                 .requestMatchers("/", "/home", "/index").permitAll()
-                .requestMatchers("/api/plans/**", "/api/register/**", "/api/health").permitAll()
+                .requestMatchers("/api/plans/**", "/api/register", "/api/register/**", "/api/health").permitAll()
+                .requestMatchers("/register/form/**").permitAll() // Registration form fragments
 
                 // Static resources
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico", "/robots.txt").permitAll()
@@ -91,12 +96,14 @@ public class SecurityConfig {
             )
             .sessionManagement(session -> session
                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
-                .invalidSessionUrl("/")
+                .invalidSessionStrategy(customInvalidSessionStrategy())
                 .sessionFixation().migrateSession()
+                .maximumSessions(1)
+                .maxSessionsPreventsLogin(false)
             )
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers(
-                    "/api/register/**"
+                    "/api/register", "/api/register/**", "/api/plans/**", "/api/health"
                 ) // Only public registration API endpoints are CSRF-exempt; admin endpoints require CSRF tokens
             )
             .headers(headers -> headers
@@ -134,5 +141,30 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Custom invalid session strategy that doesn't redirect API requests
+     * @return InvalidSessionStrategy
+     */
+    @Bean
+    public InvalidSessionStrategy customInvalidSessionStrategy() {
+        return new InvalidSessionStrategy() {
+            @Override
+            public void onInvalidSessionDetected(HttpServletRequest request, HttpServletResponse response) throws IOException {
+                String requestURI = request.getRequestURI();
+
+                // Don't redirect API requests - just return 401
+                if (requestURI.startsWith("/api/")) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.setContentType("application/json");
+                    response.getWriter().write("{\"error\":\"Invalid or expired session\",\"status\":401}");
+                    return;
+                }
+
+                // For non-API requests, redirect to home
+                response.sendRedirect("/");
+            }
+        };
     }
 }

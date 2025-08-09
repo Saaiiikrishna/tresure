@@ -13,6 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -149,21 +153,47 @@ public class RegistrationService {
     }
 
     private void queueConfirmationEmails(UserRegistration registration) {
-        if (registration.isTeamRegistration()) {
-            for (TeamMember member : registration.getTeamMembers()) {
-                String body = emailService.createTeamMemberConfirmationBody(registration, member);
-                emailQueueService.queueEmail(member.getEmail(), member.getFullName(), "Registration Confirmed - " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+        try {
+            if (registration.isTeamRegistration()) {
+                logger.debug("Queueing team member confirmation emails for registration ID: {}", registration.getId());
+                for (TeamMember member : registration.getTeamMembers()) {
+                    try {
+                        String body = emailService.createTeamMemberConfirmationBody(registration, member);
+                        emailQueueService.queueEmail(member.getEmail(), member.getFullName(), "Registration Confirmed - " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+                        logger.debug("Queued team member confirmation email for: {}", member.getEmail());
+                    } catch (Exception e) {
+                        logger.error("Failed to queue team member confirmation email for {}: {}", member.getEmail(), e.getMessage(), e);
+                        throw e;
+                    }
+                }
+            } else {
+                logger.debug("Queueing individual confirmation email for registration ID: {}", registration.getId());
+                try {
+                    String body = emailService.createRegistrationConfirmationBody(registration);
+                    emailQueueService.queueEmail(registration.getEmail(), registration.getFullName(), "Registration Received for " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+                    logger.debug("Queued individual confirmation email for: {}", registration.getEmail());
+                } catch (Exception e) {
+                    logger.error("Failed to create or queue individual confirmation email for {}: {}", registration.getEmail(), e.getMessage(), e);
+                    throw e;
+                }
             }
-        } else {
-            String body = emailService.createRegistrationConfirmationBody(registration);
-            emailQueueService.queueEmail(registration.getEmail(), registration.getFullName(), "Registration Received for " + registration.getPlan().getName(), body, EmailQueue.EmailType.REGISTRATION_CONFIRMATION);
+        } catch (Exception e) {
+            logger.error("Failed to queue confirmation emails for registration ID {}: {}", registration.getId(), e.getMessage(), e);
+            throw e;
         }
     }
 
     private void queueAdminNotificationEmail(UserRegistration registration) {
-        String body = emailService.createAdminNotificationBody(registration);
-        String subject = "📋 New Registration: " + (registration.isTeamRegistration() ? registration.getTeamName() : registration.getFullName());
-        emailQueueService.queueEmail(supportEmail, "Treasure Hunt Admin", subject, body, EmailQueue.EmailType.ADMIN_NOTIFICATION);
+        try {
+            logger.debug("Queueing admin notification email for registration ID: {}", registration.getId());
+            String body = emailService.createAdminNotificationBody(registration);
+            String subject = "📋 New Registration: " + (registration.isTeamRegistration() ? registration.getTeamName() : registration.getFullName());
+            emailQueueService.queueEmail(supportEmail, "Treasure Hunt Admin", subject, body, EmailQueue.EmailType.ADMIN_NOTIFICATION);
+            logger.debug("Queued admin notification email for registration ID: {}", registration.getId());
+        } catch (Exception e) {
+            logger.error("Failed to queue admin notification email for registration ID {}: {}", registration.getId(), e.getMessage(), e);
+            throw e;
+        }
     }
 
 
@@ -237,7 +267,32 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getAllRegistrations() {
         logger.debug("Fetching all registrations with optimized query");
-        return registrationRepository.findAllWithAllData();
+        List<UserRegistration> registrations = registrationRepository.findAllWithAllData();
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
+    }
+
+    /**
+     * Get all registrations with pagination and optimized query
+     * @param page Page number (0-based)
+     * @param size Page size
+     * @return Page of registrations with related data loaded
+     */
+    @Transactional(readOnly = true)
+    public Page<UserRegistration> getAllRegistrations(int page, int size) {
+        logger.debug("Fetching registrations page {} with size {} using optimized query", page, size);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "registrationDate"));
+        return registrationRepository.findAllWithPlanData(pageable);
     }
 
     /**
@@ -248,7 +303,19 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(TreasureHuntPlan plan) {
         logger.debug("Fetching registrations for plan ID: {} with optimized query", plan.getId());
-        return registrationRepository.findByPlanWithAllDataOrderByRegistrationDateDesc(plan);
+        List<UserRegistration> registrations = registrationRepository.findByPlanWithAllDataOrderByRegistrationDateDesc(plan);
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -259,7 +326,19 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByStatus(UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations with status: {} with optimized query", status);
-        return registrationRepository.findByStatusWithAllDataOrderByRegistrationDateDesc(status);
+        List<UserRegistration> registrations = registrationRepository.findByStatusWithAllDataOrderByRegistrationDateDesc(status);
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -270,7 +349,19 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlan(Long planId) {
         logger.debug("Fetching registrations for plan ID: {}", planId);
-        return registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
+        List<UserRegistration> registrations = registrationRepository.findByPlanIdOrderByRegistrationDateDesc(planId);
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -282,7 +373,19 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRegistrationsByPlanAndStatus(Long planId, UserRegistration.RegistrationStatus status) {
         logger.debug("Fetching registrations for plan ID: {} with status: {}", planId, status);
-        return registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
+        List<UserRegistration> registrations = registrationRepository.findByPlanIdAndStatusOrderByRegistrationDateDesc(planId, status);
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -370,7 +473,19 @@ public class RegistrationService {
     @Transactional(readOnly = true)
     public List<UserRegistration> getRecentRegistrations() {
         LocalDateTime cutoffDate = LocalDateTime.now().minusDays(30);
-        return registrationRepository.findRecentRegistrations(cutoffDate);
+        List<UserRegistration> registrations = registrationRepository.findRecentRegistrations(cutoffDate);
+
+        // Force load documents and team members to avoid LazyInitializationException in templates
+        for (UserRegistration registration : registrations) {
+            try {
+                registration.getDocuments().size(); // Trigger lazy loading
+                registration.getTeamMembers().size(); // Trigger lazy loading
+            } catch (Exception e) {
+                logger.debug("Could not load collections for registration {}: {}", registration.getId(), e.getMessage());
+            }
+        }
+
+        return registrations;
     }
 
     /**
@@ -391,15 +506,18 @@ public class RegistrationService {
     }
 
     /**
-     * Send confirmation emails to all team members or individual participant
+     * Send approval emails to all team members or individual participant
      * Uses proper transaction boundaries to avoid lazy loading issues
-     * @param registration Registration to send confirmations for
+     * @param registration Registration to send approval emails for
      */
     public void sendConfirmationEmails(UserRegistration registration) {
-        logger.info("Initiating confirmation emails for registration ID: {}", registration.getId());
-        EmailNotificationService.EmailData emailData = emailNotificationService.prepareEmailData(registration.getId());
-        // This method is now empty, as the initial confirmation is sent on creation.
-        // This could be used for a "resend confirmation" feature in the future.
+        logger.info("Initiating approval emails for registration ID: {}", registration.getId());
+        try {
+            emailNotificationService.sendApprovalEmailsAsync(registration.getId());
+            logger.info("Successfully queued approval emails for registration ID: {}", registration.getId());
+        } catch (Exception e) {
+            logger.error("Failed to queue approval emails for registration ID {}: {}", registration.getId(), e.getMessage(), e);
+        }
     }
 
     /**
@@ -409,8 +527,12 @@ public class RegistrationService {
      */
     public void sendCancellationEmail(UserRegistration registration) {
         logger.info("Initiating cancellation email for registration ID: {}", registration.getId());
-        EmailNotificationService.EmailData emailData = emailNotificationService.prepareEmailData(registration.getId());
-        emailNotificationService.sendCancellationEmailAsync(emailData);
+        try {
+            emailNotificationService.sendCancellationEmailAsync(registration.getId());
+            logger.info("Successfully queued cancellation email for registration ID: {}", registration.getId());
+        } catch (Exception e) {
+            logger.error("Failed to queue cancellation email for registration ID {}: {}", registration.getId(), e.getMessage(), e);
+        }
     }
 
     /**

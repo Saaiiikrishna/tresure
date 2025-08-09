@@ -25,6 +25,7 @@ import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -72,8 +73,8 @@ public class AdminController {
      */
     @GetMapping
     public String dashboard(Model model) {
-        logger.debug("Loading admin dashboard");
-        
+        logger.info("Loading admin dashboard");
+
         try {
             // PERFORMANCE FIX: Get statistics efficiently to avoid N+1 queries
             RegistrationService.RegistrationStatistics stats = registrationService.getRegistrationStatistics();
@@ -84,6 +85,12 @@ public class AdminController {
             long activePlansCount = allPlans.stream()
                     .filter(p -> p.getStatus() == TreasureHuntPlan.PlanStatus.ACTIVE).count();
 
+            // Ensure null safety for template
+            if (recentRegistrations == null) {
+                recentRegistrations = new ArrayList<>();
+                logger.warn("Recent registrations was null, initialized empty list");
+            }
+
             model.addAttribute("totalPlans", allPlans.size());
             model.addAttribute("activePlans", activePlansCount);
             model.addAttribute("totalRegistrations", stats.getTotalRegistrations());
@@ -93,10 +100,18 @@ public class AdminController {
             model.addAttribute("recentRegistrations", recentRegistrations);
 
             return "admin/dashboard";
-            
+
         } catch (Exception e) {
             logger.error("Error loading admin dashboard", e);
-            model.addAttribute("error", "Error loading dashboard data");
+            // Provide safe defaults to prevent template errors
+            model.addAttribute("totalPlans", 0);
+            model.addAttribute("activePlans", 0);
+            model.addAttribute("totalRegistrations", 0);
+            model.addAttribute("pendingRegistrations", 0);
+            model.addAttribute("confirmedRegistrations", 0);
+            model.addAttribute("cancelledRegistrations", 0);
+            model.addAttribute("recentRegistrations", new ArrayList<>());
+            model.addAttribute("error", "Error loading dashboard data: " + e.getMessage());
             return "admin/dashboard";
         }
     }
@@ -429,7 +444,27 @@ public class AdminController {
     public String manageRegistrations(Model model,
                                     @RequestParam(required = false) String status,
                                     @RequestParam(required = false) Long planId) {
-        logger.debug("Loading registration management page with status filter: {} and plan filter: {}", status, planId);
+        logger.info("Loading registration management page with status filter: {} and plan filter: {}", status, planId);
+
+        // Input validation and sanitization
+        if (status != null) {
+            status = inputSanitizationService.sanitizeText(status);
+            if (status != null && !status.isEmpty() && !status.equals("all")) {
+                try {
+                    UserRegistration.RegistrationStatus.valueOf(status.toUpperCase());
+                } catch (IllegalArgumentException e) {
+                    logger.warn("Invalid status filter provided: {}", status);
+                    model.addAttribute("error", "Invalid status filter provided");
+                    status = null;
+                }
+            }
+        }
+
+        if (planId != null && planId <= 0) {
+            logger.warn("Invalid plan ID provided: {}", planId);
+            model.addAttribute("error", "Invalid plan ID provided");
+            planId = null;
+        }
 
         try {
             List<UserRegistration> registrations;
@@ -470,7 +505,13 @@ public class AdminController {
 
         } catch (Exception e) {
             logger.error("Error loading registration management page", e);
-            model.addAttribute("error", "Error loading registrations");
+            // Provide safe defaults to prevent template errors
+            model.addAttribute("registrations", new ArrayList<>());
+            model.addAttribute("selectedStatus", status);
+            model.addAttribute("selectedPlanId", planId);
+            model.addAttribute("statuses", UserRegistration.RegistrationStatus.values());
+            model.addAttribute("allPlans", new ArrayList<>());
+            model.addAttribute("error", "Error loading registrations: " + e.getMessage());
             return "admin/registrations";
         }
     }
@@ -561,6 +602,7 @@ public class AdminController {
      */
     @PostMapping("/registrations/{id}/status")
     @ResponseBody
+    @Transactional
     public ResponseEntity<Map<String, Object>> updateRegistrationStatus(
             @PathVariable Long id,
             @RequestParam String status) {
@@ -579,20 +621,11 @@ public class AdminController {
             response.put("message", "Status updated successfully");
             response.put("newStatus", updatedRegistration.getStatus().toString());
 
-            // FIXED: Send appropriate emails based on status change
+            // Send appropriate emails based on status change
             if (newStatus == UserRegistration.RegistrationStatus.CONFIRMED) {
-                // Send approval/confirmation emails to all participants
+                // Send approval emails to all participants
                 logger.info("Sending approval emails for confirmed registration: {}", id);
                 registrationService.sendConfirmationEmails(updatedRegistration);
-
-                // Also send approval emails (different from confirmation emails)
-                try {
-                    emailNotificationService.sendApprovalEmailsAsync(
-                        emailNotificationService.prepareApprovalEmailData(id)
-                    );
-                } catch (Exception e) {
-                    logger.warn("Error sending approval emails for registration {}: {}", id, e.getMessage());
-                }
             } else if (newStatus == UserRegistration.RegistrationStatus.CANCELLED) {
                 // Send cancellation email to team leader or individual
                 logger.info("Sending cancellation email for cancelled registration: {}", id);

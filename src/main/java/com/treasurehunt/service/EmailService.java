@@ -35,6 +35,7 @@ public class EmailService {
     private String defaultFromEmail;
     private String companyName;
     private String supportEmail;
+    private String baseUrl;
 
     public EmailService(TemplateEngine templateEngine, ApplicationConfigurationManager config) {
         this.templateEngine = templateEngine;
@@ -43,6 +44,7 @@ public class EmailService {
         this.defaultFromEmail = config.getEmail().getFromAddress() != null ? config.getEmail().getFromAddress() : "noreply@treasurehunt.local";
         this.companyName = config.getEmail().getCompanyName();
         this.supportEmail = config.getEmail().getSupportAddress();
+        this.baseUrl = "http://localhost:8080"; // Default for development
     }
 
     /**
@@ -52,14 +54,21 @@ public class EmailService {
      */
     public String createRegistrationConfirmationBody(UserRegistration registration) {
         logger.debug("Creating registration confirmation email body for: {}", registration.getEmail());
-        Context context = new Context();
-        context.setVariable("registration", registration);
-        context.setVariable("plan", registration.getPlan());
-        context.setVariable("companyName", companyName);
-        context.setVariable("supportEmail", supportEmail);
-        context.setVariable("registrationNumber", registration.getRegistrationNumber());
-        context.setVariable("checklist", getPreHuntChecklist());
-        return templateEngine.process("email/registration-confirmation", context);
+        try {
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+            context.setVariable("checklist", getPreHuntChecklist());
+            context.setVariable("baseUrl", baseUrl);
+            return templateEngine.process("email/registration-confirmation", context);
+        } catch (Exception e) {
+            logger.error("Failed to process registration confirmation email template for {}: {}",
+                        registration.getEmail(), e.getMessage(), e);
+            return createFallbackRegistrationConfirmationBody(registration);
+        }
     }
 
     /**
@@ -73,6 +82,12 @@ public class EmailService {
         context.setVariable("registration", registration);
         context.setVariable("plan", registration.getPlan());
         context.setVariable("companyName", companyName);
+
+        // Provide absolute URLs for email links
+        context.setVariable("adminRegistrationsUrl", baseUrl + "/admin/registrations");
+        context.setVariable("registrationDetailsUrl", baseUrl + "/admin/registrations/" + registration.getId());
+        context.setVariable("baseUrl", baseUrl);
+
         return templateEngine.process("email/admin-notification", context);
     }
 
@@ -123,17 +138,23 @@ public class EmailService {
      */
     public String createTeamMemberConfirmationBody(UserRegistration registration, TeamMember member) {
         logger.debug("Creating team member confirmation email body for: {}", member.getEmail());
-        Context context = new Context();
-        context.setVariable("registration", registration);
-        context.setVariable("member", member);
-        context.setVariable("plan", registration.getPlan());
-        context.setVariable("companyName", companyName);
-        context.setVariable("supportEmail", supportEmail);
-        context.setVariable("registrationNumber", registration.getRegistrationNumber());
-        context.setVariable("teamName", registration.getTeamName());
-        context.setVariable("isTeamLeader", member.isTeamLeader());
-        context.setVariable("checklist", getPreHuntChecklist());
-        return templateEngine.process("email/team-member-confirmation", context);
+        try {
+            Context context = new Context();
+            context.setVariable("registration", registration);
+            context.setVariable("member", member);
+            context.setVariable("plan", registration.getPlan());
+            context.setVariable("companyName", companyName);
+            context.setVariable("supportEmail", supportEmail);
+            context.setVariable("registrationNumber", registration.getRegistrationNumber());
+            context.setVariable("teamName", registration.getTeamName());
+            context.setVariable("isTeamLeader", member.isTeamLeader());
+            context.setVariable("checklist", getPreHuntChecklist());
+            return templateEngine.process("email/team-member-confirmation", context);
+        } catch (Exception e) {
+            logger.error("Failed to process team member confirmation email template for {}: {}",
+                        member.getEmail(), e.getMessage(), e);
+            return createFallbackTeamMemberConfirmationBody(registration, member);
+        }
     }
 
     /**
@@ -172,6 +193,8 @@ public class EmailService {
         return templateEngine.process("email/individual-cancellation", context);
     }
 
+
+
     /**
      * Send an email using JavaMailSender (HTML enabled).
      * @param to recipient email
@@ -207,6 +230,48 @@ public class EmailService {
         sendEmail(to, subject, body, null);
     }
 
+
+    /**
+     * Create fallback registration confirmation email body
+     */
+    private String createFallbackRegistrationConfirmationBody(UserRegistration registration) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html><head><meta charset='UTF-8'><title>Registration Confirmed</title></head>");
+        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+        html.append("<h2>Registration Confirmed!</h2>");
+        html.append("<p>Dear ").append(registration.getFullName()).append(",</p>");
+        html.append("<p>Your registration for <strong>").append(registration.getPlan().getName()).append("</strong> has been confirmed.</p>");
+        html.append("<p>Registration Number: <strong>").append(registration.getRegistrationNumber()).append("</strong></p>");
+        html.append("<p>We will contact you with further details soon.</p>");
+        html.append("<p>Best regards,<br>").append(companyName).append("</p>");
+        html.append("</div></body></html>");
+        return html.toString();
+    }
+
+    /**
+     * Create fallback team member confirmation email body
+     */
+    private String createFallbackTeamMemberConfirmationBody(UserRegistration registration, TeamMember member) {
+        StringBuilder html = new StringBuilder();
+        html.append("<!DOCTYPE html>");
+        html.append("<html><head><meta charset='UTF-8'><title>Team Registration Confirmed</title></head>");
+        html.append("<body style='font-family: Arial, sans-serif; line-height: 1.6; color: #333;'>");
+        html.append("<div style='max-width: 600px; margin: 0 auto; padding: 20px;'>");
+        html.append("<h2>Team Registration Confirmed!</h2>");
+        html.append("<p>Dear ").append(member.getFullName()).append(",</p>");
+        html.append("<p>Your team registration for <strong>").append(registration.getPlan().getName()).append("</strong> has been confirmed.</p>");
+        html.append("<p>Team Name: <strong>").append(registration.getTeamName()).append("</strong></p>");
+        html.append("<p>Registration Number: <strong>").append(registration.getRegistrationNumber()).append("</strong></p>");
+        if (member.isTeamLeader()) {
+            html.append("<p><strong>You are the team leader.</strong></p>");
+        }
+        html.append("<p>We will contact you with further details soon.</p>");
+        html.append("<p>Best regards,<br>").append(companyName).append("</p>");
+        html.append("</div></body></html>");
+        return html.toString();
+    }
 
     /**
      * Get pre-hunt checklist items

@@ -356,13 +356,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr th:if="${recentRegistrations.empty}">
+                            <tr th:if="${recentRegistrations == null or recentRegistrations.empty}">
                                 <td colspan="6" class="text-center text-muted py-4">
                                     <i class="fas fa-inbox fs-1 mb-3 d-block"></i>
                                     No recent registrations found
                                 </td>
                             </tr>
-                            <tr th:each="registration : ${recentRegistrations}" th:if="${!recentRegistrations.empty}">
+                            <tr th:each="registration : ${recentRegistrations}" th:if="${recentRegistrations != null and !recentRegistrations.empty}">
                                 <td>
                                     <span class="fw-bold" th:text="${registration.registrationNumber}">TH-000001</span>
                                 </td>
