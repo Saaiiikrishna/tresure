@@ -1,0 +1,121 @@
+spring:
+  # Test profile configuration
+
+  # H2 Database Configuration for Testing
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+
+  # JPA Configuration for Testing
+  jpa:
+    open-in-view: false
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+        use_sql_comments: false
+
+  # H2 Console disabled for tests
+  h2:
+    console:
+      enabled: false
+
+  # Thymeleaf Configuration
+  thymeleaf:
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+    encoding: UTF-8
+    mode: HTML
+
+  # Mail Configuration - Test defaults (no actual sending)
+  mail:
+    host: localhost
+    port: 25
+    username: test@example.com
+    password: testpassword
+
+  # Cache Configuration
+  cache:
+    type: simple
+    cache-names: treasureHuntPlans,featuredPlan,appSettings,userRegistrations,emailQueue,uploadedImages
+
+  # Async Configuration
+  task:
+    execution:
+      pool:
+        core-size: 1
+        max-size: 2
+        queue-capacity: 10
+      thread-name-prefix: test-async-
+
+  # Security Configuration
+  security:
+    enabled: true
+
+# Logging Configuration for Tests
+logging:
+  level:
+    com.treasurehunt: DEBUG
+    org.springframework.security: WARN
+    org.springframework.web: WARN
+    org.hibernate: WARN
+    org.h2: WARN
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Application Configuration for Tests
+app:
+  version: 1.0.0-test
+
+  # Security Configuration - Test defaults
+  security:
+    admin:
+      username: admin
+      password: admin123
+
+  # File Storage Configuration
+  file-storage:
+    upload-dir: target/test-uploads/documents
+    image-dir: target/test-uploads/images
+    temp-dir: target/test-uploads/temp
+    max-file-size: 52428800  # 50MB in bytes
+    max-image-size: 10485760  # 10MB in bytes
+    max-document-size: 52428800  # 50MB in bytes
+    max-photo-size: 5242880  # 5MB in bytes
+    max-video-size: 104857600  # 100MB in bytes
+    allowed-image-types: jpg,jpeg,png,gif,webp
+    allowed-document-types: pdf,doc,docx,txt
+    allowed-photo-types: jpg,jpeg,png
+
+  # Email Configuration - MOCK ENABLED FOR TESTS
+  email:
+    from-address: test@treasurehunt.test
+    from-name: Treasure Hunt - Test
+    support-address: support@treasurehunt.test
+    company-name: Treasure Hunt Adventures (TEST)
+    mock-enabled: true  # CRITICAL: Enable mock for tests
+    
+    # Compatibility keys
+    from: test@treasurehunt.test
+    support: support@treasurehunt.test
+
+  # Performance Configuration
+  performance:
+    monitoring-enabled: false
+    metrics-enabled: false
+    slow-query-threshold-ms: 5000
+    async:
+      email-batch-size: 5
+      email-processing-delay-ms: 100
+      email-retry-delay-ms: 1000
+      email-max-retry-attempts: 2

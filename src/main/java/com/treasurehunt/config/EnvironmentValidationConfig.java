@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -17,6 +18,7 @@ import java.util.List;
  * Prevents application startup with missing critical configuration
  */
 @Component
+@Profile("!test")
 public class EnvironmentValidationConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(EnvironmentValidationConfig.class);

@@ -51,7 +51,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints - Home and API
                 .requestMatchers("/", "/home", "/index").permitAll()
-                .requestMatchers("/api/plans/**", "/api/register/**", "/api/health", "/api/test/**").permitAll()
+                .requestMatchers("/api/plans/**", "/api/register/**", "/api/health").permitAll()
 
                 // Static resources
                 .requestMatchers("/css/**", "/js/**", "/images/**", "/favicon.ico", "/robots.txt").permitAll()
@@ -96,15 +96,8 @@ public class SecurityConfig {
             )
             .csrf(csrf -> csrf
                 .ignoringRequestMatchers(
-                    "/api/**",
-                    "/admin/email-templates/**",
-                    "/admin/plans/create",
-                    "/admin/plans/*/edit",
-                    "/admin/plans/*/update",
-                    "/admin/images/upload",
-                    "/admin/images/update-url",
-                    "/admin/images/*/delete"
-                ) // CRITICAL FIX: Disable CSRF for admin POST endpoints that are failing
+                    "/api/register/**"
+                ) // Only public registration API endpoints are CSRF-exempt; admin endpoints require CSRF tokens
             )
             .headers(headers -> headers
                 .frameOptions(frameOptions -> frameOptions.sameOrigin())

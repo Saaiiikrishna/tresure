@@ -3,6 +3,8 @@
 .env.template
 .env.local
 .env.production
+.env.dev
+.env.test
 
 # Build artifacts
 .mvn/

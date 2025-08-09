@@ -16,7 +16,7 @@ import java.io.File;
  * Handles initialization tasks when the application starts
  */
 @Component
-@Profile("!test")
+@Profile({"!test", "!junit"})
 public class ApplicationStartupConfig implements CommandLineRunner {
 
     private static final Logger logger = LoggerFactory.getLogger(ApplicationStartupConfig.class);

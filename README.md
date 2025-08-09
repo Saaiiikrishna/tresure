@@ -59,14 +59,14 @@ spring:
     password: treasure_pass
   
   mail:
-    username: your-email@gmail.com
-    password: your-app-password
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
 
 app:
   security:
     admin:
-      username: admin
-      password: admin123
+      username: ${ADMIN_USERNAME}
+      password: ${ADMIN_PASSWORD}
 ```
 
 ### 3. Gmail Setup (Optional)
@@ -91,7 +91,7 @@ java -jar target/treasure-hunt-registration-1.0.0.jar
 ### 5. Access the Application
 - **Main Website**: http://localhost:8080
 - **Admin Panel**: http://localhost:8080/admin
-- **Admin Credentials**: admin / admin123 (change in production!)
+- **Admin Credentials**: set via environment variables ADMIN_USERNAME / ADMIN_PASSWORD (no defaults)
 
 ## 📁 Project Structure
 

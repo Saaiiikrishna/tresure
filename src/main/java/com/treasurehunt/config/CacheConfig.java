@@ -12,6 +12,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 
 import javax.annotation.PostConstruct;
 import java.util.Arrays;
@@ -26,8 +28,8 @@ public class CacheConfig {
 
     private static final Logger logger = LoggerFactory.getLogger(CacheConfig.class);
 
-    @Autowired(required = false)
-    private CacheManager cacheManager;
+    @Autowired
+    private org.springframework.beans.factory.ObjectProvider<CacheManager> cacheManagerProvider;
 
     // Cache names - FIXED: Added missing cache definitions
     public static final String TREASURE_HUNT_PLANS_CACHE = "treasureHuntPlans";
@@ -112,12 +114,14 @@ public class CacheConfig {
     }
 
     /**
-     * PRODUCTION FIX: Initialize and validate cache configuration on startup
+     * Initialize and validate cache configuration after application is ready.
+     * Using ApplicationReadyEvent prevents circular references during bean creation.
      */
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void initializeAndValidateCache() {
         logger.info("Initializing cache configuration...");
 
+        CacheManager cacheManager = cacheManagerProvider.getIfAvailable();
         if (cacheManager != null) {
             logger.info("Cache manager type: {}", cacheManager.getClass().getSimpleName());
 
@@ -316,19 +320,11 @@ public class CacheConfig {
     public void validateCacheConfiguration() {
         logger.info("Validating cache configuration...");
 
-        // FIXED: Get cache manager from Spring context instead of calling method directly
-        CacheManager manager = null;
-        try {
-            // This will be injected by Spring
-            manager = productionCacheManager();
-        } catch (Exception e) {
-            logger.warn("Could not get production cache manager, trying development: {}", e.getMessage());
-            try {
-                manager = developmentCacheManager();
-            } catch (Exception ex) {
-                logger.error("Could not get any cache manager for validation", ex);
-                return;
-            }
+        // Obtain CacheManager lazily from provider to avoid circular references
+        CacheManager manager = cacheManagerProvider.getIfAvailable();
+        if (manager == null) {
+            logger.warn("No CacheManager available at validation time; skipping validation");
+            return;
         }
         
         // FIXED: Verify ALL expected caches are configured including missing ones

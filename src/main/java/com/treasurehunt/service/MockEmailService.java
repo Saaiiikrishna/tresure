@@ -2,11 +2,9 @@ package com.treasurehunt.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.stereotype.Service;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -16,8 +14,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Mock email service for development and testing
  * Simulates email sending without actually sending emails
  */
-@Service
-@ConditionalOnProperty(name = "app.email.mock.enabled", havingValue = "true", matchIfMissing = false)
 public class MockEmailService implements JavaMailSender {
     
     private static final Logger logger = LoggerFactory.getLogger(MockEmailService.class);

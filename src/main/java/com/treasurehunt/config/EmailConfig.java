@@ -39,7 +39,6 @@ public class EmailConfig {
      * Production JavaMailSender - only created if Jakarta Mail classes are available
      */
     @Bean
-    @Primary
     @ConditionalOnClass(name = "jakarta.mail.internet.MimeMessage")
     @ConditionalOnProperty(name = "spring.mail.host")
     public JavaMailSender productionJavaMailSender() {
@@ -76,6 +75,7 @@ public class EmailConfig {
      * This bean will be used when app.email.mock.enabled=true
      */
     @Bean
+    @Primary
     @ConditionalOnProperty(name = "app.email.mock.enabled", havingValue = "true")
     public JavaMailSender mockJavaMailSender() {
         logger.warn("🚨 MOCK EMAIL SERVICE ENABLED - Emails will be simulated, not actually sent!");

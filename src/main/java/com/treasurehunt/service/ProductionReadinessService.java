@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
@@ -20,6 +21,7 @@ import java.util.HashMap;
  * Comprehensive validation service that checks all aspects of production readiness
  */
 @Service
+@Profile("!test")
 public class ProductionReadinessService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProductionReadinessService.class);

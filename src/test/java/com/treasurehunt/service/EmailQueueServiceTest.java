@@ -1,15 +1,18 @@
 package com.treasurehunt.service;
 
+import com.treasurehunt.config.TreasureHuntTestConfiguration;
 import com.treasurehunt.entity.EmailQueue;
 import com.treasurehunt.repository.EmailQueueRepository;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@ActiveProfiles("dev")
+@ActiveProfiles("test")
+@Import(TreasureHuntTestConfiguration.class)
 class EmailQueueServiceTest {
 
     @Autowired

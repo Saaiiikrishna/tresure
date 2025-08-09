@@ -10,6 +10,8 @@ import ch.qos.logback.core.rolling.RollingFileAppender;
 import ch.qos.logback.core.rolling.TimeBasedRollingPolicy;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
@@ -36,6 +38,9 @@ public class LoggingConfig {
 
     @Value("${logging.file.max-history:30}")
     private int maxHistory;
+
+    @Autowired
+    private Environment environment;
 
     /**
      * Configure logging after bean initialization
@@ -88,29 +93,39 @@ public class LoggingConfig {
      * Configure specific loggers for better control
      */
     private void configureSpecificLoggers(LoggerContext context) {
+        boolean isProduction = false;
+        try {
+            for (String profile : environment.getActiveProfiles()) {
+                if ("production".equalsIgnoreCase(profile)) {
+                    isProduction = true;
+                    break;
+                }
+            }
+        } catch (Exception ignored) {}
+
         // Security logging
-        configureLoggerLevel(context, "org.springframework.security", "INFO");
-        
+        configureLoggerLevel(context, "org.springframework.security", isProduction ? "INFO" : "DEBUG");
+
         // Database logging
-        configureLoggerLevel(context, "org.hibernate.SQL", "DEBUG");
-        configureLoggerLevel(context, "org.hibernate.type.descriptor.sql.BasicBinder", "TRACE");
-        
+        configureLoggerLevel(context, "org.hibernate.SQL", isProduction ? "WARN" : "DEBUG");
+        configureLoggerLevel(context, "org.hibernate.type.descriptor.sql.BasicBinder", isProduction ? "WARN" : "TRACE");
+
         // Connection pool logging
         configureLoggerLevel(context, "com.zaxxer.hikari", "INFO");
-        
+
         // Cache logging
-        configureLoggerLevel(context, "org.springframework.cache", "DEBUG");
-        
+        configureLoggerLevel(context, "org.springframework.cache", isProduction ? "INFO" : "DEBUG");
+
         // Email logging
-        configureLoggerLevel(context, "org.springframework.mail", "DEBUG");
-        
+        configureLoggerLevel(context, "org.springframework.mail", isProduction ? "INFO" : "DEBUG");
+
         // File upload logging
-        configureLoggerLevel(context, "org.springframework.web.multipart", "DEBUG");
-        
+        configureLoggerLevel(context, "org.springframework.web.multipart", isProduction ? "INFO" : "DEBUG");
+
         // Performance monitoring
         configureLoggerLevel(context, "com.treasurehunt.aspect", "INFO");
         configureLoggerLevel(context, "com.treasurehunt.service.PerformanceMonitoringService", "INFO");
-        
+
         // Cleanup services
         configureLoggerLevel(context, "com.treasurehunt.service.cleanup", "INFO");
     }
