@@ -1,21 +1,24 @@
 package com.treasurehunt.service;
 
+import com.treasurehunt.config.ApplicationConfigurationManager;
 import com.treasurehunt.entity.TeamMember;
 import com.treasurehunt.entity.UserRegistration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import jakarta.mail.internet.MimeMessage;
 import java.util.Arrays;
 import java.util.List;
 
 /**
  * Service class for generating email content using Thymeleaf templates.
- * This service is responsible for creating the HTML body of emails.
- * The actual sending is handled by other services (e.g., EmailQueueService).
+ * Also provides a simple API to send emails using JavaMailSender.
  */
 @Service
 public class EmailService {
@@ -24,14 +27,22 @@ public class EmailService {
 
     private final TemplateEngine templateEngine;
 
-    @Value("${app.email.company-name}")
-    private String companyName;
+    @Autowired(required = false)
+    private JavaMailSender mailSender;
 
-    @Value("${app.email.support}")
+    private final ApplicationConfigurationManager config;
+
+    private String defaultFromEmail;
+    private String companyName;
     private String supportEmail;
 
-    public EmailService(TemplateEngine templateEngine) {
+    public EmailService(TemplateEngine templateEngine, ApplicationConfigurationManager config) {
         this.templateEngine = templateEngine;
+        this.config = config;
+        // Initialize from central configuration
+        this.defaultFromEmail = config.getEmail().getFromAddress() != null ? config.getEmail().getFromAddress() : "noreply@treasurehunt.local";
+        this.companyName = config.getEmail().getCompanyName();
+        this.supportEmail = config.getEmail().getSupportAddress();
     }
 
     /**
@@ -160,6 +171,42 @@ public class EmailService {
         context.setVariable("registrationNumber", registration.getRegistrationNumber());
         return templateEngine.process("email/individual-cancellation", context);
     }
+
+    /**
+     * Send an email using JavaMailSender (HTML enabled).
+     * @param to recipient email
+     * @param subject subject
+     * @param body HTML body
+     * @param from optional from address; if null/blank uses configured default
+     */
+    public void sendEmail(String to, String subject, String body, String from) {
+        if (mailSender == null) {
+            logger.warn("JavaMailSender not available - skipping actual send for subject: {}", subject);
+            return;
+        }
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(body, true);
+            String fromAddress = (from != null && !from.isBlank()) ? from : defaultFromEmail;
+            helper.setFrom(fromAddress);
+            mailSender.send(message);
+            logger.debug("Email sent to {} with subject '{}'", to, subject);
+        } catch (Exception e) {
+            logger.error("Failed to send email to {} with subject '{}': {}", to, subject, e.getMessage(), e);
+            throw new RuntimeException("Email sending failed", e);
+        }
+    }
+
+    /**
+     * Backward-compatible overload without 'from' argument.
+     */
+    public void sendEmail(String to, String subject, String body) {
+        sendEmail(to, subject, body, null);
+    }
+
 
     /**
      * Get pre-hunt checklist items

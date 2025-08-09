@@ -66,6 +66,15 @@ public class EmailNotificationService {
         return new EmailData(registration);
     }
 
+
+    /**
+     * Backward-compatibility alias for older callers expecting prepareApprovalEmailData
+     */
+    @Transactional(readOnly = true)
+    public EmailData prepareApprovalEmailData(Long registrationId) {
+        return prepareEmailData(registrationId);
+    }
+
     /**
      * Send approval emails asynchronously.
      * @param emailData Data prepared in a transaction
