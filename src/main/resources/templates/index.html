@@ -997,8 +997,13 @@
                                                 <div class="info-label small text-muted">Available</div>
                                                 <div class="info-value fw-semibold"
                                                      th:class="${plan.availableSlots - plan.registrationCount >= 10 ? 'text-success' :
-                                                               (plan.availableSlots - plan.registrationCount >= 5 ? 'text-warning' : 'text-danger')}"
-                                                     th:text="${plan.availableSlots - plan.registrationCount} + ' slots'">12 slots</div>
+                                                               (plan.availableSlots - plan.registrationCount >= 5 ? 'text-warning' : 'text-danger')}">
+                                                    <!-- Proper pluralization for available slots -->
+                                                    <span th:if="${plan.availableSlots - plan.registrationCount > 1}"
+                                                          th:text="${plan.availableSlots - plan.registrationCount} + ' slots'">12 slots</span>
+                                                    <span th:if="${plan.availableSlots - plan.registrationCount == 1}">1 slot</span>
+                                                    <span th:if="${plan.availableSlots - plan.registrationCount < 1}">No Slots</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -1022,12 +1027,21 @@
                             <div class="registration-status mb-3" th:if="${plan.registrationDeadline != null}">
                                 <div class="compact-status-line p-2 rounded border border-light bg-light text-center">
                                     <small class="text-muted">
-                                        <span class="breathing-dot me-2"
-                                              th:classappend="${plan.registrationDeadlinePassed ? ' breathing-dot-red' : ' breathing-dot-green'}"></span>
-                                        Registrations are
-                                        <span class="fw-bold fst-italic" th:class="${plan.registrationDeadlinePassed ? 'text-danger fw-bold fst-italic' : 'text-success fw-bold fst-italic'}"
-                                              th:text="${plan.registrationDeadlinePassed ? 'CLOSED' : 'OPEN'}">OPEN</span>
-                                        till <strong th:text="${plan.formattedRegistrationDeadline}">3rd July</strong>
+                                        <!-- Check if registrations are closed due to no slots or deadline passed -->
+                                        <span th:with="noSlots=${plan.availableSlots - plan.registrationCount < 1}, deadlinePassed=${plan.registrationDeadlinePassed}, isClosed=${noSlots or deadlinePassed}">
+                                            <span class="breathing-dot me-2"
+                                                  th:classappend="${isClosed ? ' breathing-dot-red' : ' breathing-dot-green'}"></span>
+
+                                            <!-- Show appropriate message based on closure reason -->
+                                            <span th:if="${isClosed}">
+                                                <span class="fw-bold fst-italic text-danger">Registrations closed for this plan</span>
+                                            </span>
+                                            <span th:unless="${isClosed}">
+                                                Registrations are
+                                                <span class="fw-bold fst-italic text-success">OPEN</span>
+                                                till <strong th:text="${plan.formattedRegistrationDeadline}">3rd July</strong>
+                                            </span>
+                                        </span>
                                     </small>
                                 </div>
                             </div>
@@ -1066,11 +1080,17 @@
                                                 th:data-discount-percentage="${plan.discountPercentage}"
                                                 th:data-team-size="${plan.teamSize}"
                                                 th:data-team-type="${plan.teamType}"
-                                                th:disabled="${!plan.available or plan.registrationDeadlinePassed}">
+                                                th:with="noSlots=${plan.availableSlots - plan.registrationCount < 1}, deadlinePassed=${plan.registrationDeadlinePassed}, isClosed=${noSlots or deadlinePassed}"
+                                                th:disabled="${!plan.available or isClosed}">
 
                                             <!-- Available Registration -->
-                                            <span th:if="${plan.available and !plan.registrationDeadlinePassed}">
-                                                <i class="fas fa-user-plus me-1"></i>Register Now
+                                            <span th:with="noSlots=${plan.availableSlots - plan.registrationCount < 1}, deadlinePassed=${plan.registrationDeadlinePassed}, isClosed=${noSlots or deadlinePassed}">
+                                                <span th:if="${plan.available and !isClosed}">
+                                                    <i class="fas fa-user-plus me-1"></i>Register Now
+                                                </span>
+                                                <span th:if="${!plan.available or isClosed}">
+                                                    <i class="fas fa-times me-1"></i>Registration Closed
+                                                </span>
                                             </span>
 
                                             <!-- Fully Booked -->

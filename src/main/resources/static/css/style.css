@@ -540,6 +540,38 @@ footer hr {
     .hero-section {
         padding-top: 100px;
         text-align: center;
+        /* Ensure hero section takes full height on mobile when content stacks */
+        min-height: 100vh;
+        align-items: stretch;
+    }
+
+    /* Mobile hero background video adjustments */
+    .hero-video-bg {
+        /* Ensure background video covers the full stacked mobile hero section */
+        min-height: 100vh !important;
+        height: auto !important;
+    }
+
+    /* Ensure video elements cover full mobile hero height */
+    .hero-video-bg #hero-video-container,
+    .hero-video-bg #hero-video,
+    .hero-video-bg #hero-youtube-iframe {
+        min-height: 100vh !important;
+        height: 100vh !important;
+    }
+
+    /* Make sure the row stacks properly on mobile */
+    .hero-section .row {
+        min-height: 100vh;
+        align-items: center;
+    }
+
+    /* Adjust column layout for mobile stacking */
+    .hero-section .col-lg-6 {
+        min-height: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
 
     /* Mobile adjustments for blur backgrounds - Pure blur effect */
@@ -895,6 +927,47 @@ footer hr {
         width: 25px;
         height: 25px;
         font-size: 0.8rem;
+    }
+
+    /* Mobile-friendly file upload areas */
+    .upload-area {
+        min-height: 120px !important;
+        padding: 1.5rem !important;
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+        border: 2px dashed #007bff;
+        border-radius: 8px;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover,
+    .upload-area:active {
+        border-color: #0056b3;
+        background-color: #e3f2fd;
+        transform: scale(1.02);
+    }
+
+    .upload-icon {
+        font-size: 2.5rem !important;
+        color: #007bff;
+        margin-bottom: 0.75rem !important;
+    }
+
+    .upload-text {
+        font-size: 1rem !important;
+        font-weight: 600;
+        color: #007bff;
+        margin-bottom: 0.5rem !important;
+    }
+
+    /* Make file inputs more accessible on mobile */
+    input[type="file"] {
+        position: absolute !important;
+        left: -9999px !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
     }
 }
 

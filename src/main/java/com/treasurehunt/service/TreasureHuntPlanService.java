@@ -52,8 +52,9 @@ public class TreasureHuntPlanService implements TreasureHuntPlanServiceInterface
 
     /**
      * PERFORMANCE FIX: Load all plans into cache on startup with optimized queries
+     * STARTUP OPTIMIZATION: Disabled for faster startup - cache loaded on first access
      */
-    @PostConstruct
+    // @PostConstruct
     public void loadPlansIntoCache() {
         try {
             logger.info("Loading all plans into cache...");

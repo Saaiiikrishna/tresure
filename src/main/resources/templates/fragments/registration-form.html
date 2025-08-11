@@ -17,11 +17,32 @@
         <div class="row">
             <div class="col-md-6">
                 <p class="mb-1"><strong>Format:</strong> <span th:text="${plan.teamType.name() == 'TEAM'} ? 'Teams of ' + ${plan.teamSize} + ' players' : 'Individual players'"></span></p>
-                <p class="mb-0"><strong>Price:</strong> ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 'COMMA', 2, 'POINT')}"></span> per person</p>
+                <p class="mb-0">
+                    <strong>Price:</strong>
+                    <!-- Show discounted price if discount is enabled -->
+                    <span th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        <span class="text-success fw-bold">₹<span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 'COMMA', 2, 'POINT')}"></span></span> per person
+                        <small class="text-muted text-decoration-line-through ms-1">₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 'COMMA', 2, 'POINT')}"></span></small>
+                        <span class="badge bg-success ms-1"><span th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)}"></span>% OFF</span>
+                    </span>
+                    <!-- Show regular price if no discount -->
+                    <span th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 'COMMA', 2, 'POINT')}"></span> per person
+                    </span>
+                </p>
             </div>
             <div class="col-md-6">
                 <p th:if="${plan.teamType.name() == 'TEAM'}" class="mb-1"><strong>Team Size:</strong> <span th:text="${plan.teamSize}"></span> players</p>
-                <p class="mb-0"><strong>Total Cost:</strong> ₹<span th:text="${#numbers.formatDecimal(plan.priceInr.multiply(plan.teamSize), 1, 'COMMA', 2, 'POINT')}"></span></p>
+                <p class="mb-0">
+                    <strong>Total Cost:</strong>
+                    <!-- Calculate total cost using discounted price if applicable -->
+                    <span th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        ₹<span th:text="${#numbers.formatDecimal(plan.discountedPrice.multiply(plan.teamSize), 1, 'COMMA', 2, 'POINT')}"></span>
+                    </span>
+                    <span th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr.multiply(plan.teamSize), 1, 'COMMA', 2, 'POINT')}"></span>
+                    </span>
+                </p>
             </div>
         </div>
     </div>
@@ -52,14 +73,11 @@
                         <div class="form-text">Choose a fun name for your team!</div>
                     </div>
                 </div>
-                <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="mb-3">
                     <h6 class="mb-0 d-flex align-items-center">
                         <i class="fas fa-user-friends me-2 text-primary"></i>
                         Team Members (<span th:text="${plan.teamSize}"></span> required)
                     </h6>
-                    <div class="progress-indicator">
-                        <span class="badge bg-secondary" id="teamProgress">0 / <span th:text="${plan.teamSize}"></span> completed</span>
-                    </div>
                 </div>
                 <div th:each="i : ${#numbers.sequence(1, plan.teamSize)}" th:with="memberNumber=${i}, totalMembers=${plan.teamSize}, showMemberTitle=true">
                     <div th:replace="~{fragments/registration-form :: memberForm}"></div>
@@ -128,27 +146,30 @@
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
                     <label class="form-label">Passport Photo <small class="text-danger">(Required - JPG, PNG, max 2MB)</small></label>
-                    <div id="photoFileUploadArea" class="upload-area">
+                    <div id="photoFileUploadArea" class="upload-area" role="button" tabindex="0" aria-label="Upload passport photo">
                         <i class="fas fa-camera upload-icon"></i>
-                        <p class="upload-text mb-2">Click to upload or drag & drop</p>
+                        <p class="upload-text mb-2">Tap to upload photo</p>
+                        <small class="text-muted d-block d-md-none">JPG, PNG files only</small>
                         <div id="photoFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="photoFile" name="photoFile" accept="image/jpeg,image/jpg,image/png" style="display: none;" onchange="handleFileUpload(this, 'photo', 2)" />
                 </div>
                 <div class="col-md-4">
                     <label class="form-label">Government ID <small class="text-danger">(Required - PDF, JPG, max 5MB)</small></label>
-                    <div id="idFileUploadArea" class="upload-area">
+                    <div id="idFileUploadArea" class="upload-area" role="button" tabindex="0" aria-label="Upload government ID">
                         <i class="fas fa-id-card upload-icon"></i>
-                        <p class="upload-text mb-2">Click to upload or drag & drop</p>
+                        <p class="upload-text mb-2">Tap to upload ID</p>
+                        <small class="text-muted d-block d-md-none">PDF, JPG files only</small>
                         <div id="idFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="idFile" name="idFile" accept="application/pdf,image/jpeg,image/jpg" style="display: none;" onchange="handleFileUpload(this, 'id', 5)" />
                 </div>
                 <div class="col-md-4" id="medicalCertificateContainer">
                     <label class="form-label" id="medicalCertificateLabel">Medical Certificate <small class="text-danger" id="medicalCertificateRequired">(Required - PDF only, max 5MB)</small></label>
-                    <div id="medicalFileUploadArea" class="upload-area">
+                    <div id="medicalFileUploadArea" class="upload-area" role="button" tabindex="0" aria-label="Upload medical certificate">
                         <i class="fas fa-file-medical upload-icon"></i>
-                        <p class="upload-text mb-2" id="medicalFileUploadText">Click to upload or drag & drop</p>
+                        <p class="upload-text mb-2" id="medicalFileUploadText">Tap to upload certificate</p>
+                        <small class="text-muted d-block d-md-none">PDF files only</small>
                         <div id="medicalFileInfo" class="file-info d-none"></div>
                     </div>
                     <input type="file" id="medicalFile" name="medicalFile" accept="application/pdf" style="display: none;" onchange="handleFileUpload(this, 'medical', 5)" />

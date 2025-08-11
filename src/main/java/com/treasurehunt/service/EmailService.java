@@ -41,7 +41,7 @@ public class EmailService {
         this.templateEngine = templateEngine;
         this.config = config;
         // Initialize from central configuration
-        this.defaultFromEmail = config.getEmail().getFromAddress() != null ? config.getEmail().getFromAddress() : "noreply@treasurehunt.local";
+        this.defaultFromEmail = config.getEmail().getFromAddress();
         this.companyName = config.getEmail().getCompanyName();
         this.supportEmail = config.getEmail().getSupportAddress();
         this.baseUrl = "http://localhost:8080"; // Default for development

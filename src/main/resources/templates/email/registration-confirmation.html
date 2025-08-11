@@ -375,7 +375,19 @@
             <div class="payment-info">
                 <h3>💰 Payment Information</h3>
                 <div class="price-display">
-                    ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">2,490</span> per person
+                    <!-- Show discounted price if discount is enabled -->
+                    <div th:if="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        <span style="color: #28a745; font-weight: bold;">₹<span th:text="${#numbers.formatDecimal(plan.discountedPrice, 1, 0)}">2,241</span></span> per person
+                        <br>
+                        <small style="color: #6c757d; text-decoration: line-through;">₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">2,490</span></small>
+                        <span style="background-color: #28a745; color: white; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 5px;">
+                            <span th:text="${#numbers.formatDecimal(plan.discountPercentage, 1, 0)}">10</span>% OFF
+                        </span>
+                    </div>
+                    <!-- Show regular price if no discount -->
+                    <div th:unless="${plan.discountEnabled != null and plan.discountEnabled and plan.discountPercentage != null and plan.discountPercentage > 0}">
+                        ₹<span th:text="${#numbers.formatDecimal(plan.priceInr, 1, 0)}">2,490</span> per person
+                    </div>
                 </div>
                 <div class="non-refundable">
                     <strong>⚠️ Important:</strong> This payment is non-refundable once processed.
@@ -425,8 +437,8 @@
             <!-- Contact Information -->
             <div class="contact-info">
                 <h4>📞 Need Help?</h4>
-                <p><strong>Email:</strong> <span th:text="${supportEmail}">support@treasurehuntadventures.com</span></p>
-                <p><strong>Phone:</strong> <span th:text="${contactPhone}">+91 98765 43210</span></p>
+                <p><strong>Email:</strong> <span th:text="${supportEmail}">tresurhunting@gmail.com</span></p>
+                <p><strong>Phone:</strong> <span th:text="${contactPhone}">+91 72072 20894</span></p>
                 <p><strong>Hours:</strong> <span th:text="${businessHours}">Monday - Friday, 9:00 AM - 6:00 PM IST</span></p>
             </div>
 

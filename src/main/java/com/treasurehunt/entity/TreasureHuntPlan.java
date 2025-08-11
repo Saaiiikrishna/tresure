@@ -25,7 +25,8 @@ import java.util.List;
            @Index(name = "idx_plan_featured", columnList = "is_featured"),
            @Index(name = "idx_plan_difficulty", columnList = "difficulty_level"),
            @Index(name = "idx_plan_price", columnList = "price_inr"),
-           @Index(name = "idx_plan_created_date", columnList = "created_date")
+           @Index(name = "idx_plan_created_date", columnList = "created_date"),
+           @Index(name = "idx_plan_status_created_date", columnList = "status, created_date")
        })
 public class TreasureHuntPlan {
 
@@ -562,13 +563,39 @@ public class TreasureHuntPlan {
 
     /**
      * Check if registration deadline has passed
+     * Uses system default timezone for date comparison.
+     * If deadline is January 24th, 2025, then starting January 25th, 2025 at 00:00,
+     * the plan will show as closed.
+     *
      * @return true if deadline has passed, false otherwise
      */
     public boolean isRegistrationDeadlinePassed() {
         if (registrationDeadline == null) {
             return false;
         }
-        return LocalDate.now().isAfter(registrationDeadline);
+        // Use LocalDate.now() which uses system default timezone
+        // This ensures consistent behavior across the application
+        LocalDate currentDate = LocalDate.now();
+        return currentDate.isAfter(registrationDeadline);
+    }
+
+    /**
+     * Check if registrations are closed due to either no available slots or deadline passed
+     * @return true if registrations are closed, false otherwise
+     */
+    public boolean isRegistrationClosed() {
+        // Check if deadline has passed
+        if (isRegistrationDeadlinePassed()) {
+            return true;
+        }
+
+        // Check if no slots available (using registration count)
+        if (availableSlots != null) {
+            long currentRegistrations = getRegistrationCount();
+            return currentRegistrations >= availableSlots;
+        }
+
+        return false;
     }
 
     /**

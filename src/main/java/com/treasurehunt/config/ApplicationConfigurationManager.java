@@ -330,17 +330,23 @@ public class ApplicationConfigurationManager {
     }
 
     private void validateEmailConfig() {
-        // FIXED: Provide default values instead of throwing exceptions
+        // Validate email configuration without providing defaults
         if (email.getFromAddress() == null || email.getFromAddress().trim().isEmpty()) {
-            String defaultFrom = environment.getProperty("MAIL_FROM_ADDRESS", "noreply@treasurehunt.local");
-            email.setFromAddress(defaultFrom);
-            logger.warn("⚠️ Email from address not configured, using default: {}", defaultFrom);
+            String fromAddress = environment.getProperty("MAIL_FROM_ADDRESS");
+            if (fromAddress != null && !fromAddress.trim().isEmpty()) {
+                email.setFromAddress(fromAddress);
+            } else {
+                throw new IllegalStateException("MAIL_FROM_ADDRESS environment variable must be configured");
+            }
         }
 
         if (email.getSupportAddress() == null || email.getSupportAddress().trim().isEmpty()) {
-            String defaultSupport = environment.getProperty("MAIL_SUPPORT_ADDRESS", "support@treasurehunt.local");
-            email.setSupportAddress(defaultSupport);
-            logger.warn("⚠️ Email support address not configured, using default: {}", defaultSupport);
+            String supportAddress = environment.getProperty("MAIL_SUPPORT_ADDRESS");
+            if (supportAddress != null && !supportAddress.trim().isEmpty()) {
+                email.setSupportAddress(supportAddress);
+            } else {
+                throw new IllegalStateException("MAIL_SUPPORT_ADDRESS environment variable must be configured");
+            }
         }
 
         logger.info("✅ Email configuration validated - From: {}, Support: {}",
@@ -397,8 +403,8 @@ public class ApplicationConfigurationManager {
         logger.info("📋 Application Configuration Summary:");
         logger.info("  File Storage: uploadDir={}, maxFileSize={}MB", 
                    fileStorage.getUploadDir(), fileStorage.getMaxFileSize() / 1024 / 1024);
-        logger.info("  Email: from={}, support={}, mock={}", 
-                   fileStorage.getUploadDir(), email.getSupportAddress(), email.isMockEnabled());
+        logger.info("  Email: from={}, support={}, mock={}",
+                   email.getFromAddress(), email.getSupportAddress(), email.isMockEnabled());
         logger.info("  Security: sessionTimeout={}min, maxSessions={}", 
                    security.getSession().getTimeoutMinutes(), security.getSession().getMaxConcurrentSessions());
         logger.info("  Performance: dbPoolSize={}, cacheEnabled={}", 

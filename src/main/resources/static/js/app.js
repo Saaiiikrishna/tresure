@@ -195,29 +195,63 @@ function setupRealTimeValidation() {
     // Clear any existing validation errors first
     clearAllValidationErrors();
 
+    // Detect if this is a mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
     // Add real-time validation to all inputs
     const inputs = form.querySelectorAll('input, select, textarea');
     inputs.forEach(input => {
-        // Mark field as touched when user interacts with it
-        input.addEventListener('focus', function() {
-            this.setAttribute('data-touched', 'true');
-        });
+        // For mobile devices, be more conservative about marking fields as touched
+        if (isMobile) {
+            // On mobile, only mark as touched after user has actually interacted meaningfully
+            let hasUserInteracted = false;
 
-        // Add event listeners for real-time validation
-        input.addEventListener('input', function() {
-            this.setAttribute('data-touched', 'true');
-            validateFieldRealTime(this);
-        });
+            input.addEventListener('focus', function() {
+                // Don't immediately mark as touched on focus for mobile
+                // Wait for actual input or blur after focus
+            });
 
-        input.addEventListener('blur', function() {
-            this.setAttribute('data-touched', 'true');
-            validateFieldRealTime(this);
-        });
+            input.addEventListener('input', function() {
+                hasUserInteracted = true;
+                this.setAttribute('data-touched', 'true');
+                // Add small delay for mobile to avoid immediate validation
+                setTimeout(() => validateFieldRealTime(this), 300);
+            });
 
-        input.addEventListener('change', function() {
-            this.setAttribute('data-touched', 'true');
-            validateFieldRealTime(this);
-        });
+            input.addEventListener('blur', function() {
+                // Only mark as touched if user has actually interacted
+                if (hasUserInteracted || this.value.trim() !== '') {
+                    this.setAttribute('data-touched', 'true');
+                    validateFieldRealTime(this);
+                }
+            });
+
+            input.addEventListener('change', function() {
+                hasUserInteracted = true;
+                this.setAttribute('data-touched', 'true');
+                validateFieldRealTime(this);
+            });
+        } else {
+            // Desktop behavior - immediate validation
+            input.addEventListener('focus', function() {
+                this.setAttribute('data-touched', 'true');
+            });
+
+            input.addEventListener('input', function() {
+                this.setAttribute('data-touched', 'true');
+                validateFieldRealTime(this);
+            });
+
+            input.addEventListener('blur', function() {
+                this.setAttribute('data-touched', 'true');
+                validateFieldRealTime(this);
+            });
+
+            input.addEventListener('change', function() {
+                this.setAttribute('data-touched', 'true');
+                validateFieldRealTime(this);
+            });
+        }
     });
 }
 
@@ -359,10 +393,48 @@ function setupDragAndDrop() {
         // Handle dropped files
         uploadArea.addEventListener('drop', (e) => handleDrop(e, fileInput, type), false);
 
-        // Handle click to upload
-        uploadArea.addEventListener('click', () => {
+        // Handle click to upload - Enhanced for mobile compatibility
+        const handleUploadClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+
             if (!fileInput.disabled) {
-                fileInput.click();
+                // For mobile devices, ensure the file input is properly triggered
+                if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                    // Mobile-specific handling
+                    fileInput.style.position = 'absolute';
+                    fileInput.style.left = '-9999px';
+                    fileInput.style.top = '-9999px';
+                    fileInput.style.opacity = '0';
+                    fileInput.style.pointerEvents = 'none';
+
+                    // Ensure the input is in the DOM and focusable
+                    document.body.appendChild(fileInput);
+
+                    // Trigger click with a slight delay for mobile browsers
+                    setTimeout(() => {
+                        fileInput.click();
+                        // Return input to its original parent after click
+                        setTimeout(() => {
+                            uploadArea.parentElement.appendChild(fileInput);
+                            fileInput.style.display = 'none';
+                        }, 100);
+                    }, 50);
+                } else {
+                    // Desktop handling
+                    fileInput.click();
+                }
+            }
+        };
+
+        uploadArea.addEventListener('click', handleUploadClick);
+        uploadArea.addEventListener('touchend', handleUploadClick);
+
+        // Add keyboard accessibility
+        uploadArea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleUploadClick(e);
             }
         });
     });
@@ -793,7 +865,11 @@ function extractRegistrationFormData() {
     // Get selected plan info
     if (window.selectedPlan) {
         data.planName = window.selectedPlan.name;
-        data.planPrice = window.selectedPlan.priceInr;
+        // Use discounted price if available, otherwise fall back to original price
+        data.planPrice = window.selectedPlan.discountedPrice || window.selectedPlan.priceInr;
+        data.originalPrice = window.selectedPlan.priceInr;
+        data.discountEnabled = window.selectedPlan.discountEnabled;
+        data.discountPercentage = window.selectedPlan.discountPercentage;
         data.isTeamBased = window.selectedPlan.teamType === 'TEAM';
     }
 
@@ -827,7 +903,14 @@ function createSuccessModalContent(result, formData) {
                     </tr>
                     <tr>
                         <td><strong>Price:</strong></td>
-                        <td>₹${formData.planPrice || 'N/A'}</td>
+                        <td>
+                            ${formData.discountEnabled && formData.discountPercentage > 0 ?
+                                `<span class="text-success fw-bold">₹${formData.planPrice}</span>
+                                 <small class="text-muted text-decoration-line-through ms-1">₹${formData.originalPrice}</small>
+                                 <span class="badge bg-success ms-1">${formData.discountPercentage}% OFF</span>` :
+                                `₹${formData.planPrice || 'N/A'}`
+                            }
+                        </td>
                     </tr>
                     <tr>
                         <td><strong>Registration Date:</strong></td>
